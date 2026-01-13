@@ -31,7 +31,8 @@ def get_routers():
     from api.websocket_api import router as websocket_router
     from api.monitoring import router as monitoring_router
     from api.paper_trading_api import router as paper_trading_router
-    return models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router
+    from api.investor_reports_api import router as investor_reports_router
+    return models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router, investor_reports_router
 
 def get_managers():
     """Lazy load connection and metrics managers."""
@@ -213,14 +214,15 @@ async def system_info() -> Dict[str, Any]:
 
 # Include routers
 try:
-    models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router = get_routers()
+    models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router, investor_reports_router = get_routers()
     app.include_router(models_router, prefix="/api/v1/models", tags=["Models"])
     app.include_router(predictions_router, prefix="/api/v1/predictions", tags=["Predictions"])
     app.include_router(backtesting_router, prefix="/api/v1/backtest", tags=["Backtesting"])
     app.include_router(websocket_router, prefix="/api/v1/ws", tags=["WebSocket"])
     app.include_router(monitoring_router, prefix="/api/v1/monitoring", tags=["Monitoring"])
     app.include_router(paper_trading_router, prefix="/api/v1/paper-trading", tags=["Paper Trading"])
-    logger.info("All routers loaded successfully")
+    app.include_router(investor_reports_router, tags=["Investor Reports"])
+    logger.info("All routers loaded successfully (including investor reports)")
 except Exception as e:
     logger.warning(f"Failed to load some routers: {e}")
     # Continue anyway - some routers can fail
