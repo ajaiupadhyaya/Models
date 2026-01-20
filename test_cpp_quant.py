@@ -47,7 +47,7 @@ def test_black_scholes():
         assert 10.0 < call_price < 11.0, f"Call price {call_price} out of expected range"
         
         # Test put price
-        put_price = BlackScholesAccelerated.put_price(S, K, T, sigma, r, sigma)
+        put_price = BlackScholesAccelerated.put_price(S, K, T, r, sigma)
         print(f"✓ Put price: ${put_price:.4f}")
         
         # Test Greeks
