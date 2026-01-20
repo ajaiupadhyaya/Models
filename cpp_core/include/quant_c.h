@@ -18,8 +18,9 @@ extern "C" {
  */
 
 /* Error function approximation for normal CDF */
+/* Using Abramowitz and Stegun approximation (1964, equation 7.1.26) */
 static inline double erf_approx(double x) {
-    /* Abramowitz and Stegun approximation */
+    /* Coefficients from Abramowitz and Stegun */
     double a1 =  0.254829592;
     double a2 = -0.284496736;
     double a3 =  1.421413741;

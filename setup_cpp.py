@@ -20,7 +20,13 @@ class CMakeBuild(build_ext):
         try:
             subprocess.check_output(["cmake", "--version"])
         except OSError:
-            raise RuntimeError("CMake must be installed to build C++ extensions")
+            raise RuntimeError(
+                "CMake must be installed to build C++ extensions\n"
+                "Install CMake with:\n"
+                "  Ubuntu/Debian: sudo apt-get install cmake\n"
+                "  macOS: brew install cmake\n"
+                "  Windows: Download from https://cmake.org/download/"
+            )
 
         for ext in self.extensions:
             self.build_extension(ext)
