@@ -6,13 +6,20 @@ Combines C++ implementations for performance-critical calculations with Python c
 try:
     import quant_cpp
     CPP_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     CPP_AVAILABLE = False
     import warnings
-    warnings.warn(
-        "C++ extensions not available. Using pure Python implementations. "
-        "Build C++ extensions with: python setup_cpp.py build_ext --inplace"
-    )
+    error_msg = str(e)
+    if "No module named 'quant_cpp'" in error_msg:
+        warnings.warn(
+            "C++ extensions not available. Using pure Python implementations. "
+            "Build C++ extensions with: python setup_cpp.py build_ext --inplace"
+        )
+    else:
+        warnings.warn(
+            f"C++ extensions import failed: {error_msg}. "
+            "Using pure Python implementations."
+        )
 
 from typing import Union, List, Optional
 import numpy as np

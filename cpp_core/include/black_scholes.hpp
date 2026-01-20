@@ -4,6 +4,15 @@
 #include <cmath>
 #include <algorithm>
 
+// Ensure math constants are available
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#ifndef M_SQRT1_2
+#define M_SQRT1_2 0.70710678118654752440
+#endif
+
 namespace quant {
 
 /**
