@@ -144,6 +144,10 @@ public:
                                     double r, bool is_call = true, double q = 0.0,
                                     double initial_guess = 0.2, double tolerance = 1e-6,
                                     int max_iterations = 100) {
+        // Volatility bounds for reasonable market conditions
+        const double MIN_VOL = 0.001;  // 0.1%
+        const double MAX_VOL = 5.0;     // 500%
+        
         double sigma = initial_guess;
 
         for (int i = 0; i < max_iterations; ++i) {
@@ -162,8 +166,8 @@ public:
             sigma = sigma - diff / vega_val;
 
             // Keep sigma in reasonable bounds
-            if (sigma < 0.001) sigma = 0.001;
-            if (sigma > 5.0) sigma = 5.0;
+            if (sigma < MIN_VOL) sigma = MIN_VOL;
+            if (sigma > MAX_VOL) sigma = MAX_VOL;
         }
 
         return sigma;
