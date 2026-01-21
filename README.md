@@ -1,8 +1,39 @@
 # Financial Models Workspace
 
-A comprehensive financial modeling framework for quantitative analysis, trading strategies, and economic research. Built with institutional-grade tools and practices.
+A comprehensive, institutional-grade financial modeling framework for quantitative analysis, machine learning, and investment research. This project combines sophisticated models with publication-quality visualizations and a production-ready API.
 
 **Now with high-performance C++ implementations for computationally intensive operations (10-100x faster)!**
+
+## 🎯 What's New: Company Analysis System
+
+**Search and analyze any public company with comprehensive automated analysis:**
+
+```bash
+# Interactive search and analysis
+python analyze_company.py
+
+# Direct ticker analysis
+python analyze_company.py TSLA --full
+
+# Search by company name
+python analyze_company.py --search "Apple"
+
+# Export detailed report
+python analyze_company.py AAPL --full --export report.json
+```
+
+**Features:**
+- 🔍 **Smart Search**: Fuzzy matching for company names and tickers
+- 📊 **Fundamental Analysis**: Complete financial metrics, ratios, efficiency
+- 💰 **DCF Valuation**: Intrinsic value with upside/downside calculation
+- ⚠️ **Risk Metrics**: VaR, CVaR, volatility, Sharpe ratio, max drawdown
+- 📈 **Technical Analysis**: Moving averages, RSI, trend identification
+- 🎓 **Automated Grading**: Letter grades (A+ to F) for all metrics
+- 💡 **Investment Recommendations**: Buy/Hold/Sell with confidence levels
+
+**See [COMPANY_ANALYSIS_GUIDE.md](COMPANY_ANALYSIS_GUIDE.md) for complete documentation.**
+
+---
 
 ## 🏗️ Project Structure
 

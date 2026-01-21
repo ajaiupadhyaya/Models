@@ -40,7 +40,13 @@ mkdir -p "$LOG_DIR"
 
 log_info "Starting Trading ML API (Environment: $ENVIRONMENT, Workers: $WORKERS)"
 
-# Check Python version
+# Activate virtual environment if exists (do this first so python points to venv)
+if [ -d "${SCRIPT_DIR}/venv" ]; then
+    log_info "Activating virtual environment..."
+    source "${SCRIPT_DIR}/venv/bin/activate"
+fi
+
+# Check Python version (after venv activation)
 log_info "Checking Python version..."
 PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
 PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
@@ -52,27 +58,48 @@ if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" 
 fi
 log_info "Python version: $PYTHON_VERSION ✓"
 
-# Activate virtual environment if exists
-if [ -d "${SCRIPT_DIR}/venv" ]; then
-    log_info "Activating virtual environment..."
-    source "${SCRIPT_DIR}/venv/bin/activate"
-fi
-
 # Check required dependencies
 log_info "Checking dependencies..."
-python3 << EOF
-try:
-    import fastapi
-    import uvicorn
-    import pandas
-    import numpy
-    import tensorflow
-    import sklearn
-    print("✓ All dependencies available")
-except ImportError as e:
-    print(f"✗ Missing dependency: {e}")
-    exit(1)
+python3 << 'EOF'
+import importlib
+missing = []
+
+required = [
+    ('fastapi', 'FastAPI framework'),
+    ('uvicorn', 'ASGI server'),
+    ('pandas', 'Data processing'),
+    ('numpy', 'Numerical computing'),
+    ('sklearn', 'Machine learning'),
+]
+
+for mod, desc in required:
+    try:
+        importlib.import_module(mod)
+    except Exception as e:
+        missing.append(f"{mod} ({desc}): {e}")
+
+# Deep learning backend: TensorFlow or PyTorch (optional; warn if neither)
+dl_backends = []
+for mod in ('tensorflow', 'torch'):
+    try:
+        importlib.import_module(mod)
+        dl_backends.append(mod)
+    except Exception:
+        pass
+
+if missing:
+    print("✗ Missing required dependencies:\n  - " + "\n  - ".join(missing))
+    raise SystemExit(1)
+
+if not dl_backends:
+    print("⚠ Deep learning backend not found (tensorflow or torch). Proceeding without DL.")
+
+print("✓ Dependencies check passed")
 EOF
+
+# Check .env keys
+log_info "Checking environment keys (.env)..."
+python3 automation/ensure_env.py || log_warn "Missing keys. Run: python automation/ensure_env.py --interactive"
 
 # Validate environment variables
 log_info "Validating environment..."
@@ -120,8 +147,8 @@ sys.path.insert(0, '${SCRIPT_DIR}')
 try:
     # Test imports
     from api.main import app
-    from core.backtesting import BacktestEngine
-    from models.ml.advanced_trading import SimpleMLPredictor, EnsemblePredictor
+    from core.backtesting import BacktestEngine, SimpleMLPredictor
+    from models.ml.advanced_trading import EnsemblePredictor
     print("✓ All imports successful")
     
     # Check if models directory is writable
