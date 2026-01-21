@@ -32,7 +32,10 @@ def get_routers():
     from api.monitoring import router as monitoring_router
     from api.paper_trading_api import router as paper_trading_router
     from api.investor_reports_api import router as investor_reports_router
-    return models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router, investor_reports_router
+    from api.company_analysis_api import router as company_analysis_router
+    from api.ai_analysis_api import router as ai_analysis_router
+    from api.automation_api import router as automation_router
+    return models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router, investor_reports_router, company_analysis_router, ai_analysis_router, automation_router
 
 def get_managers():
     """Lazy load connection and metrics managers."""
@@ -214,7 +217,7 @@ async def system_info() -> Dict[str, Any]:
 
 # Include routers
 try:
-    models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router, investor_reports_router = get_routers()
+    models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router, investor_reports_router, company_analysis_router, ai_analysis_router, automation_router = get_routers()
     app.include_router(models_router, prefix="/api/v1/models", tags=["Models"])
     app.include_router(predictions_router, prefix="/api/v1/predictions", tags=["Predictions"])
     app.include_router(backtesting_router, prefix="/api/v1/backtest", tags=["Backtesting"])
@@ -222,7 +225,10 @@ try:
     app.include_router(monitoring_router, prefix="/api/v1/monitoring", tags=["Monitoring"])
     app.include_router(paper_trading_router, prefix="/api/v1/paper-trading", tags=["Paper Trading"])
     app.include_router(investor_reports_router, tags=["Investor Reports"])
-    logger.info("All routers loaded successfully (including investor reports)")
+    app.include_router(company_analysis_router, prefix="/api/v1/company", tags=["Company Analysis"])
+    app.include_router(ai_analysis_router, tags=["AI Analysis"])
+    app.include_router(automation_router, tags=["Automation"])
+    logger.info("All routers loaded successfully (including automation)")
 except Exception as e:
     logger.warning(f"Failed to load some routers: {e}")
     # Continue anyway - some routers can fail
