@@ -45,3 +45,21 @@ presentations/*.pptx
 # Logs
 *.log
 logs/
+
+# C++ Build Artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.egg-info/
+dist/
+cpp_core/build/
+quant_cpp.*.so
+quant_cpp.*.pyd
