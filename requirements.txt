@@ -52,3 +52,7 @@ pytz==2023.3
 # Testing
 pytest==7.4.2
 pytest-cov==4.1.0
+
+# C++ Build Dependencies (for high-performance quant library)
+pybind11>=2.11.0
+cmake>=3.12
