@@ -9,22 +9,6 @@ env/
 ENV/
 .venv
 
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb_checkpoints
-
-# Environment variables
-.env
-.env.local
-
-# Data files
-data/*.csv
-data/*.xlsx
-data/*.parquet
-data/*.h5
-*.db
-*.sqlite
-
 # IDE
 .vscode/
 .idea/
@@ -36,30 +20,37 @@ data/*.h5
 .DS_Store
 Thumbs.db
 
-# Reports and outputs
-outputs/
-reports/*.pdf
-reports/*.html
-presentations/*.pptx
+# Data
+data/cache/
+data/temp/
+*.parquet
+*.h5
+*.hdf5
 
 # Logs
 *.log
 logs/
 
-# C++ Build Artifacts
-*.o
-*.so
-*.dylib
-*.dll
-*.a
-*.lib
-*.exe
+# ML Models
+models/ml/saved_agents/*.zip
+*.pkl
+*.joblib
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Build
 build/
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-*.egg-info/
 dist/
+*.egg-info/
 cpp_core/build/
-quant_cpp.*.so
-quant_cpp.*.pyd
+
+# Environment
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
