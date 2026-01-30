@@ -1,7 +1,7 @@
 """
 AI Analysis Service
 
-Uses OpenAI to provide:
+Uses a configurable LLM backend (OpenAI by default) to provide:
 - Chart/graph analysis and insights
 - Market sentiment analysis
 - Trading recommendations
@@ -20,7 +20,7 @@ import numpy as np
 try:
     from openai import OpenAI, RateLimitError
     HAS_OPENAI = True
-except ImportError:
+except ImportError:  # pragma: no cover - import guard
     HAS_OPENAI = False
 
 logger = logging.getLogger(__name__)
@@ -33,21 +33,31 @@ class AIAnalysisService:
     """
     
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize with OpenAI API key."""
+        """Initialize with LLM provider configuration (OpenAI by default)."""
+        # Provider selection is centralized via env for future extensibility.
+        self.provider = os.getenv("LLM_PROVIDER", "openai").lower()
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.client = None
-        self.model = "gpt-4o-mini"  # Fast, capable model
-        
-        if not HAS_OPENAI:
-            logger.warning("OpenAI package not installed; AI analysis disabled")
-            return
-        
-        if self.api_key:
-            try:
-                self.client = OpenAI(api_key=self.api_key)
-                logger.info("OpenAI client initialized")
-            except Exception as e:
-                logger.error(f"Failed to initialize OpenAI: {e}")
+        # Default to a fast, capable OpenAI model; can be overridden via env.
+        self.model = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
+
+        if self.provider == "openai":
+            if not HAS_OPENAI:
+                logger.warning("OpenAI package not installed; AI analysis disabled")
+                return
+
+            if self.api_key:
+                try:
+                    self.client = OpenAI(api_key=self.api_key)
+                    logger.info("OpenAI client initialized")
+                except Exception as e:  # pragma: no cover - defensive
+                    logger.error(f"Failed to initialize OpenAI: {e}")
+        else:
+            # Placeholder for additional providers (local, Anthropic, etc.).
+            logger.warning(
+                "LLM_PROVIDER %r is not yet implemented; falling back to disabled AI.",
+                self.provider,
+            )
     
     def analyze_price_chart(
         self,
@@ -67,7 +77,7 @@ class AIAnalysisService:
             Plain-English analysis
         """
         if not self.client:
-            return "AI analysis unavailable (OpenAI not configured)"
+            return "AI analysis unavailable (LLM provider not configured)"
         
         try:
             # Extract key price metrics

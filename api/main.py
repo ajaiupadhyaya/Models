@@ -24,7 +24,14 @@ sys.path.insert(0, str(project_root))
 
 # Lazy load routers to avoid import cascade issues
 def get_routers():
-    """Lazy load all API routers."""
+    """
+    Lazy load API routers for the core domains.
+
+    The goal is to expose a clean, focused surface for the
+    Bloomberg-style terminal while keeping advanced/institutional
+    endpoints available but out of the default path.
+    """
+    # Core domain routers
     from api.models_api import router as models_router
     from api.predictions_api import router as predictions_router
     from api.backtesting_api import router as backtesting_router
@@ -33,9 +40,47 @@ def get_routers():
     from api.paper_trading_api import router as paper_trading_router
     from api.investor_reports_api import router as investor_reports_router
     from api.company_analysis_api import router as company_analysis_router
-    from api.ai_analysis_api import router as ai_analysis_router
-    from api.automation_api import router as automation_router
-    return models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router, investor_reports_router, company_analysis_router, ai_analysis_router, automation_router
+    from api.ai_analysis_api import router as ai_router
+
+    routers = {
+        "models": models_router,
+        "predictions": predictions_router,
+        "backtesting": backtesting_router,
+        "websocket": websocket_router,
+        "monitoring": monitoring_router,
+        "paper_trading": paper_trading_router,
+        "investor_reports": investor_reports_router,
+        "company": company_analysis_router,
+        "ai": ai_router,
+    }
+
+    try:
+        from api.automation_api import router as automation_router
+        routers["automation"] = automation_router
+    except Exception as e:
+        logger.info(f"Automation router not available: {e}")
+    try:
+        from api.orchestrator_api import router as orchestrator_router
+        routers["orchestrator"] = orchestrator_router
+    except Exception as e:
+        logger.info(f"Orchestrator router not available: {e}")
+
+    # Advanced / institutional-grade routers stay importable but are not
+    # part of the default core surface. They can still be mounted
+    # manually from a custom main if desired.
+    try:
+        from api.comprehensive_api import router as comprehensive_router  # type: ignore
+        routers["comprehensive"] = comprehensive_router
+    except Exception as e:
+        logger.info(f"Comprehensive router not available: {e}")
+
+    try:
+        from api.institutional_api import router as institutional_router  # type: ignore
+        routers["institutional"] = institutional_router
+    except Exception as e:
+        logger.info(f"Institutional router not available: {e}")
+
+    return routers
 
 def get_managers():
     """Lazy load connection and metrics managers."""
@@ -186,14 +231,26 @@ async def health_check() -> Dict[str, Any]:
 @app.get("/info", tags=["Health"])
 async def system_info() -> Dict[str, Any]:
     """
-    Get detailed system information.
+    Get detailed system information including loaded routers and capabilities.
     
     Returns:
-        dict: Detailed system status
+        dict: Detailed system status (AI, ML, RL, DL, WebSocket, etc.)
     """
     try:
+        routers_loaded = app_state.get("routers_loaded", [])
+        capabilities = []
+        if "ai" in routers_loaded:
+            capabilities.append("ai")
+        if "predictions" in routers_loaded:
+            capabilities.append("ml")
+        if "orchestrator" in routers_loaded or "automation" in routers_loaded:
+            capabilities.append("rl")
+        if "predictions" in routers_loaded:
+            capabilities.append("dl")
         return {
             "api_version": "1.0.0",
+            "routers_loaded": routers_loaded,
+            "capabilities": capabilities,
             "models": {
                 "loaded": list(app_state["models"].keys()),
                 "count": len(app_state["models"])
@@ -217,18 +274,31 @@ async def system_info() -> Dict[str, Any]:
 
 # Include routers
 try:
-    models_router, predictions_router, backtesting_router, websocket_router, monitoring_router, paper_trading_router, investor_reports_router, company_analysis_router, ai_analysis_router, automation_router = get_routers()
-    app.include_router(models_router, prefix="/api/v1/models", tags=["Models"])
-    app.include_router(predictions_router, prefix="/api/v1/predictions", tags=["Predictions"])
-    app.include_router(backtesting_router, prefix="/api/v1/backtest", tags=["Backtesting"])
-    app.include_router(websocket_router, prefix="/api/v1/ws", tags=["WebSocket"])
-    app.include_router(monitoring_router, prefix="/api/v1/monitoring", tags=["Monitoring"])
-    app.include_router(paper_trading_router, prefix="/api/v1/paper-trading", tags=["Paper Trading"])
-    app.include_router(investor_reports_router, tags=["Investor Reports"])
-    app.include_router(company_analysis_router, prefix="/api/v1/company", tags=["Company Analysis"])
-    app.include_router(ai_analysis_router, tags=["AI Analysis"])
-    app.include_router(automation_router, tags=["Automation"])
-    logger.info("All routers loaded successfully (including automation)")
+    routers = get_routers()
+    app_state["routers_loaded"] = list(routers.keys())
+
+    # Core domains
+    app.include_router(routers["models"], prefix="/api/v1/models", tags=["Models"])
+    app.include_router(routers["predictions"], prefix="/api/v1/predictions", tags=["Predictions"])
+    app.include_router(routers["backtesting"], prefix="/api/v1/backtest", tags=["Backtesting"])
+    app.include_router(routers["websocket"], prefix="/api/v1/ws", tags=["WebSocket"])
+    app.include_router(routers["monitoring"], prefix="/api/v1/monitoring", tags=["Monitoring"])
+    app.include_router(routers["paper_trading"], prefix="/api/v1/paper-trading", tags=["Paper Trading"])
+    app.include_router(routers["investor_reports"], tags=["Investor Reports"])
+    app.include_router(routers["company"], prefix="/api/v1/company", tags=["Company Analysis"])
+    app.include_router(routers["ai"], tags=["AI"])
+    if "automation" in routers:
+        app.include_router(routers["automation"], tags=["Automation"])
+    if "orchestrator" in routers:
+        app.include_router(routers["orchestrator"], tags=["Orchestrator"])
+
+    # Advanced / optional domains
+    if "comprehensive" in routers:
+        app.include_router(routers["comprehensive"], tags=["Comprehensive"])
+    if "institutional" in routers:
+        app.include_router(routers["institutional"], tags=["Institutional"])
+
+    logger.info("Routers loaded successfully")
 except Exception as e:
     logger.warning(f"Failed to load some routers: {e}")
     # Continue anyway - some routers can fail

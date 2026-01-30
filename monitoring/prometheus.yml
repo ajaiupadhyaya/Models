@@ -1,0 +1,11 @@
+# Prometheus configuration for Trading ML API
+# Used by docker-compose. Add API scrape_config when /metrics is exposed in Prometheus exposition format.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

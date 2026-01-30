@@ -10,7 +10,7 @@
 - ✓ AI analysis service active (OpenAI integration verified)
 - ✓ Alpaca trading integration ready
 - ✓ API endpoints configured
-- ✓ Dashboard module loaded
+- ✓ React terminal frontend (Vite + D3)
 
 ---
 
@@ -19,31 +19,35 @@
 ### 1. Activate the Virtual Environment
 
 ```bash
-cd /Users/ajaiupadhyaya/Documents/Models
+cd <project_root>   # e.g. /Users/ajaiupadhyaya/Documents/Models
 source venv/bin/activate
-# or directly with Python 3.11:
-alias py311="/Users/ajaiupadhyaya/Documents/Models/venv/bin/python3.11"
+# or use the venv Python directly:
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### 2. Start the API Server
 
 ```bash
-py311 -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 # or use the provided script:
 bash start-api.sh
 ```
 
 **API Documentation**: http://localhost:8000/docs
 
-### 3. Start the Dashboard
+**Important:** The frontend proxies `/api` to `http://localhost:8000`. Start the API first, then the frontend. For automation and orchestrator (RL, scheduled jobs), ensure `schedule` is installed: `pip install schedule` (included in `requirements.txt`).
 
-In a new terminal:
+### 3. Start the Bloomberg-Style Terminal (React Frontend)
+
+In a **new terminal**, from the project root:
 
 ```bash
-py311 run_dashboard.py
+cd frontend
+npm install
+npm run dev
 ```
 
-**Dashboard**: http://localhost:8050
+Open the URL shown (typically **http://localhost:5173**) in your browser. You will see the terminal with Market Overview, Primary Instrument chart, Portfolio panel, and AI Assistant.
 
 ---
 
@@ -182,7 +186,7 @@ AI_ANALYSIS_ENABLED=true
 Run the complete system validation:
 
 ```bash
-py311 automation/validate_live.py
+python automation/validate_live.py
 ```
 
 Expected output:
@@ -195,7 +199,7 @@ Expected output:
 ✓ PASS     AI Analysis
 ✓ PASS     Alpaca Integration
 ✓ PASS     API Endpoints
-✓ PASS     Dashboard
+✓ PASS     (Frontend: build with cd frontend && npm run build)
 
 Result: 9/9 checks passed
 ✅ ALL SYSTEMS OPERATIONAL - Ready to trade!
@@ -274,17 +278,18 @@ report = reporter.generate_executive_summary(
 
 ### "ModuleNotFoundError: No module named 'pandas'"
 ```bash
-# Ensure you're using the right Python:
-/Users/ajaiupadhyaya/Documents/Models/venv/bin/python3.11 -c "import pandas; print(pandas.__version__)"
+# Ensure you're using the right Python (from project root with venv activated):
+python -c "import pandas; print(pandas.__version__)"
 
 # If not working, reinstall dependencies:
-/Users/ajaiupadhyaya/Documents/Models/venv/bin/python3.11 -m pip install --upgrade pandas numpy tensorflow-macos
+pip install -r requirements.txt
+# For full API/ML stack including LSTM: pip install -r requirements-api.txt
 ```
 
 ### "TensorFlow errors on M2 Mac"
 ```bash
-# Ensure you have both packages:
-/Users/ajaiupadhyaya/Documents/Models/venv/bin/python3.11 -m pip install tensorflow-macos==2.16.2 tensorflow-metal==1.2.0
+# Optional: use TensorFlow macOS build for Apple Silicon:
+pip install tensorflow-macos tensorflow-metal
 ```
 
 ### "OpenAI API rate limit"

@@ -13,8 +13,8 @@ from pathlib import Path
 
 class ProjectLauncher:
     def __init__(self):
-        self.venv_python = "/Users/ajaiupadhyaya/Documents/Models/venv/bin/python"
-        self.project_root = Path("/Users/ajaiupadhyaya/Documents/Models")
+        self.venv_python = sys.executable
+        self.project_root = Path(__file__).resolve().parent
         self.results = {
             "environment": {},
             "dependencies": {},
