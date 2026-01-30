@@ -22,6 +22,7 @@ data/*.csv
 data/*.xlsx
 data/*.parquet
 data/*.h5
+data/cache/
 *.db
 *.sqlite
 

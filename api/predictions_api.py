@@ -160,6 +160,37 @@ def fetch_recent_data(symbol: str, days: int = 60) -> pd.DataFrame:
 
 # API Endpoints
 
+@router.get("/quick-predict")
+async def quick_predict(symbol: str = "AAPL", days_lookback: int = 60) -> Dict[str, Any]:
+    """
+    On-the-fly ML prediction without pre-loaded models.
+    Trains EnsemblePredictor on recent data and returns signal and recommendation.
+    Used by the terminal to show ML/DL capability without requiring model training first.
+    """
+    try:
+        from models.ml.advanced_trading import EnsemblePredictor
+        data = fetch_recent_data(symbol, days_lookback)
+        if data.empty or len(data) < 20:
+            return {"symbol": symbol, "error": "Insufficient data", "signal": 0.0, "recommendation": "HOLD"}
+        model = EnsemblePredictor(lookback_window=20)
+        model.train(data)
+        pred = model.predict(data)
+        signal_val = float(pred[-1]) if len(pred) else 0.0
+        rec = get_recommendation(signal_val, 0.65)
+        current_price = float(data["Close"].iloc[-1])
+        return {
+            "symbol": symbol,
+            "signal": signal_val,
+            "recommendation": rec,
+            "current_price": current_price,
+            "timestamp": datetime.now().isoformat(),
+            "model": "ensemble_on_the_fly",
+        }
+    except Exception as e:
+        logger.warning(f"Quick predict failed for {symbol}: {e}")
+        return {"symbol": symbol, "error": str(e), "signal": 0.0, "recommendation": "HOLD"}
+
+
 @router.post("/predict", response_model=PredictionResponse)
 async def predict(request: PredictionRequest) -> PredictionResponse:
     """

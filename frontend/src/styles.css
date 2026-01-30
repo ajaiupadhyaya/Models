@@ -1,0 +1,163 @@
+:root {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --bg-panel: #161b22;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --text-soft: #8b949e;
+  --accent: #58a6ff;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.terminal-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #090c10;
+}
+
+.terminal-title {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.terminal-status {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.terminal-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 320px;
+  gap: 10px;
+  padding: 10px;
+}
+
+.panel {
+  background: var(--bg-panel);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-title {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  margin-bottom: 8px;
+}
+
+.panel-left {
+  min-height: 200px;
+}
+
+.panel-main {
+  margin-bottom: 8px;
+}
+
+.panel-main-secondary {
+  min-height: 140px;
+}
+
+.panel-right {
+  min-height: 260px;
+}
+
+.panel-body-muted {
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.chart-root {
+  flex: 1;
+}
+
+.panel-empty {
+  font-size: 13px;
+  color: var(--text-soft);
+  padding: 12px 4px;
+}
+
+.ai-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ai-input {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: #0d1117;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.ai-button {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  background: var(--accent);
+  color: #010409;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ai-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ai-output {
+  flex: 1;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text-soft);
+  background: #0b1015;
+  border-radius: 4px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .terminal-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel-right {
+    order: 3;
+  }
+}
+

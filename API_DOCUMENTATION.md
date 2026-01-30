@@ -56,11 +56,13 @@ curl http://localhost:8000/health
 ```
 
 #### `GET /info`
-Detailed system information
+Detailed system information including loaded routers and capabilities (AI, ML, RL, DL).
 
 ```bash
 curl http://localhost:8000/info
 ```
+
+**Response includes:** `routers_loaded`, `capabilities` (ai, ml, rl, dl), `models`, `websocket`, `monitoring`.
 
 ---
 
@@ -147,8 +149,17 @@ curl -X POST http://localhost:8000/api/v1/models/ensemble_spy/reload
 
 ### Predictions (`/api/v1/predictions`)
 
+#### `GET /api/v1/predictions/quick-predict`
+On-the-fly ML prediction without pre-loaded models. Trains EnsemblePredictor on recent data. Used by the terminal for ML visibility.
+
+```bash
+curl "http://localhost:8000/api/v1/predictions/quick-predict?symbol=AAPL&days_lookback=60"
+```
+
+**Response:** `symbol`, `signal`, `recommendation` (BUY/SELL/HOLD), `current_price`, `model: "ensemble_on_the_fly"`.
+
 #### `POST /api/v1/predictions/predict`
-Generate a single prediction
+Generate a single prediction (requires pre-loaded model)
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/predictions/predict \

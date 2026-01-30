@@ -102,11 +102,17 @@ Navigate to `notebooks/` for example models.
 - **High-Performance C++ Core**: 10-100x faster calculations for options pricing, Monte Carlo, and risk analytics
 - **Real-time Data**: Automatic fetching from FRED, Alpha Vantage, Yahoo Finance with intelligent caching
 - **Publication-Quality Visualizations**: NYT/Bloomberg/FT-inspired interactive charts
-- **Interactive Dashboards**: Real-time web-based analysis dashboards
+- **Bloomberg-Style Terminal**: React + D3 web terminal with market overview, charts, and AI assistant
 - **Institutional Models**: DCF, Black-Scholes, Portfolio Optimization, Risk Models
 - **Macro Analysis**: Economic indicators, unemployment, GDP, inflation, yield curves
 - **Report Generation**: Automated report and slide deck creation
 - **Trading Strategies**: Professional backtesting with transaction costs and slippage
+
+### API & AI/ML/RL/DL
+- **REST API**: FastAPI at `/api/v1` — models, predictions, backtest, AI, monitoring, WebSocket. See [API_DOCUMENTATION.md](API_DOCUMENTATION.md) and `http://localhost:8000/docs` when running.
+- **AI**: OpenAI-powered stock analysis, sentiment, and trading insight via `/api/v1/ai/*`.
+- **ML/DL**: Ensemble and LSTM on-the-fly predictions; `GET /api/v1/predictions/quick-predict` for ML signal without pre-loaded models.
+- **RL**: Orchestrator and automation endpoints use Stable-Baselines3 (PPO/DQN) when `schedule` is installed.
 
 ### Advanced Features
 - **Machine Learning**: Time series forecasting, regime detection, anomaly detection
@@ -168,11 +174,16 @@ mc = MonteCarloAccelerated()
 option_price = mc.price_european_option(100, 100, 1.0, 0.05, 0.2, True, 1000000)
 ```
 
-### Interactive Dashboard
+### Bloomberg-Style Terminal (Web UI)
 ```bash
-python run_dashboard.py
-# Opens at http://localhost:8050
+# Terminal 1: Start the API
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+# Terminal 2: Start the React frontend
+cd frontend && npm install && npm run dev
+# Opens at http://localhost:5173
 ```
+See [QUICK_START_LIVE.md](QUICK_START_LIVE.md) for full setup.
 
 ### Advanced Visualizations
 ```python

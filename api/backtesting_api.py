@@ -98,6 +98,41 @@ def get_app_state() -> Dict[str, Any]:
     return get_app_state()
 
 
+@router.get("/sample-data")
+async def get_sample_data(
+    symbol: str = "AAPL",
+    period: str = "3mo"
+) -> Dict[str, Any]:
+    """
+    Get OHLCV sample data for charting (used by frontend Primary Instrument).
+    Returns candles in format expected by the terminal candlestick chart.
+    """
+    try:
+        data = yf.download(symbol, period=period, progress=False, auto_adjust=True)
+        if data.empty or len(data) == 0:
+            return {"candles": [], "symbol": symbol, "error": "No data found"}
+        if isinstance(data.columns, pd.MultiIndex):
+            data = data.copy()
+            data.columns = data.columns.get_level_values(0)
+        close_col = "Close" if "Close" in data.columns else "Adj Close"
+        vol_col = "Volume" if "Volume" in data.columns else None
+        candles = [
+            {
+                "date": idx.strftime("%Y-%m-%d"),
+                "open": float(data["Open"].loc[idx]),
+                "high": float(data["High"].loc[idx]),
+                "low": float(data["Low"].loc[idx]),
+                "close": float(data[close_col].loc[idx]),
+                "volume": int(data[vol_col].loc[idx]) if vol_col else 0,
+            }
+            for idx in data.index
+        ]
+        return {"candles": candles, "symbol": symbol, "period": period}
+    except Exception as e:
+        logger.warning(f"Sample data fetch failed for {symbol}: {e}")
+        return {"candles": [], "symbol": symbol, "error": str(e)}
+
+
 # API Endpoints
 
 @router.post("/run", response_model=BacktestResponse)
