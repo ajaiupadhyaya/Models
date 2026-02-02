@@ -122,14 +122,13 @@ async def analyze_company(
 ):
     """
     Complete automated analysis of a company.
-    
-    Provides:
-    - Fundamental analysis (financials, ratios, metrics)
-    - DCF valuation (optional)
-    - Risk metrics (VaR, CVaR, beta, volatility)
-    - Technical analysis (trends, signals)
-    - Summary and recommendations
+    Cached 15 minutes per ticker and options (see api/cache.py).
     """
+    from api.cache import get_cached, set_cached, cache_key, CACHE_TTL_COMPANY_ANALYZE
+    key = cache_key("company", "analyze", ticker, str(include_dcf), str(include_risk), str(include_technicals), period)
+    cached = get_cached(key)
+    if cached is not None:
+        return cached
     try:
         # Validate ticker
         searcher = CompanySearch()
@@ -186,6 +185,7 @@ async def analyze_company(
         response["summary"] = _generate_summary(response)
         
         logger.info(f"Analysis complete for {ticker}")
+        set_cached(key, response, CACHE_TTL_COMPANY_ANALYZE)
         return response
     
     except HTTPException:

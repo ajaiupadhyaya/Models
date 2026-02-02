@@ -33,7 +33,14 @@ export const FundamentalPanel: React.FC = () => {
     return (
       <section className="panel panel-main">
         <div className="panel-title">Fundamental: {primarySymbol}</div>
-        <div className="panel-body-muted">Loading…</div>
+        <div className="panel-skeleton">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div
+              key={i}
+              className={`panel-skeleton-line ${i % 3 === 0 ? "short" : i % 3 === 1 ? "medium" : ""}`}
+            />
+          ))}
+        </div>
       </section>
     );
   }

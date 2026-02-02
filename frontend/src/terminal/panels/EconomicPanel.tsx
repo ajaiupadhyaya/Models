@@ -36,7 +36,14 @@ export const EconomicPanel: React.FC = () => {
     return (
       <section className="panel panel-main">
         <div className="panel-title">Economic indicators</div>
-        <div className="panel-body-muted">Loading…</div>
+        <div className="panel-skeleton">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className={`panel-skeleton-line ${i % 2 === 0 ? "short" : "medium"}`}
+            />
+          ))}
+        </div>
       </section>
     );
   }

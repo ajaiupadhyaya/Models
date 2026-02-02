@@ -97,6 +97,12 @@ render blueprints validate ./render.yaml
 
 Use this before pushing if you change the Blueprint.
 
+## 8. Notify on Fail and health check (dashboard)
+
+- **Notify on Fail:** In the Render dashboard, open your service → **Settings** → enable **Notify on Fail** (email or Slack). You’ll get an alert when a deploy or health check fails.
+- **Health Check Path:** In **Settings**, set **Health Check Path** to `/health`. Render will call this to mark the service healthy; the API returns 200 from `/health` with no heavy work.
+- **Logs for runtime issues:** Use `render logs -r <SERVICE_ID> --limit 200 -o text --confirm` to inspect recent runtime logs (errors, request logs). For build logs, use `render deploys list <SERVICE_ID>` and select a deploy to view its build output.
+
 ---
 
 ## Quick reference for “build failed” debugging

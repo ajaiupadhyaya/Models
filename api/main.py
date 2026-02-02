@@ -202,6 +202,26 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         )
         return response
 
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Return 429 when IP exceeds rate limit for /api/* (skips /health, /docs, etc.)."""
+
+    async def dispatch(self, request: Request, call_next):
+        from api.rate_limit import check_rate_limit
+        allowed, retry_after = check_rate_limit(request)
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": "Too many requests",
+                    "detail": "Rate limit exceeded. Try again later.",
+                    "retry_after_seconds": retry_after,
+                },
+                headers={"Retry-After": str(retry_after)},
+            )
+        return await call_next(request)
+
+
 app.add_middleware(RequestLoggingMiddleware)
 
 # CORS middleware
@@ -212,6 +232,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limit (runs first on request; skip /health, /docs, etc.)
+app.add_middleware(RateLimitMiddleware)
 
 
 # Root endpoint (only when not serving built SPA)
@@ -235,28 +258,18 @@ if not serve_spa:
 @app.get("/health", tags=["Health"])
 async def health_check() -> Dict[str, Any]:
     """
-    Health check endpoint with system status.
-    
-    Returns:
-        dict: System health metrics
+    Lightweight health check for load balancers and Render.
+    Always returns 200 when the process is up; no DB or heavy work.
     """
-    try:
-        num_models = len(app_state["models"])
-        num_connections = (
-            len(app_state["connection_manager"].active_connections)
-            if app_state["connection_manager"]
-            else 0
-        )
-        
-        return {
-            "status": "healthy",
-            "models_loaded": num_models,
-            "active_connections": num_connections,
-            "metrics_collector": app_state["metrics_collector"] is not None,
-        }
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    num_models = len(app_state.get("models") or {})
+    conn_mgr = app_state.get("connection_manager")
+    num_connections = len(conn_mgr.active_connections) if conn_mgr else 0
+    return {
+        "status": "healthy",
+        "models_loaded": num_models,
+        "active_connections": num_connections,
+        "metrics_collector": app_state.get("metrics_collector") is not None,
+    }
 
 
 @app.get("/info", tags=["Health"])
@@ -303,8 +316,11 @@ async def system_info() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Include routers
+# Include routers — register auth first so POST /api/auth/login is never shadowed
 try:
+    from api.auth_api import router as auth_router
+    app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+
     routers = get_routers()
     app_state["routers_loaded"] = list(routers.keys())
 
@@ -320,10 +336,6 @@ try:
     app.include_router(routers["ai"], tags=["AI"])
     app.include_router(routers["data"], prefix="/api/v1/data", tags=["Data"])
     app.include_router(routers["risk"], prefix="/api/v1/risk", tags=["Risk"])
-
-    # Auth (terminal sign-in)
-    from api.auth_api import router as auth_router
-    app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 
     if "automation" in routers:
         app.include_router(routers["automation"], tags=["Automation"])
@@ -342,10 +354,18 @@ except Exception as e:
     # Continue anyway - some routers can fail
 
 # Serve built SPA when frontend/dist exists (Docker/production)
+# - Mount StaticFiles only at /assets (never at "/" — that would catch POST and return 405).
+# - SPA fallback: middleware only. Do NOT add a catch-all GET route: it would match path /api/auth/login
+#   and Starlette would return 405 for POST (path matched, method didn't). Middleware runs after
+#   routing, so POST /api/auth/login hits the auth route; only 404 GET gets index.html.
 if serve_spa:
     _spa_index = frontend_dist / "index.html"
+    _spa_assets = frontend_dist / "assets"
     _api_path_prefixes = ("/api", "/docs", "/redoc", "/openapi.json")
     _api_exact = ("/health", "/info")
+
+    if _spa_assets.exists():
+        app.mount("/assets", StaticFiles(directory=str(_spa_assets)), name="spa_assets")
 
     class SPAFallbackMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):
@@ -360,7 +380,6 @@ if serve_spa:
             return FileResponse(str(_spa_index), media_type="text/html")
 
     app.add_middleware(SPAFallbackMiddleware)
-    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="spa")
 
 # Error handlers
 @app.exception_handler(HTTPException)

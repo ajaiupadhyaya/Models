@@ -22,19 +22,13 @@ export const PanelErrorState: React.FC<PanelErrorStateProps> = ({
 }) => (
   <section className={sectionClassName}>
     <div className="panel-title">{title}</div>
-    <div className="panel-body-muted">
-      {error}
-      {hint && ` ${hint}`}
+    <div className="panel-error-box">
+      <span>{error}{hint ? ` ${hint}` : ""}</span>
+      {onRetry && (
+        <button type="button" className="ai-button" onClick={onRetry}>
+          Retry
+        </button>
+      )}
     </div>
-    {onRetry && (
-      <button
-        type="button"
-        className="ai-button"
-        onClick={onRetry}
-        style={{ marginTop: 8 }}
-      >
-        Retry
-      </button>
-    )}
   </section>
 );

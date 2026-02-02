@@ -214,6 +214,26 @@ If the build fails, use the **Render CLI** locally to fetch build logs so you (o
 
 Copy the failing part of the build log (especially the last 50–100 lines) and use it to fix the Dockerfile, dependencies, or config.
 
+### B2.9. Reliability and security (Render)
+
+**Health check**
+
+- In the Render dashboard, open your **Web Service** → **Settings**.
+- Under **Health Check Path**, set `/health`. Render will call this to mark the service healthy or unhealthy. The API returns 200 from `/health` with no heavy work.
+
+**Notify on fail**
+
+- In **Settings**, enable **Notify on Fail** (email or Slack). You’ll get an alert when a deploy or health check fails.
+
+**Secrets**
+
+- Keep all secrets only in **Environment** (e.g. `FRED_API_KEY`, `ALPHA_VANTAGE_API_KEY`, `OPENAI_API_KEY`, `TERMINAL_USER`, `TERMINAL_PASSWORD`, `AUTH_SECRET`). Never commit them to the repo.
+- If `AUTH_SECRET` or your password was ever in repo history or a backup, rotate them: generate a new secret (e.g. `openssl rand -hex 32`), set it in Render Environment, and redeploy. Optionally change `TERMINAL_PASSWORD` in Environment as well.
+
+**Rate limiting**
+
+- The API applies rate limiting per IP (e.g. 100 requests per minute for `/api/*`). If a client exceeds the limit, the API returns 429 with a `Retry-After` header. This protects external API quotas and reduces abuse.
+
 ---
 
 ## Option 3: Fly.io

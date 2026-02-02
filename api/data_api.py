@@ -34,7 +34,13 @@ async def get_macro() -> Dict[str, Any]:
     """
     Get macroeconomic indicators (FRED).
     Requires FRED_API_KEY. Returns series with latest values for dashboard.
+    Cached 10 minutes (see api/cache.py).
     """
+    from api.cache import get_cached, set_cached, cache_key, CACHE_TTL_MACRO
+    key = cache_key("data", "macro")
+    cached = get_cached(key)
+    if cached is not None:
+        return cached
     try:
         from core.data_fetcher import DataFetcher
         try:
@@ -71,7 +77,9 @@ async def get_macro() -> Dict[str, Any]:
             except Exception as e:
                 logger.warning(f"Macro series {sid} failed: {e}")
 
-        return {"series": series_list}
+        result = {"series": series_list}
+        set_cached(key, result, CACHE_TTL_MACRO)
+        return result
     except Exception as e:
         logger.warning(f"Macro endpoint failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
