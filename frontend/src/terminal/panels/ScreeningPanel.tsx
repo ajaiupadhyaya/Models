@@ -36,6 +36,9 @@ function parseScreener(json: unknown): ScreenRow[] | null {
   return Array.isArray(r?.results) ? r.results : [];
 }
 
+type SortKey = "symbol" | "name" | "sector" | "market_cap";
+type SortDir = "asc" | "desc";
+
 export const ScreeningPanel: React.FC = () => {
   const { primarySymbol, setPrimarySymbol } = useTerminal();
   const [selectedSector, setSelectedSector] = useState<string>("");
@@ -43,6 +46,8 @@ export const ScreeningPanel: React.FC = () => {
   const [screenerResults, setScreenerResults] = useState<ScreenRow[] | null>(null);
   const [screenerLoading, setScreenerLoading] = useState(false);
   const [screenerError, setScreenerError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("symbol");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const { data: sectorsList, error: sectorsError, loading: sectorsLoading, retry: sectorsRetry } = useFetchWithRetry<string[] | null>(
     "/api/v1/company/sectors",
@@ -90,13 +95,34 @@ export const ScreeningPanel: React.FC = () => {
       <PanelErrorState
         title="Screening & discovery"
         error={sectorsError}
-        hint="Ensure API is running."
+        hint="Try again or ensure the service is reachable."
         onRetry={sectorsRetry}
       />
     );
   }
 
-  const rows = screenerResults ?? [];
+  const rawRows = screenerResults ?? [];
+  const rows = [...rawRows].sort((a, b) => {
+    let va: string | number = a[sortKey] ?? "";
+    let vb: string | number = b[sortKey] ?? "";
+    if (sortKey === "market_cap") {
+      va = a.market_cap ?? 0;
+      vb = b.market_cap ?? 0;
+      return sortDir === "asc" ? (va as number) - (vb as number) : (vb as number) - (va as number);
+    }
+    const sa = String(va).toLowerCase();
+    const sb = String(vb).toLowerCase();
+    const cmp = sa < sb ? -1 : sa > sb ? 1 : 0;
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
 
   return (
     <section className="panel panel-main">
@@ -172,10 +198,22 @@ export const ScreeningPanel: React.FC = () => {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Symbol</th>
-                  <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Name</th>
-                  <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Sector</th>
-                  <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Market cap</th>
+                  {(["symbol", "name", "sector", "market_cap"] as SortKey[]).map((key) => (
+                    <th
+                      key={key}
+                      style={{
+                        textAlign: key === "market_cap" ? "right" : "left",
+                        color: "var(--text-soft)",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        userSelect: "none",
+                      }}
+                      onClick={() => toggleSort(key)}
+                    >
+                      {key === "market_cap" ? "Market cap" : key.charAt(0).toUpperCase() + key.slice(1)}
+                      {sortKey === key && (sortDir === "asc" ? " ↑" : " ↓")}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>

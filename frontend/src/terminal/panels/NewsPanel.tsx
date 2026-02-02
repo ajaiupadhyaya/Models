@@ -1,5 +1,6 @@
-import React from "react";
-import { useFetchWithRetry } from "../../hooks/useFetchWithRetry";
+import React, { useState, useCallback } from "react";
+import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
+import { resolveApiUrl } from "../../apiBase";
 import { useTerminal } from "../TerminalContext";
 import { PanelErrorState } from "./PanelErrorState";
 
@@ -24,6 +25,70 @@ function parseNewsResponse(json: unknown): { items: NewsItem[]; error?: string }
   const items = Array.isArray(r?.items) ? r.items : [];
   const error = typeof r?.error === "string" ? r.error : undefined;
   return { items, error };
+}
+
+function NewsItemRow({ item }: { item: NewsItem }) {
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const textToSummarize = (item.title ?? "") + (item.summary ? " " + item.summary : "");
+  const fetchSummary = useCallback(async () => {
+    if (!textToSummarize.trim()) return;
+    setSummarizing(true);
+    setAiSummary(null);
+    try {
+      const res = await fetch(resolveApiUrl("/api/v1/ai/summarize"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ text: textToSummarize.slice(0, 2000) }),
+      });
+      const json = await res.json().catch(() => ({}));
+      setAiSummary(json?.summary ?? (json?.error ? `— ${json.error}` : "—"));
+    } catch {
+      setAiSummary("— Request failed");
+    } finally {
+      setSummarizing(false);
+    }
+  }, [textToSummarize]);
+  return (
+    <li style={{ marginBottom: 8 }}>
+      {item.url ? (
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "var(--accent)", textDecoration: "none" }}
+        >
+          {item.title ?? item.summary ?? "—"}
+        </a>
+      ) : (
+        <span style={{ color: "var(--text)" }}>{item.title ?? item.summary ?? "—"}</span>
+      )}
+      {item.published && (
+        <span style={{ color: "var(--text-soft)", marginLeft: 8 }}>
+          {item.published.slice(0, 10)}
+        </span>
+      )}
+      {item.source && (
+        <span style={{ color: "var(--text-soft)", marginLeft: 4 }}>({item.source})</span>
+      )}
+      {textToSummarize.trim() && (
+        <div style={{ marginTop: 4 }}>
+          <button
+            type="button"
+            className="ai-button"
+            style={{ padding: "2px 6px", fontSize: 10 }}
+            disabled={summarizing}
+            onClick={fetchSummary}
+          >
+            {summarizing ? "…" : "AI Summarize"}
+          </button>
+          {aiSummary != null && (
+            <div style={{ color: "var(--text-soft)", fontSize: 11, marginTop: 4 }}>{aiSummary}</div>
+          )}
+        </div>
+      )}
+    </li>
+  );
 }
 
 export const NewsPanel: React.FC = () => {
@@ -52,7 +117,7 @@ export const NewsPanel: React.FC = () => {
       <PanelErrorState
         title={`News: ${primarySymbol}`}
         error={error}
-        hint="Ensure API is running. For real headlines set FINNHUB_API_KEY (see .env.example)."
+        hint="Try again. For real headlines set FINNHUB_API_KEY on the server."
         onRetry={retry}
       />
     );
@@ -70,28 +135,7 @@ export const NewsPanel: React.FC = () => {
         {items.length > 0 ? (
           <ul style={{ margin: 0, paddingLeft: 18 }}>
             {items.slice(0, 15).map((item, i) => (
-              <li key={i} style={{ marginBottom: 8 }}>
-                {item.url ? (
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "var(--accent)", textDecoration: "none" }}
-                  >
-                    {item.title ?? item.summary ?? "—"}
-                  </a>
-                ) : (
-                  <span style={{ color: "var(--text)" }}>{item.title ?? item.summary ?? "—"}</span>
-                )}
-                {item.published && (
-                  <span style={{ color: "var(--text-soft)", marginLeft: 8 }}>
-                    {item.published.slice(0, 10)}
-                  </span>
-                )}
-                {item.source && (
-                  <span style={{ color: "var(--text-soft)", marginLeft: 4 }}>({item.source})</span>
-                )}
-              </li>
+              <NewsItemRow key={i} item={item} />
             ))}
           </ul>
         ) : (

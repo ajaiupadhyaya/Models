@@ -133,7 +133,7 @@ def load_model_metadata(model_name: str) -> Optional[Dict[str, Any]]:
 async def load_saved_models() -> Dict[str, Any]:
     """Load all saved models from disk."""
     loaded = {}
-    
+
     try:
         for metadata_file in MODELS_DIR.glob("*_metadata.json"):
             model_name = metadata_file.stem.replace("_metadata", "")
@@ -159,7 +159,7 @@ async def load_saved_models() -> Dict[str, Any]:
     
     except Exception as e:
         logger.error(f"Error loading models: {e}")
-    
+
     return loaded
 
 

@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from typing import Dict, Any, List, Optional
 import logging
 import sys
+import time
 from pathlib import Path
 
 # Add project root to path
@@ -133,7 +134,7 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("Starting API server...")
-    
+
     # Load managers
     try:
         ConnectionManager_cls, MetricsCollector_cls = get_managers()
@@ -142,7 +143,7 @@ async def lifespan(app: FastAPI):
         logger.info("Connection manager and metrics collector initialized")
     except Exception as e:
         logger.warning(f"Could not initialize managers: {e}")
-    
+
     # Load models (if any saved models exist)
     try:
         from api.models_api import load_saved_models
@@ -151,7 +152,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"Loaded {len(loaded_models)} pre-trained models")
     except Exception as e:
         logger.warning(f"Could not load models: {e}")
-    
+
     logger.info("API server ready!")
     
     yield

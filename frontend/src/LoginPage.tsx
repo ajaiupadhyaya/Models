@@ -23,7 +23,12 @@ export function LoginPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.detail ?? "Invalid username or password");
+        const detail = typeof data.detail === "string" ? data.detail : "";
+        if (res.status === 503 && /auth|configured/i.test(detail)) {
+          setError("Auth not configured on server. Set TERMINAL_USER, TERMINAL_PASSWORD, and AUTH_SECRET in the server environment (e.g. Render dashboard).");
+        } else {
+          setError(detail || "Invalid username or password");
+        }
         return;
       }
       const data = await res.json();
@@ -34,7 +39,7 @@ export function LoginPage() {
         setError("Invalid response");
       }
     } catch (err) {
-      setError("Network error. Is the API running?");
+      setError("Connection failed. Please try again.");
     } finally {
       setLoading(false);
     }

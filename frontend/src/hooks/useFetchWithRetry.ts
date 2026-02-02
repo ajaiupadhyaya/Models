@@ -36,7 +36,7 @@ export function normalizeError(json: unknown, status: number): string {
     const e = (json as { error?: unknown }).error;
     if (e != null) return String(e);
   }
-  if (status === 0) return "Network error. Check API URL and CORS.";
+  if (status === 0) return "Connection failed. Please try again.";
   return status >= 400 ? `Request failed (${status})` : "Request failed";
 }
 

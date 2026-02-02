@@ -79,6 +79,18 @@ class CompareStrategiesRequest(BaseModel):
     initial_capital: float = Field(default=100000.0)
 
 
+class TechnicalBacktestRequest(BaseModel):
+    """Request for indicator-only (technical) strategy backtest."""
+    symbol: str = Field(description="Stock symbol")
+    start_date: str = Field(description="Start date YYYY-MM-DD")
+    end_date: Optional[str] = Field(None, description="End date YYYY-MM-DD")
+    strategy: str = Field(default="sma_cross", description="Strategy: sma_cross")
+    fast_period: int = Field(default=20, ge=2, le=100)
+    slow_period: int = Field(default=50, ge=2, le=200)
+    initial_capital: float = Field(default=100000.0)
+    commission: float = Field(default=0.001)
+
+
 class WalkForwardRequest(BaseModel):
     """Request for walk-forward analysis."""
     model_name: str = Field(description="Name of the model")
@@ -166,6 +178,79 @@ async def get_sample_data(
     except Exception as e:
         logger.warning(f"Sample data fetch failed for {symbol}: {e}")
         return {"candles": [], "symbol": symbol, "error": str(e)}
+
+
+@router.post("/technical", response_model=BacktestResponse)
+async def run_technical_backtest(request: TechnicalBacktestRequest) -> BacktestResponse:
+    """
+    Run a technical (indicator-only) strategy backtest (e.g. SMA crossover).
+    No ML model required; used by Technical/Quant tab for strategy validation.
+    """
+    try:
+        data = yf.download(
+            request.symbol,
+            start=request.start_date,
+            end=request.end_date or datetime.now().strftime("%Y-%m-%d"),
+            progress=False,
+            auto_adjust=True,
+        )
+        if data.empty or len(data) < max(request.fast_period, request.slow_period):
+            raise HTTPException(status_code=400, detail="Insufficient price data for period")
+        if isinstance(data.columns, pd.MultiIndex):
+            data = data.copy()
+            data.columns = data.columns.get_level_values(0)
+        close = data["Close"] if "Close" in data.columns else data.iloc[:, 3]
+        fast = close.rolling(request.fast_period, min_periods=request.fast_period).mean()
+        slow = close.rolling(request.slow_period, min_periods=request.slow_period).mean()
+        signals_array = np.where(fast > slow, 1.0, -1.0)
+        signals_array = np.nan_to_num(signals_array, nan=0.0)
+        use_inst = get_settings().backtest.use_institutional_default if get_settings() else False
+        if use_inst and InstitutionalBacktestEngine is not None:
+            engine = InstitutionalBacktestEngine(
+                initial_capital=request.initial_capital,
+                commission=request.commission,
+                slippage=0.0005,
+                market_impact_alpha=0.5,
+            )
+        else:
+            engine = BacktestEngine(
+                initial_capital=request.initial_capital,
+                commission=request.commission,
+            )
+        results = engine.run_backtest(data, signals_array, signal_threshold=0.0, position_size=0.2)
+        eq_curve = getattr(engine, "equity_curve", [])
+        eq_dates = data.index[: len(eq_curve)] if len(eq_curve) <= len(data) else data.index
+        equity_curve = [
+            {"date": (eq_dates[i] if i < len(eq_dates) else data.index[-1]).strftime("%Y-%m-%d"), "equity": float(eq)}
+            for i, eq in enumerate(eq_curve)
+        ]
+        trades_list = getattr(engine, "trades", [])
+        trades = [
+            {
+                "entry_date": getattr(t, "entry_date", None).strftime("%Y-%m-%d") if getattr(t, "entry_date", None) is not None else "",
+                "exit_date": getattr(t, "exit_date", None).strftime("%Y-%m-%d") if getattr(t, "exit_date", None) is not None else None,
+                "entry_price": float(getattr(t, "entry_price", 0)),
+                "exit_price": float(getattr(t, "exit_price", 0)) if getattr(t, "exit_price", None) is not None else None,
+                "quantity": float(getattr(t, "quantity", 0)),
+                "pnl": float(getattr(t, "pnl", 0)) if getattr(t, "pnl", None) is not None else None,
+            }
+            for t in trades_list
+        ]
+        metrics = {k: float(v) for k, v in results.items() if isinstance(v, (int, float))}
+        return BacktestResponse(
+            model_name=f"sma_cross_{request.fast_period}_{request.slow_period}",
+            symbol=request.symbol,
+            period={"start": request.start_date, "end": request.end_date or "now"},
+            metrics=metrics,
+            equity_curve=equity_curve[-100:],
+            trades=trades,
+            status="success",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("Technical backtest failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # API Endpoints

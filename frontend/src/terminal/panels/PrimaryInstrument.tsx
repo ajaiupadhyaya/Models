@@ -239,7 +239,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
       d3.select(el)
         .append("div")
         .attr("class", "panel-empty")
-        .text(loading ? "Loading price data…" : (chartError ? "Price data temporarily unavailable. Check API on port 8000." : "No data"));
+        .text(loading ? "Loading price data…" : (chartError ? "Price data unavailable. Try again." : "No data"));
       return;
     }
 
@@ -536,11 +536,91 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
     zoomable.call(zoom as unknown as (selection: d3.Selection<SVGGElement, unknown, null, undefined>) => void);
   }, [data, loading, chartError, smaOverlay, showRsiPanel, rsi14, showBollinger, bollingerData, showMacdPanel, macdData, showAtrPanel, atrData]);
 
+  const inlineCssVarsInSvgString = (svgString: string): string => {
+    const root = document.documentElement;
+    const getVar = (name: string) => getComputedStyle(root).getPropertyValue(name).trim() || name;
+    const vars: Record<string, string> = {
+      "var(--accent)": getVar("--accent"),
+      "var(--text)": getVar("--text"),
+      "var(--text-soft)": getVar("--text-soft"),
+      "var(--accent-green)": getVar("--accent-green"),
+      "var(--accent-red)": getVar("--accent-red"),
+      "var(--bg-panel)": getVar("--bg-panel"),
+      "var(--border)": getVar("--border"),
+      "var(--font-mono)": getVar("--font-mono"),
+    };
+    let out = svgString;
+    for (const [k, v] of Object.entries(vars)) {
+      out = out.split(k).join(v || k);
+    }
+    return out;
+  };
+
+  const handleExportChart = (format: "svg" | "png" = "svg") => {
+    const svgEl = ref.current?.querySelector("svg");
+    if (!svgEl) return;
+    const serializer = new XMLSerializer();
+    let str = serializer.serializeToString(svgEl);
+    str = inlineCssVarsInSvgString(str);
+    if (format === "svg") {
+      const blob = new Blob([str], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `chart-${primarySymbol}-${timeframe}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    const img = new Image();
+    const blob = new Blob([str], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      const w = img.naturalWidth || 600;
+      const h = img.naturalHeight || 400;
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--bg-panel").trim() || "#1a1a1a";
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((b) => {
+        if (!b) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(b);
+        a.download = `chart-${primarySymbol}-${timeframe}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  };
+
   return (
     <section className="panel panel-main">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div className="panel-title">Primary Instrument: {primarySymbol}</div>
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          {data.length > 0 && (
+            <>
+              <button type="button" className="ai-button" style={{ padding: "4px 8px", fontSize: 11 }} onClick={() => handleExportChart("png")} title="Download chart as PNG">
+                Export PNG
+              </button>
+              <button type="button" className="ai-button" style={{ padding: "4px 8px", fontSize: 11 }} onClick={() => handleExportChart("svg")} title="Download chart as SVG">
+                Export SVG
+              </button>
+            </>
+          )}
           {indicatorOverlay === "none" && (
             <button
               type="button"
@@ -578,7 +658,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
       </div>
       {chartError && (
         <div className="panel-body-muted" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-          {chartError}. Check API on port 8000.
+          {chartError}. Try again or retry.
           <button type="button" className="ai-button" onClick={() => setRetryKey((k) => k + 1)}>Retry</button>
         </div>
       )}

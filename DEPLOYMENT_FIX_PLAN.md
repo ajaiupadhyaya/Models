@@ -4,6 +4,48 @@ This document summarizes fixes applied so that **every feature in the codebase i
 
 **Does this accomplish everything in `context.md`?** No. The fixes make the **existing** terminal and APIs deploy and run reliably (API base URL, errors, charts, Investor Reports entry). For a full gap between `context.md` and the codebase—what’s implemented vs partial vs missing—see **`CONTEXT_GAP_ANALYSIS.md`**.
 
+## Render: Where to set API keys (recommended)
+
+**Yes — you should set API keys in Render.** That is the correct and secure approach for production.
+
+- **Do not** commit API keys to the repo or hardcode them.
+- **Do** set them in the Render dashboard: open your service → **Environment** → add each variable.
+- The app reads all configuration from the environment via `config/settings.py` and `os.environ`; Render injects these at runtime, so keys set in Render are used automatically.
+
+**Keys to set in Render (Environment):**
+
+| Variable | Required for | Notes |
+|----------|--------------|--------|
+| `FRED_API_KEY` | Economic tab (macro, calendar, yield curve) | Get at fred.stlouisfed.org |
+| `OPENAI_API_KEY` | AI Insights, NL query, News summarization, Investor Reports | Enables full AI features |
+| `FINNHUB_API_KEY` | Real news headlines in News tab | Optional; without it, news may be placeholder |
+| `TERMINAL_USER` | Login (if you use auth) | Set with a strong username |
+| `TERMINAL_PASSWORD` | Login (if you use auth) | Set with a strong password |
+| `AUTH_SECRET` | JWT signing (if you use auth) | Long random string |
+
+**Optional:** `ALPHA_VANTAGE_API_KEY`, `BACKTEST_USE_INSTITUTIONAL_DEFAULT`, `ENABLE_PAPER_TRADING`, `ALPACA_*` for paper trading, etc. See `.env.example` for the full list.
+
+**Single service on Render:** The Dockerfile builds the frontend and serves it from the same app; no `VITE_API_ORIGIN` is needed. The health check uses `GET /health`; Render will mark the service healthy when that returns 200.
+
+---
+
+## Fixes for "Check API on port 8000" and site unusable
+
+1. **Removed all "port 8000" and "localhost" from user-facing copy**  
+   Every panel and hook now shows deployment-agnostic messages, e.g. "Check that the API is running and reachable." (PrimaryInstrument, FundamentalPanel, PortfolioPanel, AiAssistantPanel, useFetchWithRetry).
+
+2. **Auth when not configured**  
+   If you don't set `TERMINAL_USER` / `TERMINAL_PASSWORD` / `AUTH_SECRET` on Render, the app used to block at login (503). Now:
+   - **Backend:** `GET /api/auth/status` returns `{ "configured": false }` when auth env vars are missing.
+   - **Frontend:** When there is no token, the app calls `/api/auth/status`; if `configured === false`, it **allows access without login** so the terminal is usable. If auth is configured, login is required as before.
+   - **Login page:** 503 "Auth not configured" shows a clear message to set env vars; network errors show "Cannot reach API. Check that the service is running and reachable."
+
+3. **Vite proxy**  
+   `vite.config.ts` proxy target is documented as local-dev only; production build uses same origin (no proxy). Proxy target set to `127.0.0.1:8000` for clarity.
+
+4. **Same-origin on Render**  
+   All frontend `fetch` calls use `resolveApiUrl(path)`; when `VITE_API_ORIGIN` is unset (Docker/single service), requests go to the same origin, so the SPA and API on Render work without extra config.
+
 ## Problems Addressed
 
 1. **"Not found" errors** – API calls could 404 when frontend and API were on different origins, or when resources were missing; error messages were unclear.
@@ -92,13 +134,13 @@ Do not set `VITE_API_ORIGIN`. The app is served from the same origin as the API;
 | Fundamental          | ✅ Analysis + D3 price trend (1Y) |
 | Technical            | ✅ PrimaryInstrument with indicators |
 | Quant                | ✅ Models, backtest, walk-forward |
-| Economic             | ✅ Macro list + D3 macro chart + calendar |
-| News                 | ✅ Uses `/api/v1/data/news` (FINNHUB) |
-| Portfolio            | ✅ Dashboard, risk, stress, Investor reports block |
+| Economic             | ✅ Macro list + D3 macro chart + yield curve + correlation heatmap + calendar |
+| News                 | ✅ `/api/v1/data/news` (FINNHUB); AI Summarize per article |
+| Portfolio            | ✅ Dashboard, risk, stress, optimization block, Investor reports block |
 | Paper                | ✅ Health, positions, orders, execute-signal |
 | Automation           | ✅ Orchestrator status, run-cycle, retrain |
-| Screening            | ✅ Sectors, screener run |
-| AI                   | ✅ Stock analysis, NL query (right panel) |
+| Screening            | ✅ Sectors, screener run; sortable table + CSV export |
+| AI                   | ✅ Stock analysis, sentiment, price target + confidence, NL query (right panel) |
 | Investor Reports API | ✅ Exposed; UI entry in Portfolio + link to docs |
 
 All listed features are wired and operational; missing data (e.g. no FRED key) shows clear messaging instead of raw “not found” where applicable.

@@ -127,7 +127,7 @@ function InvestorReportsBlock() {
           {data.openai_configured ? " (OpenAI configured)." : " (Set OPENAI_API_KEY for generation)."}
         </>
       ) : (
-        <span>Check API /docs for report generation.</span>
+        <span>See <a href={docsUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>/docs</a> for report generation.</span>
       )}
       {" "}
       <a href={docsUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>API docs</a>
@@ -186,7 +186,7 @@ export const PortfolioPanel: React.FC = () => {
         sectionClassName="panel panel-main-secondary"
         title="Portfolio & Strategies"
         error={error}
-        hint="Start the API on port 8000 and ensure the frontend proxy is used (npm run dev)."
+        hint="Try again or ensure the service is reachable."
         onRetry={retry}
       />
     );
@@ -305,7 +305,7 @@ export const PortfolioPanel: React.FC = () => {
               </tbody>
             </table>
           )}
-          {!riskLoading && !riskError && !riskMetrics && <div className="panel-body-muted" style={{ fontSize: 11 }}>Risk API unavailable. Start API on port 8000.</div>}
+          {!riskLoading && !riskError && !riskMetrics && <div className="panel-body-muted" style={{ fontSize: 11 }}>Risk data unavailable. Try again or retry.</div>}
         </div>
         <div style={{ marginTop: 12, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
           <div style={{ color: "var(--accent)", marginBottom: 6 }}>Stress testing ({primarySymbol})</div>

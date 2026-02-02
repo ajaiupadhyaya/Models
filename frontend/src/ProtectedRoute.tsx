@@ -14,16 +14,25 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const token = getToken();
 
   useEffect(() => {
-    if (!token) {
-      setAuthenticated(false);
-      setChecked(true);
+    if (token) {
+      fetch(resolveApiUrl("/api/auth/me"), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => {
+          setAuthenticated(res.ok);
+          setChecked(true);
+        })
+        .catch(() => {
+          setAuthenticated(false);
+          setChecked(true);
+        });
       return;
     }
-    fetch(resolveApiUrl("/api/auth/me"), {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        setAuthenticated(res.ok);
+    // No token: check if auth is configured. If not, allow access so the app is usable.
+    fetch(resolveApiUrl("/api/auth/status"))
+      .then((res) => res.json().catch(() => ({ configured: true })))
+      .then((data) => {
+        setAuthenticated(data?.configured === false);
         setChecked(true);
       })
       .catch(() => {
