@@ -32,15 +32,27 @@ warnings.filterwarnings('ignore')
 load_dotenv()
 
 
+def _get_data_config() -> "tuple[object, object]":
+    """API keys from config if available, else env."""
+    try:
+        from config import get_settings
+        s = get_settings()
+        return (s.data.fred_api_key, s.data.alpha_vantage_api_key)
+    except ImportError:
+        return (os.getenv("FRED_API_KEY"), os.getenv("ALPHA_VANTAGE_API_KEY"))
+
+
 class DataFetcher:
     """
     Unified interface for fetching financial and economic data from multiple sources.
+    API keys are read from config (env-driven) when available.
     """
     
     def __init__(self):
-        """Initialize data fetcher with API keys from environment."""
-        self.fred_api_key = os.getenv('FRED_API_KEY')
-        self.alpha_vantage_key = os.getenv('ALPHA_VANTAGE_API_KEY')
+        """Initialize data fetcher with API keys from config or environment."""
+        fred_key, av_key = _get_data_config()
+        self.fred_api_key = fred_key if isinstance(fred_key, str) else None
+        self.alpha_vantage_key = av_key if isinstance(av_key, str) else None
         
         # Initialize clients
         self.fred = Fred(api_key=self.fred_api_key) if self.fred_api_key else None

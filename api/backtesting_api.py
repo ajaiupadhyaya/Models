@@ -8,7 +8,7 @@ Endpoints for running backtests through the API:
 - Parameter optimization
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 import logging
@@ -19,6 +19,11 @@ import sys
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+try:
+    from config import get_settings
+except ImportError:
+    get_settings = None  # type: ignore[misc, assignment]
 
 # Import directly to avoid cascade
 import importlib.util
@@ -32,6 +37,17 @@ spec.loader.exec_module(backtesting_module)
 BacktestEngine = backtesting_module.BacktestEngine
 BacktestSignal = backtesting_module.BacktestSignal
 WalkForwardAnalysis = backtesting_module.WalkForwardAnalysis
+
+try:
+    spec_inst = importlib.util.spec_from_file_location(
+        "institutional_backtesting",
+        project_root / "core" / "institutional_backtesting.py"
+    )
+    inst_module = importlib.util.module_from_spec(spec_inst)
+    spec_inst.loader.exec_module(inst_module)
+    InstitutionalBacktestEngine = inst_module.InstitutionalBacktestEngine
+except Exception:
+    InstitutionalBacktestEngine = None
 
 import yfinance as yf
 import pandas as pd
@@ -51,6 +67,7 @@ class BacktestRequest(BaseModel):
     initial_capital: float = Field(default=100000.0, description="Starting capital")
     commission: float = Field(default=0.001, description="Commission rate")
     position_size: float = Field(default=1.0, description="Position size (0-1)")
+    use_institutional: Optional[bool] = Field(default=None, description="Use institutional engine (default from BACKTEST_USE_INSTITUTIONAL_DEFAULT)")
 
 
 class CompareStrategiesRequest(BaseModel):
@@ -101,14 +118,32 @@ def get_app_state() -> Dict[str, Any]:
 @router.get("/sample-data")
 async def get_sample_data(
     symbol: str = "AAPL",
-    period: str = "3mo"
+    period: str = "3mo",
+    source: Optional[str] = Query(None, description="Data source: yfinance or data_fetcher (default from config)")
 ) -> Dict[str, Any]:
     """
     Get OHLCV sample data for charting (used by frontend Primary Instrument).
     Returns candles in format expected by the terminal candlestick chart.
+    Use source=data_fetcher when Alpha Vantage (or other) is configured for unified pipeline.
     """
     try:
-        data = yf.download(symbol, period=period, progress=False, auto_adjust=True)
+        source_val = source or (get_settings().data.sample_data_source_default if get_settings else "yfinance")
+        if source_val == "data_fetcher":
+            try:
+                from core.data_fetcher import DataFetcher
+                fetcher = DataFetcher()
+                data = fetcher.get_stock_data(symbol, period=period)
+                if data is None or data.empty:
+                    data = None
+            except Exception as e:
+                logger.info("DataFetcher failed for %s: %s, falling back to yfinance", symbol, e)
+                data = None
+        else:
+            data = None
+
+        if data is None or (isinstance(data, pd.DataFrame) and data.empty):
+            data = yf.download(symbol, period=period, progress=False, auto_adjust=True)
+
         if data.empty or len(data) == 0:
             return {"candles": [], "symbol": symbol, "error": "No data found"}
         if isinstance(data.columns, pd.MultiIndex):
@@ -221,28 +256,52 @@ async def run_backtest(request: BacktestRequest) -> BacktestResponse:
                         confidence=0.8
                     ))
         
+        # Align signals to data index (array of signal values per date)
+        signals_array = np.zeros(len(data))
+        if len(signals) == len(data):
+            for i in range(len(data)):
+                s = signals[i]
+                signals_array[i] = getattr(s, "signal", 0) if hasattr(s, "signal") else float(s)
+        else:
+            for i, date in enumerate(data.index):
+                for s in signals:
+                    if getattr(s, "date", None) == date:
+                        signals_array[i] = getattr(s, "signal", 0)
+                        break
+
         # Run backtest
         logger.info("Running backtest...")
-        engine = BacktestEngine(
-            initial_capital=request.initial_capital,
-            commission=request.commission,
-            position_size=request.position_size
-        )
-        
-        results = engine.run_backtest(data, signals)
-        
-        # Format response
-        equity_curve = [
-            {
-                "date": date.strftime("%Y-%m-%d"),
-                "equity": float(equity)
-            }
-            for date, equity in zip(
-                results["equity_curve"].index,
-                results["equity_curve"].values
+        use_inst_default = get_settings().backtest.use_institutional_default if get_settings else True
+        use_inst = (request.use_institutional if request.use_institutional is not None else use_inst_default) and InstitutionalBacktestEngine is not None
+        if use_inst:
+            engine = InstitutionalBacktestEngine(
+                initial_capital=request.initial_capital,
+                commission=request.commission,
+                slippage=0.0005,
+                market_impact_alpha=0.5
             )
+        else:
+            engine = BacktestEngine(
+                initial_capital=request.initial_capital,
+                commission=request.commission
+            )
+
+        results = engine.run_backtest(
+            data,
+            signals_array,
+            signal_threshold=0.3,
+            position_size=min(0.2, float(request.position_size))
+        )
+
+        # Format response from engine state (equity_curve and trades live on engine)
+        eq_curve = getattr(engine, "equity_curve", [])
+        eq_dates = data.index[: len(eq_curve)] if len(eq_curve) <= len(data) else data.index
+        equity_curve = [
+            {"date": (eq_dates[i] if i < len(eq_dates) else data.index[-1]).strftime("%Y-%m-%d"), "equity": float(eq)}
+            for i, eq in enumerate(eq_curve)
         ]
-        
+
+        trades_list = getattr(engine, "trades", [])
         trades = [
             {
                 "entry_date": trade.entry_date.strftime("%Y-%m-%d"),
@@ -250,16 +309,29 @@ async def run_backtest(request: BacktestRequest) -> BacktestResponse:
                 "entry_price": float(trade.entry_price),
                 "exit_price": float(trade.exit_price) if trade.exit_price else None,
                 "quantity": float(trade.quantity),
-                "pnl": float(trade.pnl) if trade.pnl else None,
-                "return_pct": float(trade.return_pct) if trade.return_pct else None
+                "pnl": float(getattr(trade, "pnl", 0)) if getattr(trade, "pnl", None) is not None else None,
+                "return_pct": float(getattr(trade, "pnl_pct", getattr(trade, "return_pct", 0))) if getattr(trade, "pnl_pct", None) is not None else None
             }
-            for trade in results["trades"]
+            for trade in trades_list
         ]
-        
-        metrics = {
-            key: float(value) if value is not None else None
-            for key, value in results["metrics"].items()
-        }
+
+        metrics = {}
+        for key, value in results.items():
+            if key in ("normality_test", "max_drawdown_details"):
+                continue
+            if value is None:
+                metrics[key] = None
+            elif isinstance(value, (int, float)):
+                metrics[key] = float(value)
+            elif isinstance(value, (list, dict)):
+                continue
+            else:
+                try:
+                    metrics[key] = float(value)
+                except (TypeError, ValueError):
+                    pass
+        if "normality_test" in results and isinstance(results["normality_test"], dict):
+            metrics["normality_test_passed"] = results["normality_test"].get("passed")
         
         return BacktestResponse(
             model_name=request.model_name,

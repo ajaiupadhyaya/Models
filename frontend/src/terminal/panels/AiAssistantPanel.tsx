@@ -1,29 +1,54 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useTerminal } from "../TerminalContext";
 
 export const AiAssistantPanel: React.FC = () => {
-  const [symbol, setSymbol] = useState("AAPL");
-  const [response, setResponse] = useState<string>("");
+  const { primarySymbol, lastAiQuery, setLastAiQuery, setAiResponse } = useTerminal();
+  const [manualResponse, setManualResponse] = useState<string>("");
+  const [symbol, setSymbol] = useState(primarySymbol);
   const [loading, setLoading] = useState(false);
 
-  const runAnalysis = async () => {
-    try {
-      setLoading(true);
-      setResponse("");
-      const res = await fetch(`/api/v1/ai/stock-analysis/${symbol}?include_prediction=true`);
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setResponse(`Error ${res.status}: ${json?.detail ?? res.statusText ?? "AI analysis failed"}. Ensure API is running and OPENAI_API_KEY is set.`);
-        return;
+  useEffect(() => {
+    setSymbol(primarySymbol);
+  }, [primarySymbol]);
+
+  const runAnalysis = useCallback(
+    async (sym: string, isCommandBarQuery?: boolean) => {
+      try {
+        setLoading(true);
+        if (!isCommandBarQuery) setManualResponse("");
+        const res = await fetch(`/api/v1/ai/stock-analysis/${sym}?include_prediction=true`);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = `Error ${res.status}: ${json?.detail ?? res.statusText ?? "AI analysis failed"}. Ensure API is running and OPENAI_API_KEY is set.`;
+          if (isCommandBarQuery) setAiResponse(msg);
+          else setManualResponse(msg);
+          return;
+        }
+        const analysis = json.technical_analysis ?? "";
+        const insight = json.trading_insight ?? {};
+        const trading = insight.reasoning ?? insight.recommendation ?? "";
+        const out = [analysis, trading ? `Trading: ${trading}` : ""].filter(Boolean).join("\n\n");
+        if (isCommandBarQuery) setAiResponse(out);
+        else setManualResponse(out);
+      } catch (err) {
+        const msg = "Unable to reach AI analysis endpoint. Start the API on port 8000 and use npm run dev so /api is proxied.";
+        if (isCommandBarQuery) setAiResponse(msg);
+        else setManualResponse(msg);
+      } finally {
+        setLoading(false);
       }
-      const analysis = json.technical_analysis ?? "";
-      const insight = json.trading_insight ?? {};
-      const trading = insight.reasoning ?? insight.recommendation ?? "";
-      setResponse([analysis, trading ? `Trading: ${trading}` : ""].filter(Boolean).join("\n\n"));
-    } catch (err) {
-      setResponse("Unable to reach AI analysis endpoint. Start the API on port 8000 and use npm run dev so /api is proxied.");
-    } finally {
-      setLoading(false);
-    }
+    },
+    [setAiResponse]
+  );
+
+  useEffect(() => {
+    if (!lastAiQuery?.q || lastAiQuery.a !== "") return;
+    runAnalysis(primarySymbol, true);
+  }, [lastAiQuery?.q, lastAiQuery?.a, primarySymbol, runAnalysis]);
+
+  const handleManualAnalyze = () => {
+    setLastAiQuery(null);
+    runAnalysis(symbol, false);
   };
 
   return (
@@ -33,15 +58,26 @@ export const AiAssistantPanel: React.FC = () => {
         <input
           className="ai-input"
           value={symbol}
-          onChange={e => setSymbol(e.target.value.toUpperCase())}
+          onChange={(e) => setSymbol(e.target.value.toUpperCase())}
           placeholder="Symbol"
         />
-        <button className="ai-button" onClick={runAnalysis} disabled={loading}>
+        <button className="ai-button" onClick={handleManualAnalyze} disabled={loading}>
           {loading ? "Analyzing…" : "Analyze"}
         </button>
       </div>
-      <pre className="ai-output">{response || "Ask the assistant about any symbol."}</pre>
+      <pre className="ai-output">
+        {lastAiQuery != null ? (
+          <>
+            <span style={{ color: "var(--accent)" }}>Q: </span>
+            {lastAiQuery.q}
+            {"\n\n"}
+            <span style={{ color: "var(--accent-green)" }}>A: </span>
+            {loading && lastAiQuery.a === "" ? "Analyzing…" : lastAiQuery.a || "—"}
+          </>
+        ) : (
+          manualResponse || "Ask the assistant about any symbol. Or use the command bar (e.g. type a question and Enter)."
+        )}
+      </pre>
     </section>
   );
 };
-

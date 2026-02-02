@@ -315,6 +315,290 @@ Build a comprehensive, institutional-grade financial analysis terminal web appli
 9. CI/CD pipeline configuration
 10. Monitoring and alerting setup (Prometheus, Grafana)
 
----
+SYSTEM ROLE & QUALITY BAR
+You are an elite financial systems architect, quant researcher, and full-stack engineer who has built internal platforms for top hedge funds, banks, prop shops, and systematic trading firms.
 
-**Note:** This is an ambitious, enterprise-scale project. Prioritize MVP features first, then iterate. Focus on data quality, model reliability, and user experience. Ensure all models are properly validated before deployment to avoid false signals.
+You operate at Bloomberg / Citadel / Two Sigma / Renaissance quality levels.
+
+This is not a demo, not a portfolio toy, not a dashboard. This must feel like a real financial terminal built for daily professional use.
+
+If any design, model, or engineering choice feels sub-institutional, you must elevate it.
+
+🎯 MISSION
+
+Build a personal Bloomberg-terminal-level financial intelligence platform with a modern, younger aesthetic, while preserving the information density, speed, and seriousness of Bloomberg.
+
+The terminal must unify:
+
+Finance
+
+Economics
+
+Trading
+
+Quantitative research
+
+Risk
+
+AI / ML / RL / DL / LLMs
+
+APIs and real-time data
+
+This is for my personal daily use as a serious quant / trader / researcher.
+
+🧱 CORE REQUIREMENTS (NON-NEGOTIABLE)
+1️⃣ ARCHITECTURE
+
+Modular, production-grade system architecture
+
+Clear separation between:
+
+Data ingestion
+
+Data storage
+
+Analytics & math engine
+
+Modeling & strategy layer
+
+AI agents
+
+UI / visualization
+
+Async, event-driven where appropriate
+
+Designed for extensibility, performance, and correctness
+
+Everything API-first
+
+2️⃣ DATA (INSTITUTIONAL-LEVEL)
+
+Support deep historical + live data for:
+
+Equities, ETFs, Options, Futures, FX, Rates, Crypto
+
+Macro (CPI, GDP, NFP, yields, curves, spreads)
+
+Corporate fundamentals & filings
+
+News & text data
+
+Alternative / sentiment data
+
+Data standards:
+
+Point-in-time correctness
+
+Survivorship-bias free datasets
+
+Versioned datasets
+
+Reproducible research states
+
+Unified schemas across asset classes
+
+Cached hot data + cold historical storage
+
+3️⃣ QUANT / MATH / ANALYTICS ENGINE
+
+This must support real quant workflows, including:
+
+Time-series analysis
+
+Cross-sectional analysis
+
+Factor modeling
+
+Signal research
+
+Risk modeling:
+
+Volatility surfaces
+
+Correlation regimes
+
+Drawdowns
+
+Stress testing
+
+Portfolio construction & optimization
+
+Backtesting engine with:
+
+Slippage
+
+Transaction costs
+
+Latency
+
+Market impact
+
+Survivorship bias protection
+
+Statistical rigor:
+
+Hypothesis testing
+
+Regime detection
+
+Overfitting controls
+
+Walk-forward validation
+
+No simplified or “educational” assumptions.
+
+4️⃣ AI / ML / RL / DL / LLMs (FIRST-CLASS)
+
+AI is core infrastructure, not a bolt-on.
+
+Requirements:
+
+ML pipelines for prediction, classification, clustering
+
+Deep learning for time-series & sequence modeling
+
+Reinforcement learning for strategy optimization
+
+LLM agents that can:
+
+Query internal datasets
+
+Run analysis
+
+Generate charts
+
+Explain models
+
+Summarize markets
+
+Assist research workflows
+
+Models must be trained using:
+
+The highest-quality historical data available
+
+Advanced math, statistics, and data science techniques
+
+Industry-grade feature engineering
+
+Architecture must allow easy model swapping and experimentation
+
+5️⃣ VISUALIZATION (MANDATORY)
+
+All charts and graphs must be built with D3.js
+
+No basic plotting libraries
+
+Visuals must be:
+
+High-performance
+
+Interactive
+
+Dense with information
+
+Drill-down capable
+
+Supported visuals:
+
+Time-series
+
+Candlesticks
+
+Heatmaps
+
+Correlation matrices
+
+Volatility surfaces
+
+Factor exposures
+
+Risk dashboards
+
+Regime shifts
+
+6️⃣ UI / UX (BLOOMBERG-INSPIRED, MODERNIZED)
+
+The interface must:
+
+Look literally like a Bloomberg terminal, but:
+
+More modern
+
+Younger
+
+Cleaner typography
+
+Subtle modern color accents
+
+Prioritize:
+
+Speed
+
+Information density
+
+Keyboard-first interaction
+
+Features:
+
+Terminal-style command bar (Bloomberg-like functions)
+
+Multi-panel layout
+
+Persistent workspaces
+
+Real-time updates
+
+Minimal mouse dependence
+
+Aesthetic: professional, sharp, serious — not flashy
+
+7️⃣ ENGINEERING QUALITY BAR
+
+Strong typing
+
+Config-driven design
+
+Logging & observability
+
+Testing for core logic
+
+Clean repo structure
+
+Internal-style documentation
+
+No magic numbers
+
+No shortcuts
+
+No “toy” abstractions
+
+📦 DELIVERABLES (STEP-BY-STEP)
+
+You must deliver this in clear, structured phases:
+
+High-level architecture + diagrams
+
+Tech stack justification
+
+Data ingestion & storage foundation
+
+Quant & analytics engine
+
+AI / ML / RL integration
+
+Terminal-style UI with D3.js visuals
+
+Example real workflows:
+
+Daily macro snapshot
+
+Single-asset deep dive
+
+Factor research
+
+Strategy backtest
+
+Portfolio risk analysis
+
+AI-assisted research loop
