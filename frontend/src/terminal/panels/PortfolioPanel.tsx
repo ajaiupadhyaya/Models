@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useFetchWithRetry } from "../../hooks/useFetchWithRetry";
+import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
 import { PanelErrorState } from "./PanelErrorState";
 
@@ -31,6 +31,18 @@ interface RiskMetrics {
   sharpe_ratio?: number;
 }
 
+interface StressScenario {
+  scenario_id?: string;
+  name?: string;
+  estimated_return_pct?: number;
+}
+
+interface StressResponse {
+  ticker?: string;
+  scenarios?: StressScenario[];
+  error?: string;
+}
+
 function parseDashboard(json: unknown): DashboardData | null {
   if (json && typeof json === "object" && "detail" in (json as object)) return null;
   return json as DashboardData;
@@ -39,6 +51,11 @@ function parseDashboard(json: unknown): DashboardData | null {
 function parseRisk(json: unknown): RiskMetrics | null {
   if (json && typeof json === "object" && "detail" in (json as object)) return null;
   return json as RiskMetrics;
+}
+
+function parseStress(json: unknown): StressResponse | null {
+  if (json && typeof json === "object" && "detail" in (json as object)) return null;
+  return json as StressResponse;
 }
 
 export const PortfolioPanel: React.FC = () => {
@@ -56,10 +73,16 @@ export const PortfolioPanel: React.FC = () => {
     deps: [primarySymbol],
   });
 
+  const stressUrl = `/api/v1/risk/stress?ticker=${encodeURIComponent(primarySymbol)}`;
+  const { data: stressData, error: stressError, loading: stressLoading, retry: stressRetry } = useFetchWithRetry<StressResponse | null>(stressUrl, {
+    parse: parseStress,
+    deps: [primarySymbol],
+  });
+
   useEffect(() => {
     const fetchQuickPredict = async () => {
       try {
-        const res = await fetch(`/api/v1/predictions/quick-predict?symbol=${primarySymbol}`);
+        const res = await fetch(`/api/v1/predictions/quick-predict?symbol=${primarySymbol}`, { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
         setQuickPredict(json?.error ? { error: json.error } : json);
       } catch {
@@ -206,6 +229,39 @@ export const PortfolioPanel: React.FC = () => {
             </table>
           )}
           {!riskLoading && !riskError && !riskMetrics && <div className="panel-body-muted" style={{ fontSize: 11 }}>Risk API unavailable. Start API on port 8000.</div>}
+        </div>
+        <div style={{ marginTop: 12, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+          <div style={{ color: "var(--accent)", marginBottom: 6 }}>Stress testing ({primarySymbol})</div>
+          {stressLoading && <div className="panel-body-muted" style={{ fontSize: 11 }}>Loading…</div>}
+          {!stressLoading && stressError && (
+            <div className="panel-body-muted" style={{ fontSize: 11 }}>
+              {stressError}
+              <button type="button" className="ai-button" style={{ marginLeft: 8 }} onClick={stressRetry}>Retry</button>
+            </div>
+          )}
+          {!stressLoading && stressData?.scenarios && stressData.scenarios.length > 0 && (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Scenario</th>
+                  <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Est. return %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stressData.scenarios.map((s, i) => (
+                  <tr key={i}>
+                    <td style={{ color: "var(--text)", padding: "2px 8px 2px 0" }}>{s.name ?? s.scenario_id ?? "—"}</td>
+                    <td className="num-mono" style={{ textAlign: "right", color: (s.estimated_return_pct ?? 0) < 0 ? "var(--accent-red)" : "var(--text)" }}>
+                      {s.estimated_return_pct != null ? `${s.estimated_return_pct.toFixed(2)}%` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {!stressLoading && stressData && (!stressData.scenarios || stressData.scenarios.length === 0) && !stressError && (
+            <div className="panel-body-muted" style={{ fontSize: 11 }}>No stress scenarios available.</div>
+          )}
         </div>
       </div>
     </section>

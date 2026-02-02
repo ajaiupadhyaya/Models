@@ -192,7 +192,17 @@ async def analyze_company(
         raise
     except Exception as e:
         logger.error(f"Analysis error for {ticker}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return valid shape so frontend stays operational
+        return CompanyAnalysisResponse(
+            ticker=ticker.upper(),
+            company_name=ticker.upper(),
+            analysis_date=datetime.now().isoformat(),
+            fundamental_analysis={"profile": {"name": ticker}, "financials": {}, "ratios": {}},
+            valuation={"error": str(e)},
+            risk_metrics={"error": str(e)},
+            technical_analysis=None,
+            summary={"error": str(e), "message": "Analysis failed. Check API and data sources."},
+        )
 
 
 @router.get("/sectors")

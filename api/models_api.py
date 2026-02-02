@@ -193,7 +193,7 @@ async def list_models() -> ModelListResponse:
     
     except Exception as e:
         logger.error(f"Failed to list models: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return ModelListResponse(models=[], count=0)
 
 
 @router.get("/{model_name}", response_model=ModelInfo)

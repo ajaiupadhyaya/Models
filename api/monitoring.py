@@ -408,10 +408,15 @@ async def get_dashboard_data() -> Dict[str, Any]:
         models = app_state.get("models", {})
         
         if not collector:
-            raise HTTPException(
-                status_code=503,
-                detail="Metrics collector not available"
-            )
+            return {
+                "timestamp": datetime.now().isoformat(),
+                "system": {},
+                "models": {},
+                "recent_predictions": [],
+                "recent_errors": [],
+                "active_models": 0,
+                "available_models": [],
+            }
         
         # Get system stats
         system_stats = collector.get_system_stats()
@@ -439,7 +444,15 @@ async def get_dashboard_data() -> Dict[str, Any]:
         raise
     except Exception as e:
         logger.error(f"Failed to get dashboard data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "system": {},
+            "models": {},
+            "recent_predictions": [],
+            "recent_errors": [],
+            "active_models": 0,
+            "available_models": [],
+        }
 
 
 @router.post("/save")

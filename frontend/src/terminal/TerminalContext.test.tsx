@@ -4,6 +4,8 @@ import React from "react";
 import { TerminalContext, useTerminal, MODULES_ORDER } from "./TerminalContext";
 import type { ActiveModule } from "./TerminalContext";
 
+const DEFAULT_WATCHLIST = ["AAPL", "MSFT", "GOOGL", "TSLA", "SPY", "QQQ"];
+
 function createWrapper(initialSymbol = "AAPL", initialModule: ActiveModule = "primary") {
   return function Wrapper({ children }: { children: React.ReactNode }) {
     const [primarySymbol, setPrimarySymbol] = React.useState(initialSymbol);
@@ -11,6 +13,7 @@ function createWrapper(initialSymbol = "AAPL", initialModule: ActiveModule = "pr
     const [lastAiQuery, setLastAiQuery] = React.useState<{ q: string; a: string } | null>(null);
     const [wsConnected, setWsConnected] = React.useState(false);
     const [lastBacktestSymbol, setLastBacktestSymbol] = React.useState<string | null>(null);
+    const [watchlist, setWatchlist] = React.useState<string[]>(DEFAULT_WATCHLIST);
     const value = {
       primarySymbol,
       setPrimarySymbol,
@@ -32,6 +35,8 @@ function createWrapper(initialSymbol = "AAPL", initialModule: ActiveModule = "pr
         const i = MODULES_ORDER.indexOf(activeModule);
         setActiveModule(MODULES_ORDER[(i - 1 + MODULES_ORDER.length) % MODULES_ORDER.length]!);
       },
+      watchlist,
+      setWatchlist,
     };
     return (
       <TerminalContext.Provider value={value}>

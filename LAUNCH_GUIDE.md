@@ -87,9 +87,11 @@ Edit `.env` and set at least:
 
 | Variable | Purpose |
 |----------|--------|
-| `FRED_API_KEY` | Macro/economic data — [get key](https://fred.stlouisfed.org/docs/api/api_key.html) |
-| `ALPHA_VANTAGE_API_KEY` | Market data — [get key](https://www.alphavantage.co/support/#api-key) |
-| `OPENAI_API_KEY` | AI analysis (optional but recommended) |
+| `FRED_API_KEY` | Macro data and economic calendar — [get key](https://fred.stlouisfed.org/docs/api/api_key.html) |
+| `ALPHA_VANTAGE_API_KEY` | Market data (optional; yfinance used by default) — [get key](https://www.alphavantage.co/support/#api-key) |
+| `FINNHUB_API_KEY` | Real news in News panel (optional) — [get key](https://finnhub.io/docs/api/introduction) |
+| `OPENAI_API_KEY` | AI analysis and NL query (optional but recommended) |
+| `ALPACA_API_KEY` / `ALPACA_API_SECRET` | Paper trading (optional) — [Alpaca](https://alpaca.markets/) |
 | `TERMINAL_USER` | Sign-in username (default: demo) |
 | `TERMINAL_PASSWORD` | Sign-in password (default: demo) |
 | `AUTH_SECRET` | JWT signing secret (set a long random string in production) |
@@ -167,6 +169,26 @@ curl http://localhost:8000/info
 python validate_environment.py
 python -m pytest tests/ -v
 ```
+
+---
+
+## 3.1 What you can do after launch
+
+Once the API and frontend are running, you can use the terminal to **train, trade, and analyze**:
+
+| Action | Where | Requirements |
+|--------|--------|--------------|
+| **Train a model** | Quant panel or command `TRAIN [ticker]` | API running; yfinance data |
+| **Run backtest** | Quant panel — Run backtest, Compare strategies, Walk-forward | At least one trained model |
+| **Paper trading** | Paper panel or command `PAPER` | ALPACA_API_KEY, ALPACA_API_SECRET (see .env.example) |
+| **Automation / Orchestrator** | Automation panel or command `AUTO` | Optional: schedule, stable-baselines3 |
+| **Real news** | News panel | FINNHUB_API_KEY (optional; see .env.example) |
+| **Screener** | Screening panel — sector, min market cap, Run screen | API; company database builds on first use |
+| **NL query** | Command bar — type a question (e.g. "What's driving tech stocks?") | OPENAI_API_KEY; macro/market data cached helps |
+| **Economic calendar** | Economic panel — "Economic calendar (upcoming)" | FRED_API_KEY |
+| **API documentation** | Swagger UI at **http://localhost:8000/docs** (or your API origin + `/docs`) | API running |
+
+See `.env.example` for all optional keys (Finnhub, Alpaca, OpenAI, etc.). Minimum to run: API + frontend; add keys to enable each feature.
 
 ---
 

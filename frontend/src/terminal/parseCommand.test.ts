@@ -38,6 +38,20 @@ describe("parseCommand", () => {
     expect(parseCommand("PORT")).toEqual({ type: "module", module: "portfolio" });
   });
 
+  it("parses PAPER as paper", () => {
+    expect(parseCommand("PAPER")).toEqual({ type: "module", module: "paper" });
+  });
+
+  it("parses AUTO and ORCH as automation", () => {
+    expect(parseCommand("AUTO")).toEqual({ type: "module", module: "automation" });
+    expect(parseCommand("ORCH")).toEqual({ type: "module", module: "automation" });
+  });
+
+  it("parses TRAIN as quant with optional ticker", () => {
+    expect(parseCommand("TRAIN")).toEqual({ type: "module", module: "quant" });
+    expect(parseCommand("TRAIN AAPL")).toEqual({ type: "module", module: "quant", symbol: "AAPL" });
+  });
+
   it("parses SCREEN as screening", () => {
     expect(parseCommand("SCREEN")).toEqual({ type: "module", module: "screening" });
   });

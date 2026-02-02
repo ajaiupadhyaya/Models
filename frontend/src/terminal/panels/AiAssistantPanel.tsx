@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useTerminal } from "../TerminalContext";
+import { getAuthHeaders } from "../../hooks/useFetchWithRetry";
+
+/** Single-word ticker-like (1–5 uppercase letters). */
+function looksLikeTicker(q: string): boolean {
+  const t = q.trim().toUpperCase();
+  return /^[A-Z]{1,5}$/.test(t) && t.length >= 1;
+}
 
 export const AiAssistantPanel: React.FC = () => {
   const { primarySymbol, lastAiQuery, setLastAiQuery, setAiResponse } = useTerminal();
@@ -16,7 +23,7 @@ export const AiAssistantPanel: React.FC = () => {
       try {
         setLoading(true);
         if (!isCommandBarQuery) setManualResponse("");
-        const res = await fetch(`/api/v1/ai/stock-analysis/${sym}?include_prediction=true`);
+        const res = await fetch(`/api/v1/ai/stock-analysis/${sym}?include_prediction=true`, { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
           const msg = `Error ${res.status}: ${json?.detail ?? res.statusText ?? "AI analysis failed"}. Ensure API is running and OPENAI_API_KEY is set.`;
@@ -41,10 +48,45 @@ export const AiAssistantPanel: React.FC = () => {
     [setAiResponse]
   );
 
+  const runNlQuery = useCallback(
+    async (question: string, isCommandBarQuery?: boolean) => {
+      try {
+        setLoading(true);
+        if (!isCommandBarQuery) setManualResponse("");
+        const res = await fetch(
+          `/api/v1/ai/nl-query?q=${encodeURIComponent(question)}`,
+          { headers: getAuthHeaders() }
+        );
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = `Error ${res.status}: ${json?.detail ?? res.statusText ?? "NL query failed"}.`;
+          if (isCommandBarQuery) setAiResponse(msg);
+          else setManualResponse(msg);
+          return;
+        }
+        const answer = json.answer ?? "No answer returned.";
+        if (isCommandBarQuery) setAiResponse(answer);
+        else setManualResponse(answer);
+      } catch (err) {
+        const msg = "Unable to reach NL query endpoint. Start the API on port 8000.";
+        if (isCommandBarQuery) setAiResponse(msg);
+        else setManualResponse(msg);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setAiResponse]
+  );
+
   useEffect(() => {
     if (!lastAiQuery?.q || lastAiQuery.a !== "") return;
-    runAnalysis(primarySymbol, true);
-  }, [lastAiQuery?.q, lastAiQuery?.a, primarySymbol, runAnalysis]);
+    const q = lastAiQuery.q.trim();
+    if (looksLikeTicker(q)) {
+      runAnalysis(q, true);
+    } else {
+      runNlQuery(q, true);
+    }
+  }, [lastAiQuery?.q, lastAiQuery?.a, runAnalysis, runNlQuery]);
 
   const handleManualAnalyze = () => {
     setLastAiQuery(null);

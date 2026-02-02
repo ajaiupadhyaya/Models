@@ -40,6 +40,15 @@ export function getRetryAfterSeconds(response: Response): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+const TOKEN_KEY = "terminal_token";
+
+/** Auth headers when user is logged in (same key as LoginPage). */
+export function getAuthHeaders(): Record<string, string> {
+  if (typeof localStorage === "undefined") return {};
+  const token = localStorage.getItem(TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 /** Optional client-side cache: last successful result per url, short TTL (30s). */
 const clientCache = new Map<string, { data: unknown; expiry: number }>();
 const CLIENT_CACHE_TTL_MS = 30_000;
@@ -99,8 +108,13 @@ export function useFetchWithRetry<T = unknown>(
 
     let attempt = 0;
 
+    const headers: Record<string, string> = {
+      ...(typeof (requestInit?.headers as Record<string, string> | undefined) === "object" && (requestInit?.headers as Record<string, string>) || {}),
+      ...getAuthHeaders(),
+    };
+    const init: RequestInit = { ...requestInit, headers };
     const doFetch = (): Promise<void> =>
-      fetch(url, requestInit)
+      fetch(url, init)
         .then(async (res) => {
           const json = await res.json().catch(() => ({}));
           const errMsg = normalizeError(json, res.status);

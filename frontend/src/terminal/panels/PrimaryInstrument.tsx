@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { useTerminal } from "../TerminalContext";
+import { getAuthHeaders } from "../../hooks/useFetchWithRetry";
 
 interface Candle {
   date: Date;
@@ -148,7 +149,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
     const fetchData = async () => {
       try {
         setChartError(null);
-        const res = await fetch(`/api/v1/backtest/sample-data?symbol=${primarySymbol}&period=${timeframe}`);
+        const res = await fetch(`/api/v1/backtest/sample-data?symbol=${primarySymbol}&period=${timeframe}`, { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
           setChartError(json?.error ?? json?.detail ?? `HTTP ${res.status}`);
