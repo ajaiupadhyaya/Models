@@ -15,7 +15,8 @@ To have the terminal **accessible on the internet** (no need to run anything on 
 5. Open that URL in a browser and sign in. The same image serves the terminal UI and the API from one URL; the app runs 24/7 on their servers.
 
 **→ Full steps:** [DEPLOY.md](DEPLOY.md) — Railway, Render, Fly.io, and VPS.  
-**→ Step-by-step (exact clicks and values):** [DEPLOYMENT_STEP_BY_STEP.md](DEPLOYMENT_STEP_BY_STEP.md).
+**→ Step-by-step (exact clicks and values):** [DEPLOYMENT_STEP_BY_STEP.md](DEPLOYMENT_STEP_BY_STEP.md).  
+**→ Next improvements (UI, security, reliability):** [TERMINAL_IMPROVEMENT_PLAN.md](TERMINAL_IMPROVEMENT_PLAN.md).
 
 Local development (two terminals or Docker) is below for contributors; the **final product** is a live web app you (and others) can use from any browser.
 

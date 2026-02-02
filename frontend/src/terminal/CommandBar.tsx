@@ -160,12 +160,13 @@ export const CommandBar: React.FC<CommandBarProps> = ({ onSubmit }) => {
           ref={inputRef}
           type="text"
           className="terminal-command-input"
-          placeholder="Ticker or command (e.g. AAPL, FA AAPL, ECO, ? for help)"
+          placeholder="Type a symbol or command (e.g. AAPL, FA AAPL, ECO, ? for help)"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={onKeyDown}
           aria-label="Command or ticker"
         />
+        <span className="terminal-command-hint" aria-hidden>⌘K</span>
       </form>
       {showHelp && (
         <div

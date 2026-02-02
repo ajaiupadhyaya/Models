@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
-import { useFetchWithRetry } from "./useFetchWithRetry";
+import { useFetchWithRetry, clearFetchCache } from "./useFetchWithRetry";
 
 describe("useFetchWithRetry", () => {
   beforeEach(() => {
+    clearFetchCache();
     vi.stubGlobal("fetch", vi.fn());
   });
 

@@ -70,8 +70,15 @@ export function LoginPage() {
           />
           {error && <p className="login-error">{error}</p>}
           <div className="login-actions">
-            <button type="submit" disabled={loading}>
-              {loading ? "Signing in…" : "Sign in"}
+            <button type="submit" disabled={loading} className={loading ? "login-loading" : ""}>
+              {loading ? (
+                <>
+                  <span className="login-spinner" aria-hidden />
+                  Signing in…
+                </>
+              ) : (
+                "Sign in"
+              )}
             </button>
             <button type="button" className="login-demo" onClick={handleDemo}>
               Use demo (demo / demo)

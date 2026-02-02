@@ -31,12 +31,13 @@ ai_service = get_ai_service()
 async def market_summary(symbols: str = Query("AAPL,MSFT,GOOGL", description="Comma-separated tickers")):
     """
     Analyze multiple stocks and provide AI-powered market summary.
-    
-    Returns:
-        - individual_analyses: Per-stock analysis
-        - market_sentiment: Overall market tone
-        - key_insights: Top 3 trends
+    Cached 5 minutes per symbol set (see api/cache.py).
     """
+    from api.cache import get_cached, set_cached, cache_key, CACHE_TTL_MARKET_SUMMARY
+    key = cache_key("ai", "market-summary", symbols)
+    cached = get_cached(key)
+    if cached is not None:
+        return cached
     try:
         symbol_list = [s.strip().upper() for s in symbols.split(",")]
         analyses = {}
@@ -68,12 +69,13 @@ async def market_summary(symbols: str = Query("AAPL,MSFT,GOOGL", description="Co
                 logger.error(f"Error analyzing {symbol}: {e}")
                 analyses[symbol] = {"error": str(e)}
         
-        return {
+        result = {
             "timestamp": datetime.now().isoformat(),
             "analyses": analyses,
             "market_tone": "Neutral - Run sentiment analysis for more"
         }
-    
+        set_cached(key, result, CACHE_TTL_MARKET_SUMMARY)
+        return result
     except Exception as e:
         logger.error(f"Market summary error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

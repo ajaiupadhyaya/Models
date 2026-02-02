@@ -219,7 +219,10 @@ export const TerminalShell: React.FC = () => {
       <div className="terminal-root">
         <header className="terminal-header">
           <div className="terminal-title">BLOOMBERG</div>
-          <div className="terminal-status">Backend: /api • FastAPI</div>
+          <div className="terminal-status">
+            <span className={`terminal-status-dot ${wsConnected ? "live" : ""}`} aria-hidden />
+            {wsConnected ? "Live" : "Connecting…"} • /api
+          </div>
         </header>
 
         <div className="terminal-command-row" style={{ position: "relative" }}>

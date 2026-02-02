@@ -15,7 +15,14 @@ export interface UseFetchWithRetryOptions<T> {
   retryOn5xxOnly?: boolean;
 }
 
-function normalizeError(json: unknown, status: number): string {
+/** User-friendly messages for 429 and 5xx (used by panels). */
+export function normalizeError(json: unknown, status: number): string {
+  if (status === 429) {
+    return "Too many requests. Try again in a minute.";
+  }
+  if (status >= 500 && status < 600) {
+    return "Data temporarily unavailable. Please try again.";
+  }
   if (json && typeof json === "object") {
     const d = (json as { detail?: unknown }).detail;
     if (d != null) return String(d);
@@ -23,6 +30,23 @@ function normalizeError(json: unknown, status: number): string {
     if (e != null) return String(e);
   }
   return status >= 400 ? `HTTP ${status}` : "Request failed";
+}
+
+/** Retry-After header in seconds (for optional countdown UI). */
+export function getRetryAfterSeconds(response: Response): number | null {
+  const h = response.headers.get("Retry-After");
+  if (h == null) return null;
+  const n = parseInt(h, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Optional client-side cache: last successful result per url, short TTL (30s). */
+const clientCache = new Map<string, { data: unknown; expiry: number }>();
+const CLIENT_CACHE_TTL_MS = 30_000;
+
+/** Clear client cache (e.g. for tests). */
+export function clearFetchCache(): void {
+  clientCache.clear();
 }
 
 export function useFetchWithRetry<T = unknown>(
@@ -33,6 +57,7 @@ export function useFetchWithRetry<T = unknown>(
   error: string | null;
   loading: boolean;
   retry: () => void;
+  retryAfterSeconds: number | null;
 } {
   const {
     requestInit,
@@ -47,17 +72,30 @@ export function useFetchWithRetry<T = unknown>(
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [retryKey, setRetryKey] = useState(0);
+  const [retryAfterSeconds, setRetryAfterSeconds] = useState<number | null>(null);
 
   const runFetch = useCallback(async () => {
     if (!url) {
       setLoading(false);
       setData(null);
       setError(null);
+      setRetryAfterSeconds(null);
+      return;
+    }
+
+    const now = Date.now();
+    const cached = clientCache.get(url);
+    if (cached && cached.expiry > now) {
+      setData(cached.data as T);
+      setError(null);
+      setLoading(false);
+      setRetryAfterSeconds(null);
       return;
     }
 
     setLoading(true);
     setError(null);
+    setRetryAfterSeconds(null);
 
     let attempt = 0;
 
@@ -72,6 +110,10 @@ export function useFetchWithRetry<T = unknown>(
             (retryOn5xxOnly ? is5xx : !res.ok);
 
           if (!res.ok) {
+            if (res.status === 429) {
+              const ra = getRetryAfterSeconds(res);
+              setRetryAfterSeconds(ra);
+            }
             if (shouldRetry) {
               attempt += 1;
               const delay = retryDelayMs * Math.pow(2, attempt - 1);
@@ -89,8 +131,11 @@ export function useFetchWithRetry<T = unknown>(
             setData(null);
             return;
           }
-          setData((parsed ?? json) as T);
+          const result = (parsed ?? json) as T;
+          setData(result);
           setError(null);
+          setRetryAfterSeconds(null);
+          clientCache.set(url, { data: result, expiry: Date.now() + CLIENT_CACHE_TTL_MS });
         })
         .catch((err: unknown) => {
           const message = err instanceof Error ? err.message : "Network error";
@@ -115,8 +160,9 @@ export function useFetchWithRetry<T = unknown>(
   }, [...effectiveDeps, retryKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const retry = useCallback(() => {
+    if (url) clientCache.delete(url);
     setRetryKey((k) => k + 1);
-  }, []);
+  }, [url]);
 
-  return { data, error, loading, retry };
+  return { data, error, loading, retry, retryAfterSeconds };
 }

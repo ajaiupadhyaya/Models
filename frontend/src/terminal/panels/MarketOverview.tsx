@@ -49,16 +49,23 @@ export const MarketOverview: React.FC = () => {
     <div className="panel panel-left">
       <div className="panel-title">Watchlist</div>
       {loading && symbols.length === 0 && !error && (
-        <div className="panel-body-muted" style={{ fontSize: 12 }}>Loading…</div>
+        <div className="panel-skeleton">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className={`panel-skeleton-line ${i % 3 === 0 ? "short" : i % 3 === 1 ? "medium" : ""}`}
+            />
+          ))}
+        </div>
       )}
       {error && (
-        <div className="panel-body-muted" style={{ fontSize: 11 }}>
-          {error}. Check that the API is running on port 8000.
-          <button type="button" className="ai-button" style={{ marginLeft: 8 }} onClick={retry}>Retry</button>
+        <div className="panel-error-inline">
+          <span>{error}</span>
+          <button type="button" className="ai-button" onClick={retry}>Retry</button>
         </div>
       )}
       {symbols.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div className="watchlist-rows">
           {symbols.map((row) => (
             <div
               key={row.symbol}
@@ -76,8 +83,8 @@ export const MarketOverview: React.FC = () => {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                padding: "6px 8px",
-                borderRadius: 2,
+                padding: "var(--space-2) var(--space-3)",
+                borderRadius: "var(--radius-sm)",
               }}
             >
               <span className="num-mono" style={{ color: "var(--accent)", fontWeight: 500 }}>
