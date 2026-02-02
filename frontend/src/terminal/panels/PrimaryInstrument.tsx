@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
+import { resolveApiUrl } from "../../apiBase";
 import { useTerminal } from "../TerminalContext";
 import { getAuthHeaders } from "../../hooks/useFetchWithRetry";
 
@@ -19,7 +20,7 @@ const TIMEFRAMES = [
   { label: "3M", period: "3mo" },
 ] as const;
 
-export type IndicatorOverlay = "none" | "sma20" | "sma50" | "rsi" | "macd" | "bollinger";
+export type IndicatorOverlay = "none" | "sma20" | "sma50" | "ema12" | "ema26" | "rsi" | "macd" | "bollinger" | "atr";
 
 function ema(data: Candle[], period: number): { date: Date; value: number }[] {
   const out: { date: Date; value: number }[] = [];
@@ -128,6 +129,28 @@ function bollinger(data: Candle[], period: number = 20, k: number = 2): Bollinge
   return out;
 }
 
+function atr(data: Candle[], period: number = 14): { date: Date; value: number }[] {
+  const out: { date: Date; value: number }[] = [];
+  if (data.length < period) return out;
+  const tr: number[] = [];
+  for (let i = 0; i < data.length; i++) {
+    const prev = data[i - 1];
+    const high = data[i]!.high;
+    const low = data[i]!.low;
+    const prevClose = prev ? prev.close : data[i]!.close;
+    const trVal = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+    tr.push(trVal);
+  }
+  const k = 2 / (period + 1);
+  let prevAtr = tr.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  out.push({ date: data[period - 1]!.date, value: prevAtr });
+  for (let i = period; i < data.length; i++) {
+    prevAtr = (tr[i]! - prevAtr) * k + prevAtr;
+    out.push({ date: data[i]!.date, value: prevAtr });
+  }
+  return out;
+}
+
 interface PrimaryInstrumentProps {
   indicatorOverlay?: IndicatorOverlay;
 }
@@ -149,7 +172,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
     const fetchData = async () => {
       try {
         setChartError(null);
-        const res = await fetch(`/api/v1/backtest/sample-data?symbol=${primarySymbol}&period=${timeframe}`, { headers: getAuthHeaders() });
+        const res = await fetch(resolveApiUrl(`/api/v1/backtest/sample-data?symbol=${primarySymbol}&period=${timeframe}`), { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
           setChartError(json?.error ?? json?.detail ?? `HTTP ${res.status}`);
@@ -177,13 +200,22 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
 
   const sma20 = useMemo(() => (data.length >= 20 ? sma(data, 20) : []), [data]);
   const sma50 = useMemo(() => (data.length >= 50 ? sma(data, 50) : []), [data]);
+  const ema12 = useMemo(() => (data.length >= 12 ? ema(data, 12) : []), [data]);
+  const ema26 = useMemo(() => (data.length >= 26 ? ema(data, 26) : []), [data]);
   const rsi14 = useMemo(() => (data.length >= 15 ? rsi(data, 14) : []), [data]);
   const macdData = useMemo(() => (data.length >= 35 ? macd(data, 12, 26, 9) : []), [data]);
   const bollingerData = useMemo(() => (data.length >= 20 ? bollinger(data, 20, 2) : []), [data]);
-  const smaOverlay = effectiveOverlay === "sma20" ? sma20 : effectiveOverlay === "sma50" ? sma50 : [];
+  const atrData = useMemo(() => (data.length >= 15 ? atr(data, 14) : []), [data]);
+  const smaOverlay =
+    effectiveOverlay === "sma20" ? sma20
+    : effectiveOverlay === "sma50" ? sma50
+    : effectiveOverlay === "ema12" ? ema12
+    : effectiveOverlay === "ema26" ? ema26
+    : [];
   const showRsiPanel = effectiveOverlay === "rsi" && rsi14.length > 0;
   const showMacdPanel = effectiveOverlay === "macd" && macdData.length > 0;
   const showBollinger = effectiveOverlay === "bollinger" && bollingerData.length > 0;
+  const showAtrPanel = effectiveOverlay === "atr" && atrData.length > 0;
 
   useEffect(() => {
     if (!ref.current) return;
@@ -193,8 +225,9 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
     const width = el.clientWidth || 600;
     const rsiPanelHeight = showRsiPanel ? 90 : 0;
     const macdPanelHeight = showMacdPanel ? 90 : 0;
-    const totalHeight = 380 + rsiPanelHeight + macdPanelHeight;
-    const priceHeight = showRsiPanel || showMacdPanel ? 220 : 260;
+    const atrPanelHeight = showAtrPanel ? 90 : 0;
+    const totalHeight = 380 + rsiPanelHeight + macdPanelHeight + atrPanelHeight;
+    const priceHeight = showRsiPanel || showMacdPanel || showAtrPanel ? 220 : 260;
     const volumeHeight = 80;
     const margin = { top: 24, right: 40, bottom: 28, left: 48 };
     const innerWidth = width - margin.left - margin.right;
@@ -222,6 +255,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
     const volumeG = zoomable.append("g").attr("transform", `translate(0,${innerPriceHeight + 4})`);
     const rsiG = showRsiPanel ? zoomable.append("g").attr("transform", `translate(0,${innerPriceHeight + 4 + volumeHeight + 4})`) : null;
     const macdG = showMacdPanel ? zoomable.append("g").attr("transform", `translate(0,${innerPriceHeight + 4 + volumeHeight + 4 + (showRsiPanel ? 90 + 4 : 0)})`) : null;
+    const atrG = showAtrPanel ? zoomable.append("g").attr("transform", `translate(0,${innerPriceHeight + 4 + volumeHeight + 4 + (showRsiPanel ? 90 + 4 : 0) + (showMacdPanel ? 90 + 4 : 0)})`) : null;
 
     const xScale = d3.scaleTime()
       .domain(d3.extent(data, (d) => d.date) as [Date, Date])
@@ -404,6 +438,32 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
         .text("MACD(12,26,9)");
     }
 
+    if (showAtrPanel && atrG && atrData.length > 0) {
+      const atrHeight = 80;
+      const atrExtent = d3.extent(atrData, (d) => d.value) as [number, number];
+      const yAtr = d3.scaleLinear().domain(atrExtent).nice().range([atrHeight, 0]);
+      const lineAtr = d3.line<{ date: Date; value: number }>()
+        .x((d) => {
+          const idx = data.findIndex((c) => c.date.getTime() === d.date.getTime());
+          return ((idx >= 0 ? idx : data.length) / (data.length - 1 || 1)) * innerWidth;
+        })
+        .y((d) => yAtr(d.value));
+      atrG.append("path")
+        .datum(atrData)
+        .attr("fill", "none")
+        .attr("stroke", "var(--accent)")
+        .attr("stroke-width", 1.5)
+        .attr("d", lineAtr);
+      atrG.append("g").attr("class", "axis axis-y").call(d3.axisLeft(yAtr).ticks(4));
+      atrG.append("text")
+        .attr("x", 4)
+        .attr("y", 10)
+        .attr("fill", "var(--text-soft)")
+        .attr("font-size", 10)
+        .attr("font-family", "var(--font-mono)")
+        .text("ATR(14)");
+    }
+
     data.forEach((d, i) => {
       const vol = d.volume ?? 0;
       const x = (i / (data.length - 1 || 1)) * innerWidth;
@@ -474,7 +534,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
       });
 
     zoomable.call(zoom as unknown as (selection: d3.Selection<SVGGElement, unknown, null, undefined>) => void);
-  }, [data, loading, chartError, smaOverlay, showRsiPanel, rsi14, showBollinger, bollingerData, showMacdPanel, macdData]);
+  }, [data, loading, chartError, smaOverlay, showRsiPanel, rsi14, showBollinger, bollingerData, showMacdPanel, macdData, showAtrPanel, atrData]);
 
   return (
     <section className="panel panel-main">

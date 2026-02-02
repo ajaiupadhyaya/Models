@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { resolveApiUrl } from "../../apiBase";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
 import { PanelErrorState } from "./PanelErrorState";
@@ -97,7 +98,7 @@ export const PaperTradingPanel: React.FC = () => {
     setOrderSubmitting(true);
     setOrderMessage(null);
     try {
-      const res = await fetch("/api/v1/paper-trading/orders/place", {
+      const res = await fetch(resolveApiUrl("/api/v1/paper-trading/orders/place"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
@@ -126,15 +127,15 @@ export const PaperTradingPanel: React.FC = () => {
     setExecuteSignalLoading(true);
     setExecuteSignalMessage(null);
     try {
-      const predRes = await fetch(`/api/v1/predictions/quick-predict?symbol=${primarySymbol}`, { headers: getAuthHeaders() });
+      const predRes = await fetch(resolveApiUrl(`/api/v1/predictions/quick-predict?symbol=${primarySymbol}`), { headers: getAuthHeaders() });
       const predJson = await predRes.json().catch(() => ({}));
       const signal = predJson?.signal ?? 0;
       const confidence = Math.min(1, Math.abs(signal));
-      const priceRes = await fetch(`/api/v1/backtest/sample-data?symbol=${primarySymbol}&period=1d`, { headers: getAuthHeaders() });
+      const priceRes = await fetch(resolveApiUrl(`/api/v1/backtest/sample-data?symbol=${primarySymbol}&period=1d`), { headers: getAuthHeaders() });
       const priceJson = await priceRes.json().catch(() => ({}));
       const candles = priceJson?.candles ?? [];
       const currentPrice = candles.length > 0 ? (candles[candles.length - 1] as { close?: number }).close : 0;
-      const res = await fetch("/api/v1/paper-trading/execute-signal", {
+      const res = await fetch(resolveApiUrl("/api/v1/paper-trading/execute-signal"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({

@@ -195,3 +195,46 @@ async def get_quotes(symbols: str = Query("AAPL,MSFT,GOOGL,SPY,QQQ", description
     except Exception as e:
         logger.warning("Quotes fetch failed: %s", e)
         return {"quotes": [], "error": str(e)}
+
+
+@router.get("/correlation")
+async def get_correlation(
+    symbols: str = Query("AAPL,MSFT,GOOGL,AMZN,TSLA", description="Comma-separated symbols for correlation matrix"),
+    period: str = Query("1y", description="Price history period"),
+) -> Dict[str, Any]:
+    """
+    Return correlation matrix of daily returns for the given symbols.
+    Used by the terminal for correlation heatmap (e.g. Economic or Portfolio).
+    """
+    from api.cache import get_cached, set_cached, cache_key
+    key = cache_key("data", "correlation", symbols, period)
+    cached = get_cached(key)
+    if cached is not None:
+        return cached
+    try:
+        import yfinance as yf
+        sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:15]
+        if len(sym_list) < 2:
+            return {"symbols": [], "matrix": [], "error": "Provide at least 2 symbols"}
+        data = yf.download(sym_list, period=period, progress=False, auto_adjust=True, group_by="ticker", threads=False)
+        if data.empty:
+            return {"symbols": sym_list, "matrix": [], "error": "No price data"}
+        if isinstance(data.columns, pd.MultiIndex):
+            closes = pd.DataFrame({s: data["Close"][s] for s in sym_list if s in data["Close"].columns})
+        else:
+            closes = data[["Close"]].copy() if "Close" in data.columns else data.iloc[:, :1].copy()
+            closes.columns = sym_list[: closes.shape[1]]
+        if closes.shape[1] < 2:
+            return {"symbols": sym_list, "matrix": [], "error": "Insufficient series"}
+        returns = closes.pct_change().dropna()
+        if len(returns) < 5:
+            return {"symbols": list(closes.columns), "matrix": [], "error": "Insufficient data points"}
+        corr = returns.corr()
+        matrix = corr.values.tolist()
+        symbols_out = list(corr.index)
+        result = {"symbols": symbols_out, "matrix": matrix}
+        set_cached(key, result, 300)
+        return result
+    except Exception as e:
+        logger.warning("Correlation failed: %s", e)
+        return {"symbols": [], "matrix": [], "error": str(e)}

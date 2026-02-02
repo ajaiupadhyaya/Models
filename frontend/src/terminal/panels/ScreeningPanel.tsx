@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { resolveApiUrl } from "../../apiBase";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
 import { PanelErrorState } from "./PanelErrorState";
@@ -58,7 +59,7 @@ export const ScreeningPanel: React.FC = () => {
       const minCap = minMarketCap.trim() ? parseFloat(minMarketCap) : undefined;
       if (minCap != null && !Number.isNaN(minCap)) params.set("min_market_cap", String(minCap));
       params.set("limit", "30");
-      const res = await fetch(`/api/v1/screener/run?${params.toString()}`, { headers: getAuthHeaders() });
+      const res = await fetch(resolveApiUrl(`/api/v1/screener/run?${params.toString()}`), { headers: getAuthHeaders() });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setScreenerError((json?.detail ?? json?.error ?? `HTTP ${res.status}`) as string);

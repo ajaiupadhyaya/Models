@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { resolveApiUrl } from "../apiBase";
 
 export interface UseFetchWithRetryOptions<T> {
   /** Request init (method, headers, body). */
@@ -15,7 +16,7 @@ export interface UseFetchWithRetryOptions<T> {
   retryOn5xxOnly?: boolean;
 }
 
-/** User-friendly messages for 429 and 5xx (used by panels). */
+/** User-friendly messages for 429, 404, and 5xx (used by panels). */
 export function normalizeError(json: unknown, status: number): string {
   if (status === 429) {
     return "Too many requests. Try again in a minute.";
@@ -23,13 +24,20 @@ export function normalizeError(json: unknown, status: number): string {
   if (status >= 500 && status < 600) {
     return "Data temporarily unavailable. Please try again.";
   }
+  if (status === 404) {
+    const d = json && typeof json === "object" ? (json as { detail?: unknown }).detail : null;
+    const msg = d != null ? String(d) : "";
+    if (/not found|no data|invalid|unknown/i.test(msg)) return msg;
+    return "Resource not found. Check symbol or configuration and try again.";
+  }
   if (json && typeof json === "object") {
     const d = (json as { detail?: unknown }).detail;
     if (d != null) return String(d);
     const e = (json as { error?: unknown }).error;
     if (e != null) return String(e);
   }
-  return status >= 400 ? `HTTP ${status}` : "Request failed";
+  if (status === 0) return "Network error. Check API URL and CORS.";
+  return status >= 400 ? `Request failed (${status})` : "Request failed";
 }
 
 /** Retry-After header in seconds (for optional countdown UI). */
@@ -113,8 +121,9 @@ export function useFetchWithRetry<T = unknown>(
       ...getAuthHeaders(),
     };
     const init: RequestInit = { ...requestInit, headers };
+    const requestUrl = resolveApiUrl(url);
     const doFetch = (): Promise<void> =>
-      fetch(url, init)
+      fetch(requestUrl, init)
         .then(async (res) => {
           const json = await res.json().catch(() => ({}));
           const errMsg = normalizeError(json, res.status);

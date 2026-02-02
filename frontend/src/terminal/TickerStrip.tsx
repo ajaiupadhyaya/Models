@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { resolveApiUrl } from "../apiBase";
 import { useWebSocketPrice } from "../hooks/useWebSocketPrice";
 import { getAuthHeaders } from "../hooks/useFetchWithRetry";
 import { useTerminal } from "./TerminalContext";
@@ -30,7 +31,7 @@ export const TickerStrip: React.FC<TickerStripProps> = ({ primarySymbol, onWsSta
     }
     const fetchData = async () => {
       try {
-        const quotesRes = await fetch(`/api/v1/data/quotes?symbols=${watchlist.join(",")}`, { headers: getAuthHeaders() });
+        const quotesRes = await fetch(resolveApiUrl(`/api/v1/data/quotes?symbols=${watchlist.join(",")}`), { headers: getAuthHeaders() });
         const quotesJson = await quotesRes.json().catch(() => ({}));
         const quoteList = (quotesJson.quotes ?? []) as Array<{ symbol: string; price?: number | null; change_pct?: number | null }>;
         if (quoteList.length > 0) {
@@ -42,7 +43,7 @@ export const TickerStrip: React.FC<TickerStripProps> = ({ primarySymbol, onWsSta
           setItems(parsed);
           return;
         }
-        const res = await fetch(`/api/v1/ai/market-summary?symbols=${watchlist.join(",")}`, { headers: getAuthHeaders() });
+        const res = await fetch(resolveApiUrl(`/api/v1/ai/market-summary?symbols=${watchlist.join(",")}`), { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) return;
         const parsed: TickerItem[] = Object.entries((json.analyses ?? {}) as Record<string, { price?: number }>).map(

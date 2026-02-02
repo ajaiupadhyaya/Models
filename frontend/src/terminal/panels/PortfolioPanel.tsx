@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { resolveApiUrl } from "../../apiBase";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
 import { PanelErrorState } from "./PanelErrorState";
@@ -58,6 +59,82 @@ function parseStress(json: unknown): StressResponse | null {
   return json as StressResponse;
 }
 
+interface OptimizeResponse {
+  symbols?: string[];
+  weights?: Record<string, number>;
+  expected_return?: number;
+  volatility?: number;
+  sharpe_ratio?: number | null;
+  error?: string;
+}
+
+function parseOptimize(json: unknown): OptimizeResponse | null {
+  if (json && typeof json === "object" && "detail" in (json as object)) return null;
+  return json as OptimizeResponse;
+}
+
+function PortfolioOptimizeBlock() {
+  const { watchlist } = useTerminal();
+  const symbolsParam = watchlist.length >= 2 ? watchlist.slice(0, 10).join(",") : "AAPL,MSFT,GOOGL,AMZN,TSLA";
+  const url = `/api/v1/risk/optimize?symbols=${encodeURIComponent(symbolsParam)}&period=1y&method=sharpe`;
+  const { data, error: optError, loading: optLoading, retry: optRetry } = useFetchWithRetry<OptimizeResponse | null>(url, {
+    parse: parseOptimize,
+    deps: [symbolsParam],
+  });
+  if (optLoading) return <div className="panel-body-muted" style={{ fontSize: 11 }}>Loading…</div>;
+  if (optError || data?.error) return <div className="panel-body-muted" style={{ fontSize: 11 }}>{data?.error ?? optError} <button type="button" className="ai-button" style={{ marginLeft: 8 }} onClick={optRetry}>Retry</button></div>;
+  const weights = data?.weights ?? {};
+  const entries = Object.entries(weights).filter(([, v]) => typeof v === "number");
+  if (entries.length === 0) return <div className="panel-body-muted" style={{ fontSize: 11 }}>Need at least 2 symbols in watchlist for optimization.</div>;
+  return (
+    <div style={{ fontSize: 11 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <tbody>
+          {entries.map(([sym, w]) => (
+            <tr key={sym}>
+              <td className="num-mono" style={{ color: "var(--accent)", padding: "2px 8px 2px 0" }}>{sym}</td>
+              <td className="num-mono" style={{ textAlign: "right" }}>{(Number(w) * 100).toFixed(1)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {(data?.sharpe_ratio != null || data?.volatility != null) && (
+        <div style={{ marginTop: 6, color: "var(--text-soft)" }}>
+          {data.sharpe_ratio != null && <span className="num-mono">Sharpe {data.sharpe_ratio.toFixed(2)}</span>}
+          {data.volatility != null && <span className="num-mono" style={{ marginLeft: 8 }}>Vol {(data.volatility * 100).toFixed(2)}%</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ReportsHealth {
+  status?: string;
+  openai_configured?: boolean;
+}
+
+function InvestorReportsBlock() {
+  const { data } = useFetchWithRetry<ReportsHealth | null>("/api/v1/reports/health", {
+    parse: (json) => (json && typeof json === "object" && !("detail" in (json as object)) ? (json as ReportsHealth) : null),
+  });
+  const base = typeof window !== "undefined" ? window.location.origin : "";
+  const docsUrl = `${base}/docs`;
+  return (
+    <div style={{ fontSize: 11, color: "var(--text-soft)" }}>
+      {data?.status === "healthy" ? (
+        <>
+          <span style={{ color: "var(--accent-green)" }}>Available</span>
+          {data.openai_configured ? " (OpenAI configured)." : " (Set OPENAI_API_KEY for generation)."}
+        </>
+      ) : (
+        <span>Check API /docs for report generation.</span>
+      )}
+      {" "}
+      <a href={docsUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>API docs</a>
+    </div>
+  );
+}
+
 export const PortfolioPanel: React.FC = () => {
   const { primarySymbol } = useTerminal();
   const [quickPredict, setQuickPredict] = useState<QuickPredict | null>(null);
@@ -82,7 +159,7 @@ export const PortfolioPanel: React.FC = () => {
   useEffect(() => {
     const fetchQuickPredict = async () => {
       try {
-        const res = await fetch(`/api/v1/predictions/quick-predict?symbol=${primarySymbol}`, { headers: getAuthHeaders() });
+        const res = await fetch(resolveApiUrl(`/api/v1/predictions/quick-predict?symbol=${primarySymbol}`), { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
         setQuickPredict(json?.error ? { error: json.error } : json);
       } catch {
@@ -262,6 +339,14 @@ export const PortfolioPanel: React.FC = () => {
           {!stressLoading && stressData && (!stressData.scenarios || stressData.scenarios.length === 0) && !stressError && (
             <div className="panel-body-muted" style={{ fontSize: 11 }}>No stress scenarios available.</div>
           )}
+        </div>
+        <div style={{ marginTop: 12, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+          <div style={{ color: "var(--accent)", marginBottom: 6 }}>Portfolio optimization (Max Sharpe)</div>
+          <PortfolioOptimizeBlock />
+        </div>
+        <div style={{ marginTop: 12, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+          <div style={{ color: "var(--accent)", marginBottom: 6 }}>Investor reports</div>
+          <InvestorReportsBlock />
         </div>
       </div>
     </section>

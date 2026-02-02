@@ -142,7 +142,22 @@ async def analyze_company(
         # Get comprehensive analysis
         logger.info(f"Analyzing {ticker}...")
         fundamental_analysis = analyzer.comprehensive_analysis()
-        
+        try:
+            fin = analyzer.financials
+            bs = analyzer.balance_sheet
+            cf = analyzer.cash_flow
+            financials_summary = {}
+            if fin is not None and not fin.empty and len(fin.columns) > 0:
+                financials_summary["income"] = {str(k): float(v) if isinstance(v, (int, float)) else v for k, v in fin.iloc[:, 0].to_dict().items() if v is not None and str(v) != "nan"}
+            if bs is not None and not bs.empty and len(bs.columns) > 0:
+                financials_summary["balance_sheet"] = {str(k): float(v) if isinstance(v, (int, float)) else v for k, v in bs.iloc[:, 0].to_dict().items() if v is not None and str(v) != "nan"}
+            if cf is not None and not cf.empty and len(cf.columns) > 0:
+                financials_summary["cash_flow"] = {str(k): float(v) if isinstance(v, (int, float)) else v for k, v in cf.iloc[:, 0].to_dict().items() if v is not None and str(v) != "nan"}
+            fundamental_analysis["financials_summary"] = financials_summary
+        except Exception as e:
+            logger.warning(f"Financials summary failed: {e}")
+            fundamental_analysis["financials_summary"] = {}
+
         response = {
             "ticker": ticker.upper(),
             "company_name": fundamental_analysis['profile']['name'],

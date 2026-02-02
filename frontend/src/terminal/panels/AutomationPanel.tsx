@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { resolveApiUrl } from "../../apiBase";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { PanelErrorState } from "./PanelErrorState";
 
@@ -82,7 +83,7 @@ export const AutomationPanel: React.FC = () => {
     setRunLoading(true);
     setRunResult(null);
     try {
-      const res = await fetch(`/api/v1/orchestrator/run-cycle?execute_trades=${executeTrades}`, {
+      const res = await fetch(resolveApiUrl(`/api/v1/orchestrator/run-cycle?execute_trades=${executeTrades}`), {
         method: "POST",
         headers: getAuthHeaders(),
       });
@@ -104,7 +105,7 @@ export const AutomationPanel: React.FC = () => {
     setRetrainLoading(true);
     setRetrainResult(null);
     try {
-      const res = await fetch("/api/v1/orchestrator/retrain", { method: "POST", headers: getAuthHeaders() });
+      const res = await fetch(resolveApiUrl("/api/v1/orchestrator/retrain"), { method: "POST", headers: getAuthHeaders() });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setRetrainResult((json?.detail ?? `HTTP ${res.status}`) as string);

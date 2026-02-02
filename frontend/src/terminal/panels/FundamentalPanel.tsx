@@ -1,19 +1,27 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import * as d3 from "d3";
 import { useFetchWithRetry } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
+import { resolveApiUrl } from "../../apiBase";
+import { getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { PanelErrorState } from "./PanelErrorState";
 
 interface CompanyAnalysis {
   ticker?: string;
   company_name?: string;
   fundamental_analysis?: {
-    profile?: { name?: string };
+    profile?: { name?: string; sector?: string };
     valuation?: Record<string, unknown>;
     profitability?: Record<string, unknown>;
     financial_health?: Record<string, unknown>;
     growth?: Record<string, unknown>;
     financials?: Record<string, unknown>;
     ratios?: Record<string, unknown>;
+    financials_summary?: {
+      income?: Record<string, number | string>;
+      balance_sheet?: Record<string, number | string>;
+      cash_flow?: Record<string, number | string>;
+    };
   };
   valuation?: Record<string, unknown> | { error?: string };
   risk_metrics?: Record<string, unknown> | { error?: string };
@@ -31,6 +39,116 @@ interface CompanyAnalysis {
 function parseCompanyAnalysis(json: unknown): CompanyAnalysis | null {
   if (json && typeof json === "object" && "detail" in (json as object)) return null;
   return json as CompanyAnalysis;
+}
+
+interface SectorCompany {
+  symbol?: string;
+  ticker?: string;
+  name?: string;
+  sector?: string;
+  market_cap?: number;
+}
+
+interface SectorResponse {
+  sector?: string;
+  companies?: SectorCompany[];
+  detail?: unknown;
+}
+
+function parseSector(json: unknown): SectorCompany[] | null {
+  const r = json as SectorResponse;
+  if (r?.detail) return null;
+  return Array.isArray(r?.companies) ? r.companies : [];
+}
+
+/** Peer comparison table (sector peers). */
+function PeerComparisonTable({ sector, primarySymbol }: { sector: string; primarySymbol: string }) {
+  const url = sector ? `/api/v1/company/sector/${encodeURIComponent(sector)}?limit=12` : null;
+  const { data: peers, loading } = useFetchWithRetry<SectorCompany[] | null>(url, {
+    parse: parseSector,
+    deps: [sector],
+  });
+  const list = peers ?? [];
+  const sym = (c: SectorCompany) => c.symbol ?? c.ticker ?? "";
+  const rows = list.filter((c) => sym(c) !== primarySymbol).slice(0, 10);
+  if (!sector || sector === "N/A") return null;
+  if (loading) return <div className="panel-body-muted" style={{ fontSize: 11 }}>Loading peers…</div>;
+  if (rows.length === 0) return <div className="panel-body-muted" style={{ fontSize: 11 }}>No sector peers found.</div>;
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ color: "var(--accent)", marginBottom: 6, fontSize: 11 }}>Sector peers ({sector})</div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Symbol</th>
+            <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Name</th>
+            <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Market cap</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((c) => (
+            <tr key={sym(c)}>
+              <td className="num-mono" style={{ color: "var(--accent)", padding: "2px 8px 2px 0" }}>{sym(c) || "—"}</td>
+              <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{c.name ?? "—"}</td>
+              <td className="num-mono" style={{ textAlign: "right" }}>{c.market_cap != null ? `${(c.market_cap / 1e9).toFixed(2)}B` : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** D3 price trend chart for the primary symbol (1y). */
+function PriceTrendChart({ symbol }: { symbol: string }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [candles, setCandles] = useState<Array<{ date: string; close: number }>>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(resolveApiUrl(`/api/v1/backtest/sample-data?symbol=${symbol}&period=1y`), { headers: getAuthHeaders() });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || cancelled) return;
+        const list = (json.candles ?? []) as Array<{ date: string; close: number }>;
+        if (list.length) setCandles(list);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [symbol]);
+
+  useEffect(() => {
+    if (!ref.current || candles.length < 2) return;
+    const el = ref.current;
+    const width = el.clientWidth || 400;
+    const height = 160;
+    const margin = { top: 8, right: 8, bottom: 20, left: 40 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+    const data = candles.map((d) => ({ date: new Date(d.date), value: Number(d.close) })).filter((d) => !Number.isNaN(d.value));
+    if (data.length < 2) return;
+
+    d3.select(el).selectAll("*").remove();
+    const svg = d3.select(el).append("svg").attr("width", width).attr("height", height);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const xScale = d3.scaleTime().domain(d3.extent(data, (d) => d.date) as [Date, Date]).range([0, innerWidth]);
+    const yScale = d3.scaleLinear().domain(d3.extent(data, (d) => d.value) as [number, number]).nice().range([innerHeight, 0]);
+    const line = d3.line<{ date: Date; value: number }>().x((d) => xScale(d.date)).y((d) => yScale(d.value));
+    g.append("path").datum(data).attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 1.5).attr("d", line);
+    g.append("g").attr("transform", `translate(0,${innerHeight})`).attr("class", "axis axis-x").call(d3.axisBottom(xScale).ticks(4));
+    g.append("g").attr("class", "axis axis-y").call(d3.axisLeft(yScale).ticks(4));
+  }, [candles]);
+
+  if (candles.length < 2) return null;
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ color: "var(--accent)", marginBottom: 4, fontSize: 11 }}>Price trend (1Y)</div>
+      <div ref={ref} className="chart-root" style={{ minHeight: 160 }} />
+    </div>
+  );
 }
 
 function renderKeyValueTable(
@@ -120,6 +238,15 @@ export const FundamentalPanel: React.FC = () => {
         Fundamental: {data?.company_name ?? primarySymbol}
       </div>
       <div style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
+        <PriceTrendChart symbol={primarySymbol} />
+        {fa?.profile?.sector && <PeerComparisonTable sector={fa.profile.sector} primarySymbol={primarySymbol} />}
+        {fa?.financials_summary && (fa.financials_summary.income || fa.financials_summary.balance_sheet || fa.financials_summary.cash_flow) && (
+          <>
+            {renderKeyValueTable("Income (latest)", fa.financials_summary.income, 8, (v) => typeof v === "number" && Math.abs(v) >= 1e6 ? `${((v as number) / 1e6).toFixed(1)}M` : typeof v === "number" ? (v as number).toFixed(2) : String(v ?? "—"))}
+            {renderKeyValueTable("Balance sheet (latest)", fa.financials_summary.balance_sheet, 8, (v) => typeof v === "number" && Math.abs(v) >= 1e6 ? `${((v as number) / 1e6).toFixed(1)}M` : typeof v === "number" ? (v as number).toFixed(2) : String(v ?? "—"))}
+            {renderKeyValueTable("Cash flow (latest)", fa.financials_summary.cash_flow, 8, (v) => typeof v === "number" && Math.abs(v) >= 1e6 ? `${((v as number) / 1e6).toFixed(1)}M` : typeof v === "number" ? (v as number).toFixed(2) : String(v ?? "—"))}
+          </>
+        )}
         {summary && (summary.overall_grade || summary.recommendation) && (
           <div style={{ marginBottom: 12, padding: 8, background: "var(--bg-panel)", borderRadius: 4, border: "1px solid var(--border)" }}>
             <div style={{ color: "var(--accent)", marginBottom: 4 }}>AI company health</div>
