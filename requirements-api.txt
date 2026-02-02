@@ -25,4 +25,4 @@ xlsxwriter==3.1.2
 
 # RL Dependencies
 stable-baselines3==2.1.0
-gym==0.26.2
+gymnasium>=0.29.0

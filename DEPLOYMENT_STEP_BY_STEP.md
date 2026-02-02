@@ -203,6 +203,17 @@ Pick **one** of: Railway, Render, or Fly.io. Each gives you a public URL. Steps 
 
 - Push to `main` (or the branch you selected). Render will automatically redeploy.
 
+### B2.8. Build failed? Use the Render CLI for logs
+
+If the build fails, use the **Render CLI** locally to fetch build logs so you (or a helper) can fix the issue. See **[RENDER_CLI.md](RENDER_CLI.md)** for:
+
+- Installing the CLI (`brew install render`) and logging in (`render login`)
+- Getting your service ID and listing deploys
+- Viewing **build logs** for the failed deploy (`render deploys list <SERVICE_ID>` → select deploy → view logs)
+- Triggering a new deploy after fixes (`render deploys create <SERVICE_ID> --wait`)
+
+Copy the failing part of the build log (especially the last 50–100 lines) and use it to fix the Dockerfile, dependencies, or config.
+
 ---
 
 ## Option 3: Fly.io
