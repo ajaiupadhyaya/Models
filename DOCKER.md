@@ -7,6 +7,17 @@
 - Docker Compose 2.0+ (optional, for multi-service setup)
 - 4GB RAM, 20GB disk space
 
+### Environment (required for API keys)
+
+The API service loads environment variables from a `.env` file. `.env` is not committed; create it from the template before running Compose:
+
+```bash
+cp .env.example .env
+# Edit .env and set at least FRED_API_KEY, ALPHA_VANTAGE_API_KEY; optionally OPENAI_API_KEY, Alpaca keys.
+```
+
+When you run `docker-compose up`, the API container uses `env_file: .env`, so all keys and settings from `.env` are available inside the container. Without a valid `.env`, data and AI endpoints may return errors or empty results.
+
 ### Option 1: Run with Docker Compose (Recommended)
 
 ```bash
@@ -83,11 +94,12 @@ docker run -d \
 
 ### Configuration
 
-Edit `docker-compose.yml` to customize:
+The API service in `docker-compose.yml` uses `env_file: .env`, so create `.env` from `.env.example` and fill in your keys. You can override or add non-secret variables via `environment:` in the compose file:
 
 ```yaml
 services:
   api:
+    env_file: .env
     environment:
       - API_LOG_LEVEL=info  # debug, info, warning, error
       - ENABLE_PAPER_TRADING=true
@@ -516,4 +528,4 @@ curl -X POST http://localhost:8000/api/v1/models/train \
 
 ---
 
-For production deployment, see [DEPLOYMENT.md](./DEPLOYMENT.md)
+For production deployment, see [LAUNCH_GUIDE.md](LAUNCH_GUIDE.md) (sections 4–5).

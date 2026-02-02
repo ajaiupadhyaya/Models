@@ -33,9 +33,11 @@ uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
 ### 3. Access the API
 
-- **Interactive Docs**: http://localhost:8000/docs
+- **Interactive Docs (OpenAPI)**: http://localhost:8000/docs — all terminal-used endpoints are tagged by domain (Risk, Backtest, Data, Company, AI, Health).
 - **ReDoc**: http://localhost:8000/redoc
 - **Health Check**: http://localhost:8000/health
+
+**Rate limiting (production):** Expensive endpoints (backtest run, AI analysis, company analyze) should be rate-limited per IP or per API key in production. Document limits in API docs when implemented.
 
 ## API Endpoints
 

@@ -1,44 +1,43 @@
-# Use official Python runtime as base image
+# Stage 1: build frontend
+FROM node:20-alpine AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+# Stage 2: API + serve built SPA
 FROM python:3.12
 
-# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
 COPY requirements.txt requirements-api.txt ./
-
-# Install Python dependencies
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --only-binary :all: -r requirements.txt && \
     pip install -r requirements-api.txt
 
-# Copy application code
 COPY . .
+COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
 
-# Create non-root user for security
 RUN useradd -m -u 1000 appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-# Expose API port
+ENV PORT=8000
 EXPOSE 8000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+    CMD sh -c 'curl -f http://127.0.0.1:${PORT:-8000}/health' || exit 1
 
-# Run API server
-CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec python -m uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

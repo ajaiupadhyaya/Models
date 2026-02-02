@@ -33,6 +33,8 @@ python analyze_company.py AAPL --full --export report.json
 
 **See [COMPANY_ANALYSIS_GUIDE.md](COMPANY_ANALYSIS_GUIDE.md) for complete documentation.**
 
+**→ [LAUNCH_GUIDE.md](LAUNCH_GUIDE.md)** — Step-by-step instructions to get the API and web terminal running.
+
 ---
 
 ## 🏗️ Project Structure
@@ -59,6 +61,8 @@ Models/
 ```
 
 ## 🚀 Quick Start
+
+For **full run and deploy steps** (env, two terminals, Docker, production), use **[LAUNCH_GUIDE.md](LAUNCH_GUIDE.md)** as the single place for setup and launch.
 
 ### 1. Set Up Environment
 
@@ -183,7 +187,7 @@ python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
 cd frontend && npm install && npm run dev
 # Opens at http://localhost:5173
 ```
-See [QUICK_START_LIVE.md](QUICK_START_LIVE.md) for full setup.
+See [LAUNCH_GUIDE.md](LAUNCH_GUIDE.md) for full setup.
 
 ### Advanced Visualizations
 ```python
@@ -211,7 +215,7 @@ engine = BacktestEngine(commission=0.001, slippage=0.0005)
 results = engine.run_backtest(prices, signals)
 ```
 
-See `notebooks/` for detailed examples and `ADVANCED_FEATURES.md` for comprehensive documentation.
+See `notebooks/` for detailed examples and [ARCHITECTURE.md](ARCHITECTURE.md) for methodology and data validation.
 
 ## 🚀 High-Performance C++ Library
 
@@ -241,6 +245,34 @@ For complete documentation, see **[CPP_QUANT_GUIDE.md](CPP_QUANT_GUIDE.md)**
 | Black-Scholes (10k calls) | 500 ms | 5 ms | 100x |
 | Monte Carlo (1M paths) | 30 s | 0.3 s | 100x |
 | Portfolio analytics | 100 μs | 5 μs | 20x |
+
+## 🧪 Running tests
+
+### Backend (pytest)
+```bash
+# Create and activate a virtual environment first (see Quick Start)
+source venv/bin/activate   # or: .venv/bin/activate, or: uv venv && source .venv/bin/activate
+pip install -r requirements.txt   # includes pytest, pytest-cov
+
+# Run all backend tests
+python -m pytest tests/ -v
+
+# Run with coverage report
+python -m pytest tests/ --cov=config --cov=api --cov=core --cov=models/risk --cov-report=term-missing
+```
+
+### Frontend (Vitest)
+```bash
+cd frontend
+npm install
+npm run test
+```
+
+See [WORKFLOWS.md](WORKFLOWS.md) for step-by-step terminal workflows and [ARCHITECTURE.md](ARCHITECTURE.md) for backtest methodology and data validation.
+
+## Deployment
+
+To run in production or with Docker: copy `.env.example` to `.env`, set your API keys, then follow **[LAUNCH_GUIDE.md](LAUNCH_GUIDE.md)** (sections 4–5 for Docker and production). See [DOCKER.md](DOCKER.md) for Docker-specific options.
 
 ## 📝 License
 

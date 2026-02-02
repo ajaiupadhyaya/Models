@@ -11,7 +11,8 @@ Production-ready API server for ML trading models with:
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from typing import Dict, Any, List, Optional
 import logging
@@ -21,6 +22,10 @@ from pathlib import Path
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+# Built frontend (Docker/production); when present, serve SPA from same origin
+frontend_dist = project_root / "frontend" / "dist"
+serve_spa = (frontend_dist / "index.html").exists()
 
 # Lazy load routers to avoid import cascade issues
 def get_routers():
@@ -41,6 +46,8 @@ def get_routers():
     from api.investor_reports_api import router as investor_reports_router
     from api.company_analysis_api import router as company_analysis_router
     from api.ai_analysis_api import router as ai_router
+    from api.data_api import router as data_router
+    from api.risk_api import router as risk_router
 
     routers = {
         "models": models_router,
@@ -52,6 +59,8 @@ def get_routers():
         "investor_reports": investor_reports_router,
         "company": company_analysis_router,
         "ai": ai_router,
+        "data": data_router,
+        "risk": risk_router,
     }
 
     try:
@@ -174,6 +183,27 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# Request logging middleware: log method, path, status, duration
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+import time
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start = time.perf_counter()
+        response = await call_next(request)
+        duration_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "request method=%s path=%s status=%s duration_ms=%.2f",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+        )
+        return response
+
+app.add_middleware(RequestLoggingMiddleware)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -184,21 +214,22 @@ app.add_middleware(
 )
 
 
-# Root endpoint
-@app.get("/", tags=["Health"])
-async def root() -> Dict[str, str]:
-    """
-    Root endpoint - API health check.
-    
-    Returns:
-        dict: API status and version
-    """
-    return {
-        "status": "online",
-        "message": "Trading ML API",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+# Root endpoint (only when not serving built SPA)
+if not serve_spa:
+    @app.get("/", tags=["Health"])
+    async def root() -> Dict[str, str]:
+        """
+        Root endpoint - API health check.
+        
+        Returns:
+            dict: API status and version
+        """
+        return {
+            "status": "online",
+            "message": "Trading ML API",
+            "version": "1.0.0",
+            "docs": "/docs"
+        }
 
 
 @app.get("/health", tags=["Health"])
@@ -287,6 +318,13 @@ try:
     app.include_router(routers["investor_reports"], tags=["Investor Reports"])
     app.include_router(routers["company"], prefix="/api/v1/company", tags=["Company Analysis"])
     app.include_router(routers["ai"], tags=["AI"])
+    app.include_router(routers["data"], prefix="/api/v1/data", tags=["Data"])
+    app.include_router(routers["risk"], prefix="/api/v1/risk", tags=["Risk"])
+
+    # Auth (terminal sign-in)
+    from api.auth_api import router as auth_router
+    app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+
     if "automation" in routers:
         app.include_router(routers["automation"], tags=["Automation"])
     if "orchestrator" in routers:
@@ -303,6 +341,26 @@ except Exception as e:
     logger.warning(f"Failed to load some routers: {e}")
     # Continue anyway - some routers can fail
 
+# Serve built SPA when frontend/dist exists (Docker/production)
+if serve_spa:
+    _spa_index = frontend_dist / "index.html"
+    _api_path_prefixes = ("/api", "/docs", "/redoc", "/openapi.json")
+    _api_exact = ("/health", "/info")
+
+    class SPAFallbackMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            response = await call_next(request)
+            if response.status_code != 404:
+                return response
+            path = request.url.path
+            if request.method != "GET":
+                return response
+            if any(path.startswith(p) for p in _api_path_prefixes) or path in _api_exact:
+                return response
+            return FileResponse(str(_spa_index), media_type="text/html")
+
+    app.add_middleware(SPAFallbackMiddleware)
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="spa")
 
 # Error handlers
 @app.exception_handler(HTTPException)

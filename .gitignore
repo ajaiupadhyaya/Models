@@ -23,6 +23,7 @@ data/*.xlsx
 data/*.parquet
 data/*.h5
 data/cache/
+data/metrics/*.json
 *.db
 *.sqlite
 
@@ -64,3 +65,7 @@ dist/
 cpp_core/build/
 quant_cpp.*.so
 quant_cpp.*.pyd
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

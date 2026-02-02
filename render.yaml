@@ -1,0 +1,17 @@
+# Render Blueprint: deploy the terminal as a web service
+# https://render.com/docs/blueprint-spec
+#
+# Usage: connect this repo in Render; Render will create a Web Service from this spec.
+# Set env vars (FRED_API_KEY, ALPHA_VANTAGE_API_KEY, etc.) in the Render dashboard.
+
+services:
+  - type: web
+    name: terminal-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Render sets PORT automatically; Dockerfile CMD uses it
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      # Add FRED_API_KEY, ALPHA_VANTAGE_API_KEY, OPENAI_API_KEY, TERMINAL_USER, TERMINAL_PASSWORD, AUTH_SECRET in Render dashboard (Environment)
