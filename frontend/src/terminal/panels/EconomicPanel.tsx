@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import * as d3 from "d3";
 import { useFetchWithRetry } from "../../hooks/useFetchWithRetry";
+import { useTerminal } from "../TerminalContext";
 import { PanelErrorState } from "./PanelErrorState";
 
 interface MacroPoint {
@@ -45,7 +47,136 @@ function parseCalendar(json: unknown): CalendarEvent[] | null {
   return Array.isArray(r?.events) ? r.events : [];
 }
 
+/** D3 time-series chart for macro series (first series with data). */
+function MacroChart({ series }: { series: MacroSeries[] }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const withData = series.filter((s) => s.data && s.data.length > 1);
+  const first = withData[0];
+
+  useEffect(() => {
+    if (!ref.current || !first?.data?.length) return;
+    const el = ref.current;
+    const width = el.clientWidth || 400;
+    const height = 180;
+    const margin = { top: 12, right: 12, bottom: 24, left: 44 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+
+    d3.select(el).selectAll("*").remove();
+    const data = first.data.map((d) => ({ date: new Date(d.date), value: Number(d.value) })).filter((d) => !Number.isNaN(d.value));
+    if (data.length < 2) return;
+
+    const svg = d3
+      .select(el)
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const xScale = d3.scaleTime().domain(d3.extent(data, (d) => d.date) as [Date, Date]).range([0, innerWidth]);
+    const yScale = d3.scaleLinear().domain(d3.extent(data, (d) => d.value) as [number, number]).nice().range([innerHeight, 0]);
+
+    const line = d3.line<{ date: Date; value: number }>().x((d) => xScale(d.date)).y((d) => yScale(d.value));
+    g.append("path").datum(data).attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 1.5).attr("d", line);
+    g.append("g").attr("transform", `translate(0,${innerHeight})`).attr("class", "axis axis-x").call(d3.axisBottom(xScale).ticks(5));
+    g.append("g").attr("class", "axis axis-y").call(d3.axisLeft(yScale).ticks(5));
+    g.append("text").attr("x", 2).attr("y", 8).attr("fill", "var(--text-soft)").attr("font-size", 10).attr("font-family", "var(--font-mono)").text(first.description || first.series_id);
+  }, [first?.series_id, first?.data?.length]);
+
+  if (!first?.data?.length) return null;
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ color: "var(--accent)", marginBottom: 6, fontSize: 12 }}>Macro trend</div>
+      <div ref={ref} className="chart-root" style={{ minHeight: 180 }} />
+    </div>
+  );
+}
+
+interface CorrelationResponse {
+  symbols?: string[];
+  matrix?: number[][];
+  error?: string;
+}
+
+/** D3 correlation heatmap (global market correlation). */
+function CorrelationHeatmap({ symbolsParam }: { symbolsParam: string }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const url = `/api/v1/data/correlation?symbols=${encodeURIComponent(symbolsParam)}&period=1y`;
+  const { data } = useFetchWithRetry<CorrelationResponse | null>(url, {
+    parse: (json) => (json && typeof json === "object" && !("detail" in (json as object)) ? (json as CorrelationResponse) : null),
+    deps: [symbolsParam],
+  });
+
+  useEffect(() => {
+    if (!ref.current || !data?.symbols?.length || !data?.matrix?.length) return;
+    const el = ref.current;
+    const symbols = data.symbols;
+    const matrix = data.matrix;
+    const n = symbols.length;
+    const cellSize = 28;
+    const margin = { top: 8, left: 64 };
+    const width = margin.left + n * cellSize;
+    const height = margin.top + n * cellSize;
+
+    d3.select(el).selectAll("*").remove();
+    const svg = d3.select(el).append("svg").attr("width", width).attr("height", height);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const colorScale = d3.scaleLinear<string>().domain([-1, 0, 1]).range(["#2166ac", "#333333", "#b2182b"]);
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const v = matrix[i]?.[j] ?? 0;
+        g.append("rect")
+          .attr("x", j * cellSize)
+          .attr("y", i * cellSize)
+          .attr("width", cellSize - 2)
+          .attr("height", cellSize - 2)
+          .attr("fill", colorScale(v))
+          .attr("stroke", "var(--border)")
+          .attr("stroke-width", 0.5);
+        g.append("text")
+          .attr("x", j * cellSize + (cellSize - 2) / 2)
+          .attr("y", i * cellSize + (cellSize - 2) / 2 + 4)
+          .attr("text-anchor", "middle")
+          .attr("font-size", 9)
+          .attr("font-family", "var(--font-mono)")
+          .attr("fill", Math.abs(v) > 0.5 ? "#fff" : "var(--text)")
+          .text(typeof v === "number" ? v.toFixed(2) : "");
+      }
+      g.append("text")
+        .attr("x", -6)
+        .attr("y", i * cellSize + (cellSize - 2) / 2 + 4)
+        .attr("text-anchor", "end")
+        .attr("font-size", 9)
+        .attr("font-family", "var(--font-mono)")
+        .attr("fill", "var(--text-soft)")
+        .text(symbols[i] ?? "");
+    }
+    for (let j = 0; j < n; j++) {
+      g.append("text")
+        .attr("x", j * cellSize + (cellSize - 2) / 2)
+        .attr("y", -4)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 9)
+        .attr("font-family", "var(--font-mono)")
+        .attr("fill", "var(--text-soft)")
+        .text(symbols[j] ?? "");
+    }
+  }, [data?.symbols, data?.matrix]);
+
+  if (!data?.symbols?.length || !data?.matrix?.length) return null;
+  if (data.error) return null;
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ color: "var(--accent)", marginBottom: 6, fontSize: 12 }}>Correlation (returns, 1Y)</div>
+      <div ref={ref} className="chart-root" />
+    </div>
+  );
+}
+
 export const EconomicPanel: React.FC = () => {
+  const { watchlist } = useTerminal();
+  const correlationSymbols = watchlist.length >= 2 ? watchlist.slice(0, 8).join(",") : "AAPL,MSFT,GOOGL,AMZN,TSLA";
   const { data, error, loading, retry } = useFetchWithRetry<MacroSeries[] | null>("/api/v1/data/macro", {
     parse: parseMacro,
   });
@@ -86,6 +217,8 @@ export const EconomicPanel: React.FC = () => {
     <section className="panel panel-main">
       <div className="panel-title">Economic indicators</div>
       <div style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
+        <CorrelationHeatmap symbolsParam={correlationSymbols} />
+        {data && data.length > 0 && <MacroChart series={data} />}
         {data && data.length > 0 ? (
           data.slice(0, 6).map((s) => (
             <div key={s.series_id} style={{ marginBottom: 12 }}>

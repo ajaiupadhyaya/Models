@@ -128,3 +128,57 @@ async def run_stress_ticker(
     except Exception as e:
         logger.warning("Stress run failed for %s: %s", ticker, e)
         return {"ticker": ticker.upper(), "scenarios": [], "error": str(e)}
+
+
+@router.get("/optimize")
+async def portfolio_optimize(
+    symbols: str = Query("AAPL,MSFT,GOOGL,AMZN,TSLA", description="Comma-separated symbols for portfolio"),
+    period: str = Query("1y", description="History period for returns"),
+    method: str = Query("sharpe", description="Optimization method: sharpe, min_vol, risk_parity"),
+) -> Dict[str, Any]:
+    """
+    Mean-variance (or risk-parity) portfolio optimization from historical returns.
+    Used by the terminal Portfolio panel for rebalancing suggestions.
+    """
+    try:
+        import yfinance as yf
+        import pandas as pd
+        from models.portfolio.optimization import optimize_portfolio_from_returns
+
+        sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:15]
+        if len(sym_list) < 2:
+            return {"weights": {}, "error": "Provide at least 2 symbols"}
+        data = yf.download(sym_list, period=period, progress=False, auto_adjust=True, group_by="ticker", threads=False)
+        if data.empty:
+            return {"weights": {}, "error": "No price data"}
+        if isinstance(data.columns, pd.MultiIndex):
+            closes = pd.DataFrame({s: data["Close"][s] for s in sym_list if s in data["Close"].columns})
+        else:
+            if "Close" in data.columns:
+                closes = data[["Close"]].copy()
+                closes.columns = sym_list[:1]
+            else:
+                return {"weights": {}, "error": "No close prices"}
+        if closes.shape[1] < 2:
+            return {"weights": {}, "error": "Insufficient series for optimization"}
+        returns = closes.pct_change().dropna()
+        if len(returns) < 20:
+            return {"weights": {}, "error": "Insufficient data points"}
+        result = optimize_portfolio_from_returns(returns, method=method)
+        weights_series = result.get("weights")
+        if weights_series is not None and hasattr(weights_series, "to_dict"):
+            weights_dict = {k: round(float(v), 4) for k, v in weights_series.to_dict().items()}
+        else:
+            weights_dict = {}
+        return {
+            "symbols": list(weights_dict.keys()),
+            "weights": weights_dict,
+            "expected_return": round(float(result.get("expected_return", 0)), 4),
+            "volatility": round(float(result.get("volatility", 0)), 4),
+            "sharpe_ratio": round(float(result.get("sharpe_ratio", 0)), 4) if result.get("sharpe_ratio") is not None else None,
+        }
+    except ValueError as e:
+        return {"weights": {}, "error": str(e)}
+    except Exception as e:
+        logger.warning("Portfolio optimize failed: %s", e)
+        return {"weights": {}, "error": str(e)}

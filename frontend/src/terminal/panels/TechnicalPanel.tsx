@@ -6,9 +6,12 @@ const INDICATORS: { id: IndicatorOverlay; label: string }[] = [
   { id: "none", label: "None" },
   { id: "sma20", label: "SMA 20" },
   { id: "sma50", label: "SMA 50" },
+  { id: "ema12", label: "EMA 12" },
+  { id: "ema26", label: "EMA 26" },
   { id: "rsi", label: "RSI" },
   { id: "macd", label: "MACD" },
   { id: "bollinger", label: "BB" },
+  { id: "atr", label: "ATR" },
 ];
 
 export const TechnicalPanel: React.FC = () => {

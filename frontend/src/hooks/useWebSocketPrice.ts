@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getWsBase } from "../apiBase";
 
 interface PriceUpdate {
   type: string;
@@ -27,9 +28,10 @@ export function useWebSocketPrice(symbol: string | null): {
       setError(null);
       return;
     }
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/api/v1/ws/prices/${symbol}`;
+    const wsBase = getWsBase();
+    const wsUrl = wsBase
+      ? `${wsBase}/api/v1/ws/prices/${symbol}`
+      : `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/v1/ws/prices/${symbol}`;
     let ws: WebSocket | null = null;
     let closed = false;
 

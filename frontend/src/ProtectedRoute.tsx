@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { resolveApiUrl } from "./apiBase";
 import { getToken } from "./LoginPage";
 
 interface ProtectedRouteProps {
@@ -18,7 +19,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       setChecked(true);
       return;
     }
-    fetch("/api/auth/me", {
+    fetch(resolveApiUrl("/api/auth/me"), {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {

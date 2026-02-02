@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { resolveApiUrl } from "../../apiBase";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
 
@@ -80,7 +81,7 @@ export const QuantPanel: React.FC = () => {
     setTrainLoading(true);
     setTrainResult(null);
     try {
-      const res = await fetch("/api/v1/models/train", {
+      const res = await fetch(resolveApiUrl("/api/v1/models/train"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
@@ -117,7 +118,7 @@ export const QuantPanel: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/v1/backtest/run", {
+      const res = await fetch(resolveApiUrl("/api/v1/backtest/run"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
@@ -158,7 +159,7 @@ export const QuantPanel: React.FC = () => {
     setCompareError(null);
     setCompareResult(null);
     try {
-      const res = await fetch("/api/v1/backtest/compare", {
+      const res = await fetch(resolveApiUrl("/api/v1/backtest/compare"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
@@ -199,7 +200,7 @@ export const QuantPanel: React.FC = () => {
     setWfError(null);
     setWfResult(null);
     try {
-      const res = await fetch("/api/v1/backtest/walk-forward", {
+      const res = await fetch(resolveApiUrl("/api/v1/backtest/walk-forward"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({

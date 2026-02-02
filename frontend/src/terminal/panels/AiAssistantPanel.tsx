@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { resolveApiUrl } from "../../apiBase";
 import { useTerminal } from "../TerminalContext";
 import { getAuthHeaders } from "../../hooks/useFetchWithRetry";
 
@@ -23,7 +24,7 @@ export const AiAssistantPanel: React.FC = () => {
       try {
         setLoading(true);
         if (!isCommandBarQuery) setManualResponse("");
-        const res = await fetch(`/api/v1/ai/stock-analysis/${sym}?include_prediction=true`, { headers: getAuthHeaders() });
+        const res = await fetch(resolveApiUrl(`/api/v1/ai/stock-analysis/${sym}?include_prediction=true`), { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
           const msg = `Error ${res.status}: ${json?.detail ?? res.statusText ?? "AI analysis failed"}. Ensure API is running and OPENAI_API_KEY is set.`;
@@ -54,7 +55,7 @@ export const AiAssistantPanel: React.FC = () => {
         setLoading(true);
         if (!isCommandBarQuery) setManualResponse("");
         const res = await fetch(
-          `/api/v1/ai/nl-query?q=${encodeURIComponent(question)}`,
+          resolveApiUrl(`/api/v1/ai/nl-query?q=${encodeURIComponent(question)}`),
           { headers: getAuthHeaders() }
         );
         const json = await res.json().catch(() => ({}));
