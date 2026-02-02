@@ -78,7 +78,14 @@ async def market_summary(symbols: str = Query("AAPL,MSFT,GOOGL", description="Co
         return result
     except Exception as e:
         logger.error(f"Market summary error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return 200 with placeholder so frontend stays operational
+        symbol_list = [s.strip().upper() for s in symbols.split(",")] if symbols else ["AAPL"]
+        analyses = {sym: {"price": 0.0, "analysis": "Data temporarily unavailable. Check API and network."} for sym in symbol_list}
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "analyses": analyses,
+            "market_tone": "Unavailable - check API and data sources",
+        }
 
 
 @router.get("/stock-analysis/{symbol}")
@@ -148,7 +155,15 @@ async def stock_analysis(
         raise
     except Exception as e:
         logger.error(f"Stock analysis error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return 200 with minimal structure so frontend stays operational
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "symbol": symbol.upper(),
+            "current_price": 0.0,
+            "technical_analysis": "Analysis temporarily unavailable. Ensure API is running and OPENAI_API_KEY is set for full analysis.",
+            "prediction": None,
+            "trading_insight": {"reasoning": "Unable to generate insight. Check API and configuration.", "recommendation": "—"},
+        }
 
 
 @router.post("/trading-insight")
@@ -232,3 +247,38 @@ async def explain_metrics(metrics: dict):
     except Exception as e:
         logger.error(f"Metric explanation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/nl-query")
+async def nl_query(q: str = Query(..., description="Natural language question (e.g. What's driving tech stocks today?)")):
+    """
+    Answer a natural-language question using macro data, market summary, and LLM.
+    Uses cached macro and market-summary when available.
+    """
+    from api.cache import get_cached, cache_key
+    context_parts = []
+    try:
+        macro = get_cached(cache_key("data", "macro"))
+        if macro and isinstance(macro, dict) and "series" in macro:
+            for s in macro.get("series", [])[:6]:
+                desc = s.get("description", "")
+                data = s.get("data", [])
+                if data:
+                    latest = data[-1]
+                    context_parts.append(f"- {desc}: {latest.get('value', 'N/A')} (as of {latest.get('date', '')})")
+        if not context_parts:
+            context_parts.append("- Macro: (no cached data; run Economic panel to populate)")
+    except Exception as e:
+        context_parts.append(f"- Macro: (unavailable: {e})")
+    try:
+        market = get_cached(cache_key("ai", "market-summary", "AAPL,MSFT,GOOGL,SPY"))
+        if market and isinstance(market, dict) and "analyses" in market:
+            context_parts.append("- Market summary (AAPL, MSFT, GOOGL, SPY):")
+            for sym, v in list((market.get("analyses") or {}).items())[:4]:
+                if isinstance(v, dict) and v.get("analysis"):
+                    context_parts.append(f"  {sym}: {str(v.get('analysis', ''))[:120]}...")
+    except Exception:
+        pass
+    context = "\n".join(context_parts) if context_parts else "No macro or market data cached yet."
+    answer = ai_service.answer_nl_query(context, q)
+    return {"answer": answer, "question": q}

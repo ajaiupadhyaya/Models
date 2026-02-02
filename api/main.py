@@ -73,6 +73,11 @@ def get_routers():
         routers["orchestrator"] = orchestrator_router
     except Exception as e:
         logger.info(f"Orchestrator router not available: {e}")
+    try:
+        from api.screener_api import router as screener_router
+        routers["screener"] = screener_router
+    except Exception as e:
+        logger.info(f"Screener router not available: {e}")
 
     # Advanced / institutional-grade routers stay importable but are not
     # part of the default core surface. They can still be mounted
@@ -335,12 +340,19 @@ try:
     app.include_router(routers["company"], prefix="/api/v1/company", tags=["Company Analysis"])
     app.include_router(routers["ai"], tags=["AI"])
     app.include_router(routers["data"], prefix="/api/v1/data", tags=["Data"])
+    try:
+        from api.news_api import router as news_router
+        app.include_router(news_router, prefix="/api/v1/data", tags=["News"])
+    except Exception as e:
+        logger.info("News router not available: %s", e)
     app.include_router(routers["risk"], prefix="/api/v1/risk", tags=["Risk"])
 
     if "automation" in routers:
         app.include_router(routers["automation"], tags=["Automation"])
     if "orchestrator" in routers:
         app.include_router(routers["orchestrator"], tags=["Orchestrator"])
+    if "screener" in routers:
+        app.include_router(routers["screener"], prefix="/api/v1/screener", tags=["Screener"])
 
     # Advanced / optional domains
     if "comprehensive" in routers:

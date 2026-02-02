@@ -10,6 +10,8 @@ import { QuantPanel } from "./panels/QuantPanel";
 import { EconomicPanel } from "./panels/EconomicPanel";
 import { NewsPanel } from "./panels/NewsPanel";
 import { ScreeningPanel } from "./panels/ScreeningPanel";
+import { PaperTradingPanel } from "./panels/PaperTradingPanel";
+import { AutomationPanel } from "./panels/AutomationPanel";
 import { CommandBar } from "./CommandBar";
 import { TickerStrip } from "./TickerStrip";
 import {
@@ -18,8 +20,24 @@ import {
   MODULES_ORDER,
   WORKSPACE_STORAGE_KEY,
   ACTIVE_WORKSPACE_KEY,
+  WATCHLIST_STORAGE_KEY,
+  loadWatchlist,
   type WorkspaceState,
 } from "./TerminalContext";
+
+const MODULE_LABELS: Record<ActiveModule, string> = {
+  primary: "Primary",
+  fundamental: "Fundamental",
+  technical: "Technical",
+  quant: "Quant",
+  economic: "Economic",
+  news: "News",
+  portfolio: "Portfolio",
+  paper: "Paper",
+  automation: "Automation",
+  screening: "Screening",
+  ai: "AI",
+};
 
 const LAYOUT_STORAGE_KEY = "bloomberg-terminal-layout";
 const DEFAULT_LAYOUT: [number, number, number] = [20, 50, 30];
@@ -89,6 +107,10 @@ function MainContent({ activeModule }: { activeModule: ActiveModule }) {
       return <NewsPanel />;
     case "portfolio":
       return <PortfolioPanel />;
+    case "paper":
+      return <PaperTradingPanel />;
+    case "automation":
+      return <AutomationPanel />;
     case "screening":
       return <ScreeningPanel />;
     case "ai":
@@ -124,6 +146,15 @@ export const TerminalShell: React.FC = () => {
   const [lastAiQuery, setLastAiQuery] = useState<{ q: string; a: string } | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [lastBacktestSymbol, setLastBacktestSymbol] = useState<string | null>(null);
+  const [watchlist, setWatchlistState] = useState<string[]>(loadWatchlist);
+  const setWatchlist = useCallback((symbols: string[]) => {
+    setWatchlistState(symbols);
+    try {
+      localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(symbols));
+    } catch {
+      // ignore
+    }
+  }, []);
   const defaultLayout = currentWs?.layout
     ? { left: currentWs.layout[0], main: currentWs.layout[1], right: currentWs.layout[2] }
     : savedLayout
@@ -214,6 +245,8 @@ export const TerminalShell: React.FC = () => {
         onSwitchWorkspace: handleSwitchWorkspace,
         nextModule,
         prevModule,
+        watchlist,
+        setWatchlist,
       }}
     >
       <div className="terminal-root">
@@ -228,6 +261,42 @@ export const TerminalShell: React.FC = () => {
         <div className="terminal-command-row" style={{ position: "relative" }}>
           <CommandBar onSubmit={handleCommand} />
         </div>
+
+        <nav
+          className="terminal-module-tabs"
+          aria-label="Switch module"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 4,
+            padding: "6px 8px",
+            borderBottom: "1px solid var(--border)",
+            background: "var(--bg-panel)",
+            minHeight: 36,
+            alignItems: "center",
+          }}
+        >
+          {MODULES_ORDER.map((mod) => (
+            <button
+              key={mod}
+              type="button"
+              onClick={() => setActiveModule(mod)}
+              className={activeModule === mod ? "terminal-tab-active" : "terminal-tab"}
+              style={{
+                padding: "4px 10px",
+                fontSize: 12,
+                fontFamily: "var(--font-mono)",
+                border: `1px solid ${activeModule === mod ? "var(--accent)" : "var(--border)"}`,
+                borderRadius: 4,
+                background: activeModule === mod ? "var(--accent)" : "transparent",
+                color: activeModule === mod ? "#0a0a0a" : "var(--text)",
+                cursor: "pointer",
+              }}
+            >
+              {MODULE_LABELS[mod]}
+            </button>
+          ))}
+        </nav>
 
         <TickerStrip primarySymbol={primarySymbol} onWsStatus={setWsConnected} />
 

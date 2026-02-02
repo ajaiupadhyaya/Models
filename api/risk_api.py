@@ -5,8 +5,8 @@ Endpoints for VaR, CVaR, volatility, and stress metrics per symbol.
 Used by the terminal Portfolio panel for risk analytics.
 """
 
-from fastapi import APIRouter, HTTPException
-from typing import Dict, Any
+from fastapi import APIRouter, HTTPException, Query
+from typing import Dict, Any, List
 import logging
 from pathlib import Path
 import sys
@@ -72,4 +72,59 @@ async def get_risk_metrics(ticker: str, period: str = "1y") -> Dict[str, Any]:
         raise
     except Exception as e:
         logger.warning("Risk metrics failed for %s: %s", ticker, e)
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "ticker": ticker.upper(),
+            "period": period,
+            "var_95_pct": 0.0,
+            "var_99_pct": 0.0,
+            "cvar_95_pct": 0.0,
+            "cvar_99_pct": 0.0,
+            "volatility_daily_pct": 0.0,
+            "volatility_annual_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 0.0,
+            "error": str(e),
+        }
+
+
+@router.get("/stress/scenarios")
+async def list_stress_scenarios() -> Dict[str, Any]:
+    """
+    List available historical stress scenarios (Black Monday, COVID crash, etc.).
+    Used by the terminal Portfolio / stress section.
+    """
+    try:
+        from models.risk.stress_testing import HistoricalScenarioAnalyzer
+        scenarios = HistoricalScenarioAnalyzer.list_scenarios()
+        return {"scenarios": scenarios, "count": len(scenarios)}
+    except Exception as e:
+        logger.warning("Stress scenarios list failed: %s", e)
+        return {"scenarios": [], "count": 0, "error": str(e)}
+
+
+@router.get("/stress")
+async def run_stress_ticker(
+    ticker: str = Query(..., description="Stock symbol"),
+) -> Dict[str, Any]:
+    """
+    Estimate stress impact for a single ticker across historical scenarios.
+    Uses SPY/QQQ shock as proxy for equity tickers when symbol not in scenario.
+    """
+    try:
+        from models.risk.stress_testing import HistoricalScenarioAnalyzer
+        ticker = ticker.upper()
+        results: List[Dict[str, Any]] = []
+        for key, data in HistoricalScenarioAnalyzer.SCENARIOS.items():
+            shocks = data.get("shocks", {})
+            shock = shocks.get(ticker)
+            if shock is None:
+                shock = shocks.get("SPY") or shocks.get("QQQ") or 0.0
+            results.append({
+                "scenario_id": key,
+                "name": data.get("name", key),
+                "estimated_return_pct": round(float(shock) * 100, 2),
+            })
+        return {"ticker": ticker, "scenarios": results}
+    except Exception as e:
+        logger.warning("Stress run failed for %s: %s", ticker, e)
+        return {"ticker": ticker.upper(), "scenarios": [], "error": str(e)}

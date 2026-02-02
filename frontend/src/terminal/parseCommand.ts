@@ -11,6 +11,8 @@ export type ActiveModule =
   | "economic"
   | "news"
   | "portfolio"
+  | "paper"
+  | "automation"
   | "screening"
   | "ai";
 
@@ -33,11 +35,14 @@ export function parseCommand(raw: string): ParsedCommand | null {
   const ticker = parts[1]?.toUpperCase() ?? "";
 
   // Single-word: could be a command (ECO, PORT, FLD) or a ticker (AAPL)
-  const singleWordNoArgCodes = ["ECO", "PORT", "FLD", "FLDS"];
+  const singleWordNoArgCodes = ["ECO", "PORT", "PAPER", "AUTO", "ORCH", "TRAIN", "FLD", "FLDS"];
   if (parts.length === 1) {
     if (singleWordNoArgCodes.includes(code)) {
       if (code === "ECO") return { type: "module", module: "economic" };
       if (code === "PORT") return { type: "module", module: "portfolio" };
+      if (code === "PAPER") return { type: "module", module: "paper" };
+      if (code === "AUTO" || code === "ORCH") return { type: "module", module: "automation" };
+      if (code === "TRAIN") return { type: "module", module: "quant" };
       if (code === "FLD" || code === "FLDS") return { type: "module", module: "technical" };
     }
     if (/^[A-Z]{1,5}$/.test(parts[0]!)) {
@@ -59,12 +64,19 @@ export function parseCommand(raw: string): ParsedCommand | null {
       return { type: "module", module: "news", symbol: ticker || undefined };
     case "PORT":
       return { type: "module", module: "portfolio" };
+    case "PAPER":
+      return { type: "module", module: "paper" };
+    case "AUTO":
+    case "ORCH":
+      return { type: "module", module: "automation" };
     case "SCREEN":
       return { type: "module", module: "screening", symbol: ticker || undefined };
     case "AI":
       return { type: "ai", module: "ai", query: parts.slice(1).join(" ") || undefined };
     case "BACKTEST":
       return { type: "backtest", module: "quant", symbol: ticker || undefined };
+    case "TRAIN":
+      return { type: "module", module: "quant", symbol: ticker || undefined };
     case "WORKSPACE":
       return { type: "workspace", symbol: ticker || undefined };
     default:

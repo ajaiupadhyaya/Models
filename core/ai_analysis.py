@@ -279,6 +279,33 @@ class AIAnalysisService:
             logger.error(f"Metric explanation error: {e}")
             return f"Explanation unavailable: {str(e)[:50]}"
 
+    def answer_nl_query(self, context: str, question: str) -> str:
+        """
+        Answer a natural-language question using provided context (macro, market summary, etc.).
+        """
+        if not self.client:
+            return "AI analysis unavailable (LLM provider not configured). Set OPENAI_API_KEY."
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a financial analyst. Answer the user's question concisely using only the provided context. If the context does not contain enough information, say so. Keep answers to 2-4 sentences."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Context:\n{context}\n\nQuestion: {question}"
+                    }
+                ],
+                max_tokens=300,
+                temperature=0.5
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"NL query error: {e}")
+            return f"Unable to answer: {str(e)[:80]}"
+
 
 # Global instance
 _service = None
