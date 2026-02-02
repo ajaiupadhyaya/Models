@@ -5,7 +5,7 @@ interface PanelErrorStateProps {
   title: string;
   /** Error message to show. */
   error: string;
-  /** Optional hint (e.g. "Ensure API is running on port 8000."). */
+  /** Optional hint (e.g. "Try again or ensure the service is reachable."). */
   hint?: string;
   /** If provided, a Retry button is shown. */
   onRetry?: () => void;

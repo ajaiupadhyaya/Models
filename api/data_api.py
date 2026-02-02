@@ -8,7 +8,7 @@ import os
 import requests
 import pandas as pd
 from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import logging
 from pathlib import Path
 import sys
@@ -90,6 +90,53 @@ async def get_macro() -> Dict[str, Any]:
         return {"series": [], "error": str(e)}
 
 
+@router.get("/yield-curve")
+async def get_yield_curve() -> Dict[str, Any]:
+    """
+    Get US Treasury yield curve (2Y, 5Y, 10Y, 30Y) for Economic tab visualization.
+    Requires FRED_API_KEY. Cached 1 hour.
+    """
+    from api.cache import get_cached, set_cached, cache_key
+    key = cache_key("data", "yield-curve")
+    cached = get_cached(key)
+    if cached is not None:
+        return cached
+    try:
+        from core.data_fetcher import DataFetcher
+        try:
+            from config import get_settings
+            if not get_settings().data.fred_configured:
+                return {"error": "FRED API key not configured", "maturities": [], "yields": []}
+        except ImportError:
+            pass
+        fetcher = DataFetcher()
+        if not fetcher.fred:
+            return {"error": "FRED API key not configured", "maturities": [2, 5, 10, 30], "yields": []}
+        end_date = datetime.now().strftime("%Y-%m-%d")
+        start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        series_ids = [("DGS2", 2), ("DGS5", 5), ("DGS10", 10), ("DGS30", 30)]
+        yields_list: List[float] = []
+        maturities: List[int] = []
+        last_date: Optional[str] = None
+        for sid, mat in series_ids:
+            try:
+                s = fetcher.get_economic_indicator(sid, start_date, end_date)
+                if s is not None and not s.empty:
+                    last_val = s.dropna().iloc[-1] if len(s.dropna()) else None
+                    if last_val is not None:
+                        maturities.append(mat)
+                        yields_list.append(float(last_val))
+                    if last_date is None and s.index is not None and len(s) > 0:
+                        last_date = str(s.index[-1])[:10]
+            except Exception as e:
+                logger.warning("Yield curve series %s failed: %s", sid, e)
+        result = {"maturities": maturities, "yields": yields_list, "date": last_date}
+        if maturities:
+            set_cached(key, result, 3600)
+        return result
+    except Exception as e:
+        logger.warning("Yield curve failed: %s", e)
+        return {"error": str(e), "maturities": [2, 5, 10, 30], "yields": []}
 @router.get("/economic-calendar")
 async def get_economic_calendar(
     days_ahead: int = 30,
@@ -220,10 +267,20 @@ async def get_correlation(
         if data.empty:
             return {"symbols": sym_list, "matrix": [], "error": "No price data"}
         if isinstance(data.columns, pd.MultiIndex):
-            closes = pd.DataFrame({s: data["Close"][s] for s in sym_list if s in data["Close"].columns})
+            # group_by='ticker' -> (Ticker, OHLCV); level 1 is Open/High/Low/Close/Volume
+            try:
+                closes = data.xs("Close", axis=1, level=1)
+            except (KeyError, TypeError):
+                level0 = data.columns.get_level_values(0).unique()
+                closes = pd.DataFrame({s: data[s]["Close"] for s in sym_list if s in level0})
+            if closes.empty or not hasattr(closes, "columns"):
+                closes = pd.DataFrame()
+            else:
+                closes = closes.reindex(columns=[s for s in sym_list if s in closes.columns]).dropna(axis=1, how="all").dropna(axis=0, how="all")
         else:
             closes = data[["Close"]].copy() if "Close" in data.columns else data.iloc[:, :1].copy()
             closes.columns = sym_list[: closes.shape[1]]
+        closes = closes.dropna(axis=1, how="all").dropna(axis=0, how="all")
         if closes.shape[1] < 2:
             return {"symbols": sym_list, "matrix": [], "error": "Insufficient series"}
         returns = closes.pct_change().dropna()

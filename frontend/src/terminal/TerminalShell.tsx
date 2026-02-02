@@ -12,6 +12,7 @@ import { NewsPanel } from "./panels/NewsPanel";
 import { ScreeningPanel } from "./panels/ScreeningPanel";
 import { PaperTradingPanel } from "./panels/PaperTradingPanel";
 import { AutomationPanel } from "./panels/AutomationPanel";
+import { AiInsightsPanel } from "./panels/AiInsightsPanel";
 import { CommandBar } from "./CommandBar";
 import { TickerStrip } from "./TickerStrip";
 import {
@@ -116,6 +117,7 @@ function MainContent({ activeModule }: { activeModule: ActiveModule }) {
     case "ai":
       return (
         <>
+          <AiInsightsPanel />
           <PrimaryInstrument />
           <PortfolioPanel />
         </>

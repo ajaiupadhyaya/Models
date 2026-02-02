@@ -27,7 +27,7 @@ export const AiAssistantPanel: React.FC = () => {
         const res = await fetch(resolveApiUrl(`/api/v1/ai/stock-analysis/${sym}?include_prediction=true`), { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const msg = `Error ${res.status}: ${json?.detail ?? res.statusText ?? "AI analysis failed"}. Ensure API is running and OPENAI_API_KEY is set.`;
+          const msg = `Error ${res.status}: ${json?.detail ?? res.statusText ?? "AI analysis failed"}. Ensure OPENAI_API_KEY is set on the server for full analysis.`;
           if (isCommandBarQuery) setAiResponse(msg);
           else setManualResponse(msg);
           return;
@@ -39,7 +39,7 @@ export const AiAssistantPanel: React.FC = () => {
         if (isCommandBarQuery) setAiResponse(out);
         else setManualResponse(out);
       } catch (err) {
-        const msg = "Unable to reach AI analysis endpoint. Start the API on port 8000 and use npm run dev so /api is proxied.";
+        const msg = "AI analysis unavailable. Please try again.";
         if (isCommandBarQuery) setAiResponse(msg);
         else setManualResponse(msg);
       } finally {
@@ -69,7 +69,7 @@ export const AiAssistantPanel: React.FC = () => {
         if (isCommandBarQuery) setAiResponse(answer);
         else setManualResponse(answer);
       } catch (err) {
-        const msg = "Unable to reach NL query endpoint. Start the API on port 8000.";
+        const msg = "Query unavailable. Please try again.";
         if (isCommandBarQuery) setAiResponse(msg);
         else setManualResponse(msg);
       } finally {

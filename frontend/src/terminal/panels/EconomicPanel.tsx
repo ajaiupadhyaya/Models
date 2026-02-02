@@ -174,6 +174,62 @@ function CorrelationHeatmap({ symbolsParam }: { symbolsParam: string }) {
   );
 }
 
+interface YieldCurveResponse {
+  maturities?: number[];
+  yields?: number[];
+  date?: string;
+  error?: string;
+}
+
+function YieldCurveChart() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const { data } = useFetchWithRetry<YieldCurveResponse | null>("/api/v1/data/yield-curve", {
+    parse: (json) => (json && typeof json === "object" && !("detail" in (json as object)) ? (json as YieldCurveResponse) : null),
+    deps: [],
+  });
+
+  useEffect(() => {
+    if (!ref.current || !data?.maturities?.length || !data?.yields?.length) return;
+    const el = ref.current;
+    const maturities = data.maturities;
+    const yields = data.yields;
+    const n = Math.min(maturities.length, yields.length);
+    if (n < 2) return;
+    const margin = { top: 12, right: 12, bottom: 28, left: 40 };
+    const width = Math.min(el.clientWidth || 320, 400);
+    const height = 160;
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+
+    d3.select(el).selectAll("*").remove();
+    const svg = d3.select(el).append("svg").attr("width", width).attr("height", height);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const xScale = d3.scaleLinear().domain([Math.min(...maturities.slice(0, n)), Math.max(...maturities.slice(0, n))]).range([0, innerWidth]);
+    const yScale = d3.scaleLinear().domain([Math.min(...yields.slice(0, n)) - 0.1, Math.max(...yields.slice(0, n)) + 0.1]).nice().range([innerHeight, 0]);
+
+    const lineData = maturities.slice(0, n).map((m, i) => ({ m, y: yields[i]! }));
+    const line = d3.line<{ m: number; y: number }>().x((d) => xScale(d.m)).y((d) => yScale(d.y));
+    g.append("path").datum(lineData).attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 2).attr("d", line);
+    g.selectAll("circle").data(lineData).enter().append("circle")
+      .attr("cx", (d) => xScale(d.m))
+      .attr("cy", (d) => yScale(d.y))
+      .attr("r", 4)
+      .attr("fill", "var(--accent)");
+    g.append("g").attr("transform", `translate(0,${innerHeight})`).attr("class", "axis axis-x").call(d3.axisBottom(xScale).tickFormat((d) => d + "Y"));
+    g.append("g").attr("class", "axis axis-y").call(d3.axisLeft(yScale).ticks(5).tickFormat((d) => d + "%"));
+    g.append("text").attr("x", 2).attr("y", 8).attr("fill", "var(--text-soft)").attr("font-size", 10).attr("font-family", "var(--font-mono)").text("US Treasury yield curve" + (data.date ? ` (${data.date})` : ""));
+  }, [data?.maturities, data?.yields, data?.date]);
+
+  if (!data?.maturities?.length || !data?.yields?.length || data.error) return null;
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ color: "var(--accent)", marginBottom: 6, fontSize: 12 }}>Yield curve</div>
+      <div ref={ref} className="chart-root" style={{ minHeight: 160 }} />
+    </div>
+  );
+}
+
 export const EconomicPanel: React.FC = () => {
   const { watchlist } = useTerminal();
   const correlationSymbols = watchlist.length >= 2 ? watchlist.slice(0, 8).join(",") : "AAPL,MSFT,GOOGL,AMZN,TSLA";
@@ -218,6 +274,7 @@ export const EconomicPanel: React.FC = () => {
       <div className="panel-title">Economic indicators</div>
       <div style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
         <CorrelationHeatmap symbolsParam={correlationSymbols} />
+        <YieldCurveChart />
         {data && data.length > 0 && <MacroChart series={data} />}
         {data && data.length > 0 ? (
           data.slice(0, 6).map((s) => (

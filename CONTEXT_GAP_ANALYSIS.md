@@ -95,6 +95,18 @@ The following items from the gap analysis have been implemented:
 | **Income / balance sheet / cash flow** | Company analyze API now includes `fundamental_analysis.financials_summary` (income, balance_sheet, cash_flow from latest period); Fundamental panel shows three key-value tables. |
 | **More technical indicators** | Technical panel: EMA 12, EMA 26, ATR(14) added; PrimaryInstrument computes and displays ATR in a sub-panel. |
 
+## Phase B implementation (completed)
+
+| Item | Implementation |
+|------|----------------|
+| **Correlation + optimize APIs (yfinance)** | `data_api.get_correlation` and `risk_api.portfolio_optimize` now correctly extract Close from yfinance multi-symbol download via `data.xs("Close", axis=1, level=1)` for MultiIndex columns. |
+| **Chart export (PNG/SVG)** | PrimaryInstrument: "Export PNG" and "Export SVG" buttons; PNG via canvas from inlined-CSS SVG; SVG with CSS variables inlined for portability. |
+| **Sortable + CSV** | Screening panel already had sortable columns + CSV export; Peer comparison table now has sortable columns (symbol, name, market_cap) and CSV export. |
+| **AI Insights: sentiment + price target** | Stock-analysis API returns `sentiment` (score, label, reasoning) and prediction `confidence` / `confidence_interval_low|high`; AiInsightsPanel shows Sentiment block and Price target with confidence and range. |
+| **Technical strategy backtest** | Already present: `POST /api/v1/backtest/technical` (SMA crossover); QuantPanel "Technical strategy backtest (SMA cross)" section. |
+| **News: AI summarization** | NewsPanel: per-article "AI Summarize" button calling `POST /api/v1/ai/summarize`; API bug fixed (body.text.slice → body.text[:200]). |
+| **Yield curve viz** | `GET /api/v1/data/yield-curve` (FRED DGS2, DGS5, DGS10, DGS30); Economic panel: D3 YieldCurveChart (maturity vs yield). |
+
 ---
 
 ## Summary

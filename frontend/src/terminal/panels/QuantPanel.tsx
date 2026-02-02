@@ -76,6 +76,18 @@ export const QuantPanel: React.FC = () => {
   const [trainResult, setTrainResult] = useState<{ success: boolean; message: string; trainingTime?: number } | null>(null);
   useEffect(() => setTrainSymbol(primarySymbol), [primarySymbol]);
 
+  const [techStart, setTechStart] = useState(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [techEnd, setTechEnd] = useState(() => new Date().toISOString().slice(0, 10));
+  const [techFast, setTechFast] = useState(20);
+  const [techSlow, setTechSlow] = useState(50);
+  const [techBacktest, setTechBacktest] = useState<BacktestResult | null>(null);
+  const [techLoading, setTechLoading] = useState(false);
+  const [techError, setTechError] = useState<string | null>(null);
+
   const runTrain = useCallback(async () => {
     const modelName = trainModelName.trim() || `model_${trainSymbol}_${trainModelType}`;
     setTrainLoading(true);
@@ -225,6 +237,38 @@ export const QuantPanel: React.FC = () => {
     }
   }, [wfModel, wfStart, wfEnd, wfTrain, wfTest, models, symbol]);
 
+  const runTechnicalBacktest = useCallback(async () => {
+    setTechLoading(true);
+    setTechError(null);
+    setTechBacktest(null);
+    try {
+      const res = await fetch(resolveApiUrl("/api/v1/backtest/technical"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          symbol,
+          start_date: techStart,
+          end_date: techEnd,
+          strategy: "sma_cross",
+          fast_period: techFast,
+          slow_period: techSlow,
+          initial_capital: 100000,
+          commission: 0.001,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setTechError((json?.detail ?? `HTTP ${res.status}`) as string);
+        return;
+      }
+      setTechBacktest(json as BacktestResult);
+    } catch (err) {
+      setTechError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setTechLoading(false);
+    }
+  }, [symbol, techStart, techEnd, techFast, techSlow]);
+
   useEffect(() => {
     if (lastBacktestSymbol && models.length > 0 && !backtest && !loading) {
       runBacktest();
@@ -232,6 +276,7 @@ export const QuantPanel: React.FC = () => {
   }, [lastBacktestSymbol, models.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const metrics = backtest?.metrics ?? {};
+  const techMetrics = techBacktest?.metrics ?? {};
   const sharpe = metrics.sharpe_ratio ?? metrics.sharpe ?? null;
   const maxDd = metrics.max_drawdown_pct ?? metrics.max_drawdown ?? null;
   const totalReturn = metrics.total_return_pct ?? metrics.total_return ?? metrics.cumulative_return ?? null;
@@ -327,6 +372,29 @@ export const QuantPanel: React.FC = () => {
               {trainResult.success
                 ? `Success: ${trainResult.message}${trainResult.trainingTime != null ? ` (${trainResult.trainingTime.toFixed(1)}s)` : ""}`
                 : trainResult.message}
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
+          <div style={{ color: "var(--text-soft)", marginBottom: 8, fontWeight: 600 }}>Technical strategy backtest (SMA cross)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
+            <input type="date" value={techStart} onChange={(e) => setTechStart(e.target.value)} style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", color: "var(--text)", padding: "4px 6px", borderRadius: 4, fontSize: 11 }} aria-label="Start" />
+            <span style={{ color: "var(--text-soft)" }}>→</span>
+            <input type="date" value={techEnd} onChange={(e) => setTechEnd(e.target.value)} style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", color: "var(--text)", padding: "4px 6px", borderRadius: 4, fontSize: 11 }} aria-label="End" />
+            <input type="number" min={2} max={100} value={techFast} onChange={(e) => setTechFast(parseInt(e.target.value, 10) || 20)} style={{ width: 48, background: "var(--bg-panel)", border: "1px solid var(--border)", color: "var(--text)", padding: "4px 6px", borderRadius: 4, fontSize: 11 }} aria-label="Fast period" />
+            <span style={{ color: "var(--text-soft)", fontSize: 11 }}>fast</span>
+            <input type="number" min={2} max={200} value={techSlow} onChange={(e) => setTechSlow(parseInt(e.target.value, 10) || 50)} style={{ width: 48, background: "var(--bg-panel)", border: "1px solid var(--border)", color: "var(--text)", padding: "4px 6px", borderRadius: 4, fontSize: 11 }} aria-label="Slow period" />
+            <span style={{ color: "var(--text-soft)", fontSize: 11 }}>slow</span>
+            <button type="button" className="ai-button" disabled={techLoading} onClick={runTechnicalBacktest}>{techLoading ? "Running…" : "Run"}</button>
+          </div>
+          {techError && <div style={{ color: "var(--accent-red)", fontSize: 11, marginBottom: 4 }}>{techError}</div>}
+          {techBacktest && (
+            <div style={{ fontSize: 11, color: "var(--text-soft)" }}>
+              <span className="num-mono" style={{ marginRight: 12 }}>Return: {(techMetrics.total_return_pct ?? techMetrics.total_return ?? 0)?.toFixed(2)}%</span>
+              <span className="num-mono" style={{ marginRight: 12 }}>Sharpe: {(techMetrics.sharpe_ratio ?? techMetrics.sharpe ?? 0)?.toFixed(2)}</span>
+              <span className="num-mono" style={{ marginRight: 12 }}>Max DD: {(techMetrics.max_drawdown_pct ?? techMetrics.max_drawdown ?? 0)?.toFixed(2)}%</span>
+              <span className="num-mono">Trades: {techMetrics.num_trades ?? techBacktest.trades?.length ?? 0}</span>
             </div>
           )}
         </div>

@@ -61,8 +61,13 @@ function parseSector(json: unknown): SectorCompany[] | null {
   return Array.isArray(r?.companies) ? r.companies : [];
 }
 
-/** Peer comparison table (sector peers). */
+type PeerSortKey = "symbol" | "name" | "market_cap";
+type PeerSortDir = "asc" | "desc";
+
+/** Peer comparison table (sector peers) – sortable columns and CSV export. */
 function PeerComparisonTable({ sector, primarySymbol }: { sector: string; primarySymbol: string }) {
+  const [sortKey, setSortKey] = useState<PeerSortKey>("symbol");
+  const [sortDir, setSortDir] = useState<PeerSortDir>("asc");
   const url = sector ? `/api/v1/company/sector/${encodeURIComponent(sector)}?limit=12` : null;
   const { data: peers, loading } = useFetchWithRetry<SectorCompany[] | null>(url, {
     parse: parseSector,
@@ -70,19 +75,67 @@ function PeerComparisonTable({ sector, primarySymbol }: { sector: string; primar
   });
   const list = peers ?? [];
   const sym = (c: SectorCompany) => c.symbol ?? c.ticker ?? "";
-  const rows = list.filter((c) => sym(c) !== primarySymbol).slice(0, 10);
+  const filtered = list.filter((c) => sym(c) !== primarySymbol).slice(0, 10);
+  const rows = [...filtered].sort((a, b) => {
+    let va: string | number = sortKey === "symbol" ? sym(a) : sortKey === "name" ? (a.name ?? "") : (a.market_cap ?? 0);
+    let vb: string | number = sortKey === "symbol" ? sym(b) : sortKey === "name" ? (b.name ?? "") : (b.market_cap ?? 0);
+    if (sortKey === "market_cap") {
+      return sortDir === "asc" ? (va as number) - (vb as number) : (vb as number) - (va as number);
+    }
+    const cmp = String(va).toLowerCase().localeCompare(String(vb).toLowerCase());
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+  const toggleSort = (key: PeerSortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
   if (!sector || sector === "N/A") return null;
   if (loading) return <div className="panel-body-muted" style={{ fontSize: 11 }}>Loading peers…</div>;
   if (rows.length === 0) return <div className="panel-body-muted" style={{ fontSize: 11 }}>No sector peers found.</div>;
+  const exportCsv = () => {
+    const headers = ["Symbol", "Name", "Sector", "Market Cap"];
+    const csvRows = [headers.join(","), ...rows.map((c) => [
+      `"${(sym(c) || "").replace(/"/g, '""')}"`,
+      `"${(c.name ?? "").replace(/"/g, '""')}"`,
+      `"${(c.sector ?? "").replace(/"/g, '""')}"`,
+      c.market_cap != null ? String(c.market_cap) : "",
+    ].join(","))];
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = `peers-${sector.replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(downloadUrl);
+  };
   return (
     <div style={{ marginBottom: 12 }}>
-      <div style={{ color: "var(--accent)", marginBottom: 6, fontSize: 11 }}>Sector peers ({sector})</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <span style={{ color: "var(--accent)", fontSize: 11 }}>Sector peers ({sector})</span>
+        <button type="button" className="ai-button" style={{ padding: "2px 6px", fontSize: 10 }} onClick={exportCsv}>Export CSV</button>
+      </div>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
         <thead>
           <tr>
-            <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Symbol</th>
-            <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Name</th>
-            <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Market cap</th>
+            {(["symbol", "name", "market_cap"] as PeerSortKey[]).map((key) => (
+              <th
+                key={key}
+                style={{
+                  textAlign: key === "market_cap" ? "right" : "left",
+                  color: "var(--text-soft)",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+                onClick={() => toggleSort(key)}
+              >
+                {key === "market_cap" ? "Market cap" : key.charAt(0).toUpperCase() + key.slice(1)}
+                {sortKey === key && (sortDir === "asc" ? " ↑" : " ↓")}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -206,7 +259,7 @@ export const FundamentalPanel: React.FC = () => {
       <PanelErrorState
         title={`Fundamental: ${primarySymbol}`}
         error={error}
-        hint="Ensure API is running on port 8000."
+        hint="Try again or ensure the service is reachable."
         onRetry={retry}
       />
     );

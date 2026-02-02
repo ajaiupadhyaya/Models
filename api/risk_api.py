@@ -152,13 +152,23 @@ async def portfolio_optimize(
         if data.empty:
             return {"weights": {}, "error": "No price data"}
         if isinstance(data.columns, pd.MultiIndex):
-            closes = pd.DataFrame({s: data["Close"][s] for s in sym_list if s in data["Close"].columns})
+            # group_by='ticker' -> (Ticker, OHLCV); level 1 is Close
+            try:
+                closes = data.xs("Close", axis=1, level=1)
+            except (KeyError, TypeError):
+                level0 = data.columns.get_level_values(0).unique()
+                closes = pd.DataFrame({s: data[s]["Close"] for s in sym_list if s in level0})
+            if closes.empty or not hasattr(closes, "columns"):
+                closes = pd.DataFrame()
+            else:
+                closes = closes.reindex(columns=[s for s in sym_list if s in closes.columns]).dropna(axis=1, how="all").dropna(axis=0, how="all")
         else:
             if "Close" in data.columns:
                 closes = data[["Close"]].copy()
                 closes.columns = sym_list[:1]
             else:
                 return {"weights": {}, "error": "No close prices"}
+        closes = closes.dropna(axis=1, how="all").dropna(axis=0, how="all")
         if closes.shape[1] < 2:
             return {"weights": {}, "error": "Insufficient series for optimization"}
         returns = closes.pct_change().dropna()

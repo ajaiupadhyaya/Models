@@ -174,7 +174,7 @@ export const PaperTradingPanel: React.FC = () => {
       <PanelErrorState
         title="Paper Trading"
         error={healthError}
-        hint="Ensure API is running. Paper trading requires ALPACA_API_KEY and ALPACA_API_SECRET (see .env.example)."
+        hint="Paper trading requires ALPACA_API_KEY and ALPACA_API_SECRET on the server."
         onRetry={healthRetry}
       />
     );

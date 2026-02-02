@@ -89,3 +89,23 @@ async def me(username: Annotated[str, Depends(get_current_user)]) -> MeResponse:
 @router.post("/logout")
 async def logout() -> dict:
     return {"status": "ok"}
+
+
+@router.get("/status")
+async def auth_status() -> dict:
+    """
+    Return whether auth is configured. Frontend can allow access without login when False.
+    Considered configured only when AUTH_SECRET is set and not the default placeholder.
+    """
+    settings = get_settings()
+    secret_ok = (
+        settings.auth.auth_secret
+        and settings.auth.auth_secret.strip()
+        and "change-me-in-production" not in settings.auth.auth_secret
+    )
+    configured = bool(
+        settings.auth.terminal_user
+        and settings.auth.terminal_password
+        and secret_ok
+    )
+    return {"configured": configured}
