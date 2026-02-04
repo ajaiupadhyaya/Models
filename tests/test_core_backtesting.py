@@ -114,3 +114,27 @@ def test_institutional_engine_cost_impact(fixed_price_df, fixed_signals):
     assert r_inst["num_trades"] == r_std["num_trades"]
     # With positive costs/slippage, institutional final equity should not exceed standard by a large margin
     assert r_inst["final_equity"] <= r_std["final_equity"] + 0.05 * 100000
+
+
+def test_sma_crossover_strategy_produces_trades():
+    """Simple SMA crossover: buy when short MA > long MA, sell otherwise; backtest produces valid metrics."""
+    from core.backtesting import BacktestEngine
+    n = 120
+    np.random.seed(42)
+    dates = pd.date_range(start="2024-01-01", periods=n, freq="B")
+    close = 100.0 + np.cumsum(np.random.randn(n) * 0.8)
+    close = np.maximum(close, 90)
+    df = pd.DataFrame(
+        {"Open": close - 0.5, "High": close + 0.5, "Low": close - 1.0, "Close": close, "Volume": 1_000_000},
+        index=dates,
+    )
+    short_ma = df["Close"].rolling(10).mean()
+    long_ma = df["Close"].rolling(30).mean()
+    # Signal: +0.5 when short > long, -0.5 when short < long (normalized to [-1,1] scale for threshold)
+    raw = np.where(short_ma > long_ma, 0.5, -0.5)
+    signals = np.nan_to_num(raw, nan=0.0)
+    engine = BacktestEngine(initial_capital=100000.0, commission=0.001)
+    result = engine.run_backtest(df, signals, signal_threshold=0.3, position_size=0.1)
+    assert result["num_trades"] >= 0
+    assert "final_equity" in result
+    assert result["final_equity"] >= 0

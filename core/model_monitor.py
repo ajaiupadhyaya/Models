@@ -100,21 +100,18 @@ class ModelPerformanceMonitor:
         actual_direction = np.sign(actuals)
         accuracy = np.mean(pred_direction == actual_direction)
         
-        # Calculate returns
-        returns = actuals
-        cumulative_returns = (1 + returns).cumprod()
-        total_return = cumulative_returns[-1] - 1
-        
-        # Calculate Sharpe ratio
-        if len(returns) > 1:
-            sharpe = np.mean(returns) / (np.std(returns) + 1e-6) * np.sqrt(252)
-        else:
-            sharpe = 0
-        
-        # Calculate max drawdown
-        running_max = np.maximum.accumulate(cumulative_returns)
-        drawdown = (cumulative_returns - running_max) / running_max
-        max_drawdown = np.min(drawdown)
+        # Calculate returns and metrics via canonical core.utils
+        from core.utils import (
+            calculate_sharpe_ratio,
+            calculate_max_drawdown,
+        )
+        returns_series = pd.Series(actuals)
+        cumulative_returns = (1 + returns_series).cumprod()
+        total_return = float(cumulative_returns.iloc[-1] - 1) if len(cumulative_returns) > 0 else 0.0
+        sharpe = float(calculate_sharpe_ratio(returns_series)) if len(returns_series) > 1 else 0.0
+        if not np.isfinite(sharpe):
+            sharpe = 0.0
+        max_drawdown = float(calculate_max_drawdown(returns_series)) if len(returns_series) > 0 else 0.0
         
         # Calculate MAE and RMSE
         mae = np.mean(np.abs(predictions - actuals))

@@ -190,6 +190,14 @@ Once the API and frontend are running, you can use the terminal to **train, trad
 
 See `.env.example` for all optional keys (Finnhub, Alpaca, OpenAI, etc.). Minimum to run: API + frontend; add keys to enable each feature.
 
+### 3.2 Scheduled runs and automation
+
+Automated daily analysis and data updates use the **data scheduler** (`core/pipeline/data_scheduler.py`) and **comprehensive integration** (`core/comprehensive_integration.py`).
+
+- **Automated daily analysis**: `ComprehensiveIntegration.automated_daily_analysis()` runs full analysis (fundamental, technical, risk, AI) for all configured symbols. Register it as a scheduled job (e.g. daily at market close) via the scheduler.
+- **How to run the scheduler**: Instantiate `DataScheduler` (or the app’s scheduler), add jobs (e.g. `UpdateJob(job_id="daily_analysis", name="Daily Analysis", function=integration.automated_daily_analysis, frequency=UpdateFrequency.DAILY)`), and call `scheduler.start()`. Failures are logged; optionally wire to `core/alerting_system.py` for notifications.
+- **Deploy**: For production, run the API process (or a separate worker) that starts the scheduler and registers the daily analysis job. See `core/comprehensive_integration.py` and `core/pipeline/data_scheduler.py` for job registration. Document the exact command (e.g. `python -m api.main` with `RUN_SCHEDULER=1`) in your runbook or DEPLOY.md.
+
 ---
 
 ## 4. Docker — one-command launch (recommended)

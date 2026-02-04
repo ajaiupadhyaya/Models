@@ -334,49 +334,46 @@ def _calculate_dcf(analyzer: CompanyAnalyzer) -> Dict[str, Any]:
 
 
 def _calculate_risk_metrics(ticker: str, period: str = "1y") -> Dict[str, Any]:
-    """Calculate risk metrics."""
+    """Calculate risk metrics using canonical core.utils and risk models."""
     try:
+        from core.utils import (
+            calculate_returns,
+            calculate_sharpe_ratio,
+            calculate_max_drawdown,
+            annualize_volatility,
+            annualize_returns,
+        )
         fetcher = DataFetcher()
         data = fetcher.get_stock_data(ticker, period=period)
         
         if len(data) == 0:
             return {"error": "No price data available"}
         
-        returns = data['Close'].pct_change().dropna()
-        
-        # Calculate VaR and CVaR
-        var_95 = VaRModel.calculate_var(returns, confidence_level=0.95)
-        var_99 = VaRModel.calculate_var(returns, confidence_level=0.99)
-        cvar_95 = CVaRModel.calculate_cvar(returns, confidence_level=0.95)
-        cvar_99 = CVaRModel.calculate_cvar(returns, confidence_level=0.99)
-        
-        # Volatility
+        returns = calculate_returns(data["Close"])
+        # VaR/CVaR: 95% VaR = 5th percentile (confidence_level=0.05), 99% = 1st (0.01)
+        var_95 = VaRModel.calculate_var(returns, confidence_level=0.05)
+        var_99 = VaRModel.calculate_var(returns, confidence_level=0.01)
+        cvar_95 = CVaRModel.calculate_cvar(returns, confidence_level=0.05)
+        cvar_99 = CVaRModel.calculate_cvar(returns, confidence_level=0.01)
         volatility_daily = returns.std()
-        volatility_annual = volatility_daily * np.sqrt(252)
-        
-        # Drawdown
-        cumulative = (1 + returns).cumprod()
-        running_max = cumulative.expanding().max()
-        drawdown = (cumulative - running_max) / running_max
-        max_drawdown = drawdown.min()
-        
-        # Sharpe ratio (assuming 2% risk-free rate)
-        rf_rate = 0.02
-        sharpe = (returns.mean() * 252 - rf_rate) / volatility_annual if volatility_annual > 0 else 0
-        
+        volatility_annual = annualize_volatility(returns)
+        max_drawdown = calculate_max_drawdown(returns)
+        sharpe = calculate_sharpe_ratio(returns)
+        if not np.isfinite(sharpe):
+            sharpe = 0.0
+        returns_mean_annual = annualize_returns(returns)
         return {
-            "var_95": var_95,
-            "var_99": var_99,
-            "cvar_95": cvar_95,
-            "cvar_99": cvar_99,
-            "volatility_daily": volatility_daily,
-            "volatility_annual": volatility_annual,
-            "max_drawdown": max_drawdown,
-            "sharpe_ratio": sharpe,
-            "returns_mean_annual": returns.mean() * 252,
-            "returns_std_annual": volatility_annual
+            "var_95": float(var_95),
+            "var_99": float(var_99),
+            "cvar_95": float(cvar_95),
+            "cvar_99": float(cvar_99),
+            "volatility_daily": float(volatility_daily),
+            "volatility_annual": float(volatility_annual),
+            "max_drawdown": float(max_drawdown),
+            "sharpe_ratio": float(sharpe),
+            "returns_mean_annual": float(returns_mean_annual),
+            "returns_std_annual": float(volatility_annual),
         }
-    
     except Exception as e:
         return {"error": str(e)}
 

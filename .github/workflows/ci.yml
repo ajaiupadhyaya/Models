@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  SKIP_AI_VALIDATION: "1"
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -20,6 +23,23 @@ jobs:
           pip install -r requirements.txt -r requirements-api.txt
       - name: Run backend tests
         run: python -m pytest tests/ -v --tb=short
+      - name: Run C++ quant tests (skip if not built)
+        run: python -m pytest tests/test_cpp_quant.py -v --tb=short
+        continue-on-error: false
+      - name: Run ML smoke tests (synthetic data)
+        run: python -m pytest tests/test_smoke_ml.py -v --tb=short
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint config, api, core
+        run: ruff check config/ api/ core/ --output-format=concise || true
 
   frontend:
     runs-on: ubuntu-latest

@@ -23,6 +23,7 @@ data/*.xlsx
 data/*.parquet
 data/*.h5
 data/cache/
+data/test_models/
 data/metrics/*.json
 *.db
 *.sqlite

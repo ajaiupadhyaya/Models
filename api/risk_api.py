@@ -27,7 +27,6 @@ async def get_risk_metrics(ticker: str, period: str = "1y") -> Dict[str, Any]:
     try:
         from core.data_fetcher import DataFetcher
         from models.risk.var_cvar import VaRModel, CVaRModel
-        import pandas as pd
         import numpy as np
 
         fetcher = DataFetcher()
@@ -35,7 +34,13 @@ async def get_risk_metrics(ticker: str, period: str = "1y") -> Dict[str, Any]:
         if data is None or data.empty or "Close" not in data.columns:
             raise HTTPException(status_code=404, detail=f"No price data for {ticker}")
 
-        returns = data["Close"].pct_change().dropna()
+        from core.utils import (
+            calculate_returns,
+            calculate_sharpe_ratio,
+            calculate_max_drawdown,
+            annualize_volatility,
+        )
+        returns = calculate_returns(data["Close"])
         if len(returns) < 20:
             raise HTTPException(status_code=400, detail="Insufficient data for risk metrics")
 
@@ -47,14 +52,11 @@ async def get_risk_metrics(ticker: str, period: str = "1y") -> Dict[str, Any]:
         cvar_99 = float(CVaRModel.calculate_cvar(returns, confidence_level=0.01))
 
         volatility_daily = float(returns.std())
-        volatility_annual = float(volatility_daily * (252 ** 0.5))
-        cumulative = (1 + returns).cumprod()
-        running_max = cumulative.expanding().max()
-        drawdown = (cumulative - running_max) / running_max
-        max_drawdown = float(drawdown.min())
-
-        rf = 0.02
-        sharpe = float((returns.mean() * 252 - rf) / volatility_annual) if volatility_annual > 0 else 0.0
+        volatility_annual = float(annualize_volatility(returns))
+        max_drawdown = float(calculate_max_drawdown(returns))
+        sharpe = float(calculate_sharpe_ratio(returns))
+        if not np.isfinite(sharpe):
+            sharpe = 0.0
 
         return {
             "ticker": ticker.upper(),

@@ -61,6 +61,29 @@ def calculate_sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.02) ->
     return np.sqrt(252) * excess_returns.mean() / downside_std
 
 
+def _drawdown_series_from_cumulative(cumulative: pd.Series) -> pd.Series:
+    """Drawdown series from cumulative wealth (or equity) series. Single formula for reuse."""
+    running_max = cumulative.expanding().max()
+    return (cumulative - running_max) / running_max
+
+
+def drawdown_series_from_returns(returns: pd.Series) -> pd.Series:
+    """
+    Drawdown series from returns. Used by calculate_max_drawdown and callers that need the series.
+    """
+    cumulative = (1 + returns).cumprod()
+    return _drawdown_series_from_cumulative(cumulative)
+
+
+def drawdown_series_from_equity(equity_curve: pd.Series) -> pd.Series:
+    """
+    Drawdown series from equity curve (e.g. (1+returns).cumprod() or price index).
+    Normalizes to start at 1 so formula matches drawdown_from_returns.
+    """
+    cumulative = equity_curve / equity_curve.iloc[0]
+    return _drawdown_series_from_cumulative(cumulative)
+
+
 def calculate_max_drawdown(returns: pd.Series) -> float:
     """
     Calculate maximum drawdown.
@@ -71,10 +94,14 @@ def calculate_max_drawdown(returns: pd.Series) -> float:
     Returns:
         Maximum drawdown (negative value)
     """
-    cumulative = (1 + returns).cumprod()
-    running_max = cumulative.expanding().max()
-    drawdown = (cumulative - running_max) / running_max
-    return drawdown.min()
+    return drawdown_series_from_returns(returns).min()
+
+
+def calculate_max_drawdown_from_equity(equity_curve: pd.Series) -> float:
+    """
+    Maximum drawdown from an equity curve (e.g. cumulative wealth index).
+    """
+    return drawdown_series_from_equity(equity_curve).min()
 
 
 def calculate_var(returns: pd.Series, confidence_level: float = 0.05) -> float:
