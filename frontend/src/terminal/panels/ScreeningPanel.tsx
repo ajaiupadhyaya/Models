@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { resolveApiUrl } from "../../apiBase";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
 import { PanelErrorState } from "./PanelErrorState";
+import { BarChart } from "../../charts";
 
 interface ScreenRow {
   symbol: string;
@@ -102,6 +103,14 @@ export const ScreeningPanel: React.FC = () => {
   }
 
   const rawRows = screenerResults ?? [];
+  const sectorCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    rawRows.forEach((r) => {
+      const s = r.sector ?? "Other";
+      m[s] = (m[s] ?? 0) + 1;
+    });
+    return Object.entries(m).map(([label, value]) => ({ label: label.slice(0, 14), value }));
+  }, [rawRows]);
   const rows = [...rawRows].sort((a, b) => {
     let va: string | number = a[sortKey] ?? "";
     let vb: string | number = b[sortKey] ?? "";
@@ -171,6 +180,18 @@ export const ScreeningPanel: React.FC = () => {
         )}
         {rows.length > 0 ? (
           <>
+            {sectorCounts.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ color: "var(--accent)", marginBottom: 4, fontSize: 11 }}>Sector distribution</div>
+                <BarChart
+                  data={sectorCounts}
+                  height={Math.min(180, sectorCounts.length * 24)}
+                  marginPreset="compact"
+                  valueFormat={(v) => String(Math.round(v))}
+                  className="chart-root"
+                />
+              </div>
+            )}
             <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}>
               <button
                 type="button"

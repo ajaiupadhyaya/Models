@@ -3,15 +3,8 @@ import * as d3 from "d3";
 import { resolveApiUrl } from "../../apiBase";
 import { useTerminal } from "../TerminalContext";
 import { getAuthHeaders } from "../../hooks/useFetchWithRetry";
-
-interface Candle {
-  date: Date;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume?: number;
-}
+import { drawCandles, drawVolumeBars, inlineCssVarsInSvgString } from "../../charts";
+import type { Candle } from "../../charts";
 
 const TIMEFRAMES = [
   { label: "1D", period: "1d" },
@@ -155,6 +148,12 @@ interface PrimaryInstrumentProps {
   indicatorOverlay?: IndicatorOverlay;
 }
 
+interface ChartOverlay {
+  next_price: number;
+  low: number;
+  high: number;
+}
+
 export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorOverlay = "none" }) => {
   const { primarySymbol } = useTerminal();
   const [timeframe, setTimeframe] = useState<typeof TIMEFRAMES[number]["period"]>("3mo");
@@ -163,8 +162,36 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
   const [chartError, setChartError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [showSma, setShowSma] = useState(false);
+  const [chartOverlay, setChartOverlay] = useState<ChartOverlay | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(resolveApiUrl(`/api/v1/ai/stock-analysis/${primarySymbol}?include_prediction=true`), { headers: getAuthHeaders() });
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        const overlay = (json as { chart_overlay?: ChartOverlay }).chart_overlay
+          ?? (json as { prediction?: { next_price?: number; confidence_interval_low?: number; confidence_interval_high?: number } }).prediction
+            ? (() => {
+                const p = (json as { prediction: { next_price?: number; confidence_interval_low?: number; confidence_interval_high?: number } }).prediction;
+                if (p?.next_price == null) return null;
+                return {
+                  next_price: p.next_price,
+                  low: p.confidence_interval_low ?? p.next_price,
+                  high: p.confidence_interval_high ?? p.next_price,
+                };
+              })()
+            : null;
+        setChartOverlay(overlay);
+      } catch {
+        if (!cancelled) setChartOverlay(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [primarySymbol]);
 
   const effectiveOverlay: IndicatorOverlay = indicatorOverlay !== "none" ? indicatorOverlay : (showSma ? "sma20" : "none");
 
@@ -261,12 +288,18 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
       .domain(d3.extent(data, (d) => d.date) as [Date, Date])
       .range([0, innerWidth]);
 
+    const priceMin = (d3.min(data, (d) => d.low) ?? 0) * 0.998;
+    const priceMax = (d3.max(data, (d) => d.high) ?? 1) * 1.002;
     const yScale = d3
       .scaleLinear()
-      .domain([
-        (d3.min(data, (d) => d.low) ?? 0) * 0.998,
-        (d3.max(data, (d) => d.high) ?? 1) * 1.002,
-      ])
+      .domain(
+        chartOverlay
+          ? [
+              Math.min(priceMin, chartOverlay.low * 0.998),
+              Math.max(priceMax, chartOverlay.high * 1.002),
+            ]
+          : [priceMin, priceMax]
+      )
       .nice()
       .range([innerPriceHeight, 0]);
 
@@ -283,36 +316,44 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
 
     priceG.append("g").attr("class", "axis axis-y").call(yAxis);
 
-    const candleWidth = Math.max(2, (innerWidth / data.length) * 0.6);
-    const candlePad = (innerWidth / data.length - candleWidth) / 2;
+    drawCandles(
+      priceG as d3.Selection<SVGGElement, unknown, null, undefined>,
+      data,
+      xScale,
+      yScale,
+      innerWidth
+    );
 
-    const candle = priceG
-      .selectAll("g.candle")
-      .data(data)
-      .enter()
-      .append("g")
-      .attr("class", "candle")
-      .attr("transform", (d, i) => {
-        const x = (i / (data.length - 1 || 1)) * innerWidth;
-        return `translate(${x},0)`;
-      });
-
-    candle
-      .append("line")
-      .attr("y1", (d) => yScale(d.high))
-      .attr("y2", (d) => yScale(d.low))
-      .attr("x1", innerWidth / data.length / 2)
-      .attr("x2", innerWidth / data.length / 2)
-      .attr("stroke", "var(--text-soft)")
-      .attr("stroke-width", 1);
-
-    candle
-      .append("rect")
-      .attr("y", (d) => yScale(Math.max(d.open, d.close)))
-      .attr("height", (d) => Math.max(1, Math.abs(yScale(d.open) - yScale(d.close))))
-      .attr("width", candleWidth)
-      .attr("x", candlePad)
-      .attr("fill", (d) => (d.close >= d.open ? "var(--accent-green)" : "var(--accent-red)"));
+    if (chartOverlay && chartOverlay.low < chartOverlay.high) {
+      const barWidth = Math.max(8, (innerWidth / data.length) * 2);
+      const x0 = innerWidth - barWidth;
+      priceG
+        .append("rect")
+        .attr("x", x0)
+        .attr("y", yScale(chartOverlay.high))
+        .attr("width", barWidth)
+        .attr("height", Math.max(1, yScale(chartOverlay.low) - yScale(chartOverlay.high)))
+        .attr("fill", "var(--accent)")
+        .attr("opacity", 0.25);
+      priceG
+        .append("line")
+        .attr("x1", x0)
+        .attr("x2", innerWidth)
+        .attr("y1", yScale(chartOverlay.next_price))
+        .attr("y2", yScale(chartOverlay.next_price))
+        .attr("stroke", "var(--accent)")
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "4,2");
+      priceG
+        .append("text")
+        .attr("x", innerWidth - 4)
+        .attr("y", yScale(chartOverlay.next_price) - 4)
+        .attr("text-anchor", "end")
+        .attr("font-size", 9)
+        .attr("font-family", "var(--font-mono)")
+        .attr("fill", "var(--text-soft)")
+        .text("ML");
+    }
 
     if (smaOverlay.length > 0) {
       const line = d3.line<{ date: Date; value: number }>()
@@ -464,18 +505,14 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
         .text("ATR(14)");
     }
 
-    data.forEach((d, i) => {
-      const vol = d.volume ?? 0;
-      const x = (i / (data.length - 1 || 1)) * innerWidth;
-      volumeG
-        .append("rect")
-        .attr("x", x - (innerWidth / data.length) * 0.4)
-        .attr("y", yVolScale(vol))
-        .attr("width", Math.max(1, (innerWidth / data.length) * 0.8))
-        .attr("height", Math.max(0, innerVolumeHeight - yVolScale(vol)))
-        .attr("fill", d.close >= d.open ? "var(--accent-green)" : "var(--accent-red)")
-        .attr("opacity", 0.7);
-    });
+    drawVolumeBars(
+      volumeG as d3.Selection<SVGGElement, unknown, null, undefined>,
+      data,
+      xScale,
+      yVolScale,
+      innerWidth,
+      innerVolumeHeight
+    );
 
     volumeG
       .append("g")
@@ -534,27 +571,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
       });
 
     zoomable.call(zoom as unknown as (selection: d3.Selection<SVGGElement, unknown, null, undefined>) => void);
-  }, [data, loading, chartError, smaOverlay, showRsiPanel, rsi14, showBollinger, bollingerData, showMacdPanel, macdData, showAtrPanel, atrData]);
-
-  const inlineCssVarsInSvgString = (svgString: string): string => {
-    const root = document.documentElement;
-    const getVar = (name: string) => getComputedStyle(root).getPropertyValue(name).trim() || name;
-    const vars: Record<string, string> = {
-      "var(--accent)": getVar("--accent"),
-      "var(--text)": getVar("--text"),
-      "var(--text-soft)": getVar("--text-soft"),
-      "var(--accent-green)": getVar("--accent-green"),
-      "var(--accent-red)": getVar("--accent-red"),
-      "var(--bg-panel)": getVar("--bg-panel"),
-      "var(--border)": getVar("--border"),
-      "var(--font-mono)": getVar("--font-mono"),
-    };
-    let out = svgString;
-    for (const [k, v] of Object.entries(vars)) {
-      out = out.split(k).join(v || k);
-    }
-    return out;
-  };
+  }, [data, loading, chartError, chartOverlay, smaOverlay, showRsiPanel, rsi14, showBollinger, bollingerData, showMacdPanel, macdData, showAtrPanel, atrData]);
 
   const handleExportChart = (format: "svg" | "png" = "svg") => {
     const svgEl = ref.current?.querySelector("svg");

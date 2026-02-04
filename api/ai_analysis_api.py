@@ -116,8 +116,9 @@ async def stock_analysis(
         # Technical analysis via AI
         technical_analysis = ai_service.analyze_price_chart(symbol, df)
         
-        # ML prediction (optional)
+        # ML prediction (optional); chart_overlay for D3 prediction band
         prediction_data = None
+        chart_overlay = None
         if include_prediction and len(df) >= 20:
             try:
                 # Train ensemble model on recent data
@@ -126,12 +127,19 @@ async def stock_analysis(
                 next_price = model.predict(df).iloc[-1] if hasattr(model.predict(df), 'iloc') else model.predict(df)[-1]
                 confidence = 0.65  # Reasonable default confidence
                 
+                low = float(next_price * 0.97)
+                high = float(next_price * 1.03)
                 prediction_data = {
                     "next_price": float(next_price),
                     "implied_change_pct": float(((next_price - current_price) / current_price * 100)),
                     "confidence": 0.65,
-                    "confidence_interval_low": float(next_price * 0.97),
-                    "confidence_interval_high": float(next_price * 1.03),
+                    "confidence_interval_low": low,
+                    "confidence_interval_high": high,
+                }
+                chart_overlay = {
+                    "next_price": float(next_price),
+                    "low": low,
+                    "high": high,
                 }
             except Exception as e:
                 logger.warning(f"Prediction error for {symbol}: {e}")
@@ -158,7 +166,7 @@ async def stock_analysis(
             except Exception:
                 pass
         
-        return {
+        result = {
             "timestamp": datetime.now().isoformat(),
             "symbol": symbol,
             "current_price": current_price,
@@ -167,6 +175,9 @@ async def stock_analysis(
             "trading_insight": insight,
             "sentiment": sentiment_data,
         }
+        if chart_overlay is not None:
+            result["chart_overlay"] = chart_overlay
+        return result
     
     except HTTPException:
         raise

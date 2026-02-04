@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as d3 from "d3";
+import React, { useEffect, useState } from "react";
 import { useFetchWithRetry } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
 import { resolveApiUrl } from "../../apiBase";
 import { getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { PanelErrorState } from "./PanelErrorState";
+import { TimeSeriesLine } from "../../charts";
+import type { TimeSeriesPoint } from "../../charts";
 
 interface CompanyAnalysis {
   ticker?: string;
@@ -152,9 +153,8 @@ function PeerComparisonTable({ sector, primarySymbol }: { sector: string; primar
   );
 }
 
-/** D3 price trend chart for the primary symbol (1y). */
+/** Price trend chart for the primary symbol (1y) using shared D3 TimeSeriesLine. */
 function PriceTrendChart({ symbol }: { symbol: string }) {
-  const ref = useRef<HTMLDivElement | null>(null);
   const [candles, setCandles] = useState<Array<{ date: string; close: number }>>([]);
 
   useEffect(() => {
@@ -173,33 +173,15 @@ function PriceTrendChart({ symbol }: { symbol: string }) {
     return () => { cancelled = true; };
   }, [symbol]);
 
-  useEffect(() => {
-    if (!ref.current || candles.length < 2) return;
-    const el = ref.current;
-    const width = el.clientWidth || 400;
-    const height = 160;
-    const margin = { top: 8, right: 8, bottom: 20, left: 40 };
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
-    const data = candles.map((d) => ({ date: new Date(d.date), value: Number(d.close) })).filter((d) => !Number.isNaN(d.value));
-    if (data.length < 2) return;
+  const data: TimeSeriesPoint[] = candles
+    .map((d) => ({ date: new Date(d.date), value: Number(d.close) }))
+    .filter((d) => !Number.isNaN(d.value));
 
-    d3.select(el).selectAll("*").remove();
-    const svg = d3.select(el).append("svg").attr("width", width).attr("height", height);
-    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-    const xScale = d3.scaleTime().domain(d3.extent(data, (d) => d.date) as [Date, Date]).range([0, innerWidth]);
-    const yScale = d3.scaleLinear().domain(d3.extent(data, (d) => d.value) as [number, number]).nice().range([innerHeight, 0]);
-    const line = d3.line<{ date: Date; value: number }>().x((d) => xScale(d.date)).y((d) => yScale(d.value));
-    g.append("path").datum(data).attr("fill", "none").attr("stroke", "var(--accent)").attr("stroke-width", 1.5).attr("d", line);
-    g.append("g").attr("transform", `translate(0,${innerHeight})`).attr("class", "axis axis-x").call(d3.axisBottom(xScale).ticks(4));
-    g.append("g").attr("class", "axis axis-y").call(d3.axisLeft(yScale).ticks(4));
-  }, [candles]);
-
-  if (candles.length < 2) return null;
+  if (data.length < 2) return null;
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ color: "var(--accent)", marginBottom: 4, fontSize: 11 }}>Price trend (1Y)</div>
-      <div ref={ref} className="chart-root" style={{ minHeight: 160 }} />
+      <TimeSeriesLine data={data} height={160} marginPreset="compact" className="chart-root" style={{ minHeight: 160 }} />
     </div>
   );
 }

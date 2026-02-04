@@ -2,11 +2,13 @@
  * AI Insights Tab – sentiment, price targets, and AI analysis for the primary symbol.
  * Context: Real-time sentiment, predictive price targets with confidence, anomaly alerts, NL query.
  */
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { resolveApiUrl } from "../../apiBase";
 import { useTerminal } from "../TerminalContext";
 import { PanelErrorState } from "./PanelErrorState";
+import { TimeSeriesLine } from "../../charts";
+import type { TimeSeriesPoint } from "../../charts";
 
 interface StockAnalysisResponse {
   symbol?: string;
@@ -19,6 +21,7 @@ interface StockAnalysisResponse {
     confidence_interval_low?: number;
     confidence_interval_high?: number;
   };
+  chart_overlay?: { next_price: number; low: number; high: number };
   trading_insight?: { recommendation?: string; reasoning?: string; action?: string; risk_level?: string };
   sentiment?: { score?: number; label?: string; reasoning?: string };
   error?: string;
@@ -29,6 +32,28 @@ function parseStockAnalysis(json: unknown): StockAnalysisResponse | null {
   return json as StockAnalysisResponse;
 }
 
+function usePriceSeries(symbol: string): TimeSeriesPoint[] {
+  const [data, setData] = useState<TimeSeriesPoint[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(resolveApiUrl(`/api/v1/backtest/sample-data?symbol=${symbol}&period=3mo`), { headers: getAuthHeaders() });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || cancelled) return;
+        const candles = (json.candles ?? []) as Array<{ date: string; close: number }>;
+        if (candles.length >= 2) {
+          setData(candles.map((c) => ({ date: new Date(c.date), value: c.close })));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [symbol]);
+  return data;
+}
+
 export const AiInsightsPanel: React.FC = () => {
   const { primarySymbol } = useTerminal();
   const url = `/api/v1/ai/stock-analysis/${primarySymbol}?include_prediction=true`;
@@ -36,6 +61,12 @@ export const AiInsightsPanel: React.FC = () => {
     parse: parseStockAnalysis,
     deps: [primarySymbol],
   });
+  const priceSeries = usePriceSeries(primarySymbol);
+  const overlay = data?.chart_overlay ?? (data?.prediction ? {
+    next_price: data.prediction.next_price ?? 0,
+    low: data.prediction.confidence_interval_low ?? data.prediction.next_price ?? 0,
+    high: data.prediction.confidence_interval_high ?? data.prediction.next_price ?? 0,
+  } : null);
 
   if (loading) {
     return (
@@ -71,6 +102,44 @@ export const AiInsightsPanel: React.FC = () => {
     <section className="panel panel-main">
       <div className="panel-title">AI Insights: {data?.symbol ?? primarySymbol}</div>
       <div style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
+        {priceSeries.length >= 2 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: "var(--accent)", marginBottom: 4, fontSize: 11 }}>Price (3M)</div>
+            <TimeSeriesLine
+              data={priceSeries}
+              height={120}
+              marginPreset="compact"
+              showAxis={true}
+              className="chart-root"
+              style={{ minHeight: 120 }}
+            />
+          </div>
+        )}
+        {overlay && overlay.low < overlay.high && (
+          <div style={{ marginBottom: 12, padding: 8, background: "var(--bg-panel)", borderRadius: 4, border: "1px solid var(--border)" }}>
+            <div style={{ color: "var(--accent)", marginBottom: 4, fontSize: 11 }}>Prediction range</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span className="num-mono" style={{ color: "var(--text-soft)" }}>${overlay.low.toFixed(2)}</span>
+              <div style={{ flex: 1, minWidth: 80, height: 8, background: "var(--border)", borderRadius: 4, position: "relative" }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    left: `${Math.max(0, Math.min(100, ((overlay.next_price - overlay.low) / (overlay.high - overlay.low)) * 100))}%`,
+                    top: -2,
+                    width: 4,
+                    height: 12,
+                    background: "var(--accent)",
+                    borderRadius: 2,
+                    transform: "translateX(-50%)",
+                  }}
+                  title={`Next: $${overlay.next_price.toFixed(2)}`}
+                />
+              </div>
+              <span className="num-mono" style={{ color: "var(--text-soft)" }}>${overlay.high.toFixed(2)}</span>
+              <span className="num-mono" style={{ color: "var(--accent)" }}>Next: ${overlay.next_price.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
         {price != null && (
           <div style={{ marginBottom: 12 }}>
             <span style={{ color: "var(--accent)" }}>Price</span>

@@ -3,6 +3,7 @@ import { resolveApiUrl } from "../../apiBase";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
 import { PanelErrorState } from "./PanelErrorState";
+import { BarChart } from "../../charts";
 
 interface DashboardData {
   timestamp?: string;
@@ -86,8 +87,20 @@ function PortfolioOptimizeBlock() {
   const weights = data?.weights ?? {};
   const entries = Object.entries(weights).filter(([, v]) => typeof v === "number");
   if (entries.length === 0) return <div className="panel-body-muted" style={{ fontSize: 11 }}>Need at least 2 symbols in watchlist for optimization.</div>;
+  const allocationData = entries.map(([sym, w]) => ({ label: sym, value: Number(w) * 100 }));
   return (
     <div style={{ fontSize: 11 }}>
+      <div style={{ marginBottom: 8 }}>
+        <BarChart
+          data={allocationData}
+          height={Math.min(140, allocationData.length * 24)}
+          marginPreset="compact"
+          horizontal
+          valueFormat={(v) => `${v.toFixed(1)}%`}
+          title="Allocation"
+          className="chart-root"
+        />
+      </div>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <tbody>
           {entries.map(([sym, w]) => (
@@ -276,34 +289,52 @@ export const PortfolioPanel: React.FC = () => {
             </div>
           )}
           {!riskLoading && riskMetrics && (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-              <tbody>
-                <tr>
-                  <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>VaR 95%</td>
-                  <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.var_95_pct != null ? `${riskMetrics.var_95_pct.toFixed(2)}%` : "—"}</td>
-                </tr>
-                <tr>
-                  <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>VaR 99%</td>
-                  <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.var_99_pct != null ? `${riskMetrics.var_99_pct.toFixed(2)}%` : "—"}</td>
-                </tr>
-                <tr>
-                  <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>CVaR 95%</td>
-                  <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.cvar_95_pct != null ? `${riskMetrics.cvar_95_pct.toFixed(2)}%` : "—"}</td>
-                </tr>
-                <tr>
-                  <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Vol (ann.)</td>
-                  <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.volatility_annual_pct != null ? `${riskMetrics.volatility_annual_pct.toFixed(2)}%` : "—"}</td>
-                </tr>
-                <tr>
-                  <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Max DD</td>
-                  <td className="num-mono" style={{ textAlign: "right", color: "var(--accent-red)" }}>{riskMetrics.max_drawdown_pct != null ? `${riskMetrics.max_drawdown_pct.toFixed(2)}%` : "—"}</td>
-                </tr>
-                <tr>
-                  <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Sharpe</td>
-                  <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.sharpe_ratio != null ? riskMetrics.sharpe_ratio.toFixed(2) : "—"}</td>
-                </tr>
-              </tbody>
-            </table>
+            <>
+              <div style={{ marginBottom: 8 }}>
+                <BarChart
+                  data={[
+                    { label: "VaR 95%", value: riskMetrics.var_95_pct ?? 0, color: "var(--accent-red)" },
+                    { label: "VaR 99%", value: riskMetrics.var_99_pct ?? 0, color: "var(--accent-red)" },
+                    { label: "CVaR 95%", value: riskMetrics.cvar_95_pct ?? 0, color: "var(--accent-red)" },
+                    { label: "Vol %", value: riskMetrics.volatility_annual_pct ?? 0 },
+                    { label: "Max DD %", value: riskMetrics.max_drawdown_pct ?? 0, color: "var(--accent-red)" },
+                    { label: "Sharpe", value: riskMetrics.sharpe_ratio ?? 0, color: "var(--accent-green)" },
+                  ]}
+                  height={140}
+                  marginPreset="compact"
+                  valueFormat={(v) => (Math.abs(v) >= 1 ? v.toFixed(1) : v.toFixed(2))}
+                  className="chart-root"
+                />
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                <tbody>
+                  <tr>
+                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>VaR 95%</td>
+                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.var_95_pct != null ? `${riskMetrics.var_95_pct.toFixed(2)}%` : "—"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>VaR 99%</td>
+                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.var_99_pct != null ? `${riskMetrics.var_99_pct.toFixed(2)}%` : "—"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>CVaR 95%</td>
+                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.cvar_95_pct != null ? `${riskMetrics.cvar_95_pct.toFixed(2)}%` : "—"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Vol (ann.)</td>
+                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.volatility_annual_pct != null ? `${riskMetrics.volatility_annual_pct.toFixed(2)}%` : "—"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Max DD</td>
+                    <td className="num-mono" style={{ textAlign: "right", color: "var(--accent-red)" }}>{riskMetrics.max_drawdown_pct != null ? `${riskMetrics.max_drawdown_pct.toFixed(2)}%` : "—"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Sharpe</td>
+                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.sharpe_ratio != null ? riskMetrics.sharpe_ratio.toFixed(2) : "—"}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </>
           )}
           {!riskLoading && !riskError && !riskMetrics && <div className="panel-body-muted" style={{ fontSize: 11 }}>Risk data unavailable. Try again or retry.</div>}
         </div>
@@ -317,24 +348,40 @@ export const PortfolioPanel: React.FC = () => {
             </div>
           )}
           {!stressLoading && stressData?.scenarios && stressData.scenarios.length > 0 && (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Scenario</th>
-                  <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Est. return %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stressData.scenarios.map((s, i) => (
-                  <tr key={i}>
-                    <td style={{ color: "var(--text)", padding: "2px 8px 2px 0" }}>{s.name ?? s.scenario_id ?? "—"}</td>
-                    <td className="num-mono" style={{ textAlign: "right", color: (s.estimated_return_pct ?? 0) < 0 ? "var(--accent-red)" : "var(--text)" }}>
-                      {s.estimated_return_pct != null ? `${s.estimated_return_pct.toFixed(2)}%` : "—"}
-                    </td>
+            <>
+              <div style={{ marginBottom: 8 }}>
+                <BarChart
+                  data={stressData.scenarios.map((s) => ({
+                    label: (s.name ?? s.scenario_id ?? "—").slice(0, 12),
+                    value: s.estimated_return_pct ?? 0,
+                    color: (s.estimated_return_pct ?? 0) < 0 ? "var(--accent-red)" : "var(--accent-green)",
+                  }))}
+                  height={Math.min(120, stressData.scenarios.length * 28)}
+                  marginPreset="compact"
+                  horizontal
+                  valueFormat={(v) => `${v.toFixed(1)}%`}
+                  className="chart-root"
+                />
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Scenario</th>
+                    <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Est. return %</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {stressData.scenarios.map((s, i) => (
+                    <tr key={i}>
+                      <td style={{ color: "var(--text)", padding: "2px 8px 2px 0" }}>{s.name ?? s.scenario_id ?? "—"}</td>
+                      <td className="num-mono" style={{ textAlign: "right", color: (s.estimated_return_pct ?? 0) < 0 ? "var(--accent-red)" : "var(--text)" }}>
+                        {s.estimated_return_pct != null ? `${s.estimated_return_pct.toFixed(2)}%` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
           {!stressLoading && stressData && (!stressData.scenarios || stressData.scenarios.length === 0) && !stressError && (
             <div className="panel-body-muted" style={{ fontSize: 11 }}>No stress scenarios available.</div>
