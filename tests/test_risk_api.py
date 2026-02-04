@@ -113,5 +113,21 @@ def test_risk_metrics_no_close_column_returns_404(client):
 
         response = client.get("/api/v1/risk/metrics/TICK?period=1y")
         assert response.status_code == 404
+
+
+def test_risk_metrics_nan_in_close_reduces_returns(client):
+    """When Close contains NaN, effective returns drop; if < 20 valid returns, API returns 400."""
+    import numpy as np
+    # 30 rows but only 10 non-NaN -> 9 returns after pct_change().dropna() -> insufficient
+    close = np.full(30, np.nan)
+    close[:10] = 100 + np.arange(10) * 0.5
+    with patch("core.data_fetcher.DataFetcher") as MockFetcher:
+        instance = MagicMock()
+        instance.get_stock_data.return_value = pd.DataFrame({"Close": close})
+        MockFetcher.return_value = instance
+        response = client.get("/api/v1/risk/metrics/TICK?period=1y")
+        assert response.status_code == 400
+        body = response.json()
+        assert "Insufficient" in body.get("detail", "")
         body = response.json()
         assert "No price data" in body.get("detail", "") or "No price data" in body.get("error", "")

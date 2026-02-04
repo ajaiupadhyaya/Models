@@ -59,6 +59,8 @@ This guide gets your Bloomberg-style terminal **live on the internet** so you (a
 
 **Optional:** Use the [render.yaml](render.yaml) Blueprint in this repo so Render creates the web service from the repo (see [Render Blueprint Spec](https://render.com/docs/blueprint-spec)).
 
+**Scheduled runs:** For automated daily analysis, run a worker or the API with the data scheduler enabled (see [LAUNCH_GUIDE.md](LAUNCH_GUIDE.md) § 3.2). Set `RUN_SCHEDULER=1` (or equivalent) if your start command supports it; register `automated_daily_analysis` as a daily job in `core/pipeline/data_scheduler.py`.
+
 **Cost:** Free tier available; paid plans for always-on and more resources. See [render.com/pricing](https://render.com/pricing).
 
 ---

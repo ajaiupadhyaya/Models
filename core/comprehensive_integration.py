@@ -48,6 +48,7 @@ try:
 except ImportError:
     HAS_INSTITUTIONAL = False
 from core.performance_optimizer import cached, SmartCache
+from core.utils import annualize_volatility
 
 logger = logging.getLogger(__name__)
 
@@ -222,16 +223,17 @@ class ComprehensiveIntegration:
                 # Tail ratio
                 tail_ratio = AdvancedRiskMetrics.tail_ratio(returns)
             else:
+                from core.utils import calculate_max_drawdown
                 es_95 = returns.quantile(0.05)
-                max_dd = {"max_drawdown": float(self._calculate_max_drawdown(df['Close']))}
+                max_dd = {"max_drawdown": float(calculate_max_drawdown(returns))}
                 sortino = 0.0
                 tail_ratio = 0.0
             
             # VaR and CVaR
             if VaRModel is not None:
-                var_model = VaRModel()
-                var_95 = var_model.calculate_var(returns, confidence=0.95)
-                cvar_95 = var_model.calculate_cvar(returns, confidence=0.95)
+                # 95% VaR = 5th percentile (left tail) = confidence_level=0.05
+                var_95 = VaRModel.calculate_var(returns, confidence_level=0.05)
+                cvar_95 = CVaRModel.calculate_cvar(returns, confidence_level=0.05)
             else:
                 var_95 = returns.quantile(0.05)
                 cvar_95 = returns[returns <= var_95].mean()
@@ -254,7 +256,7 @@ class ComprehensiveIntegration:
                 "var_95": float(var_95),
                 "cvar_95": float(cvar_95),
                 "expected_shortfall_95": float(es_95) if HAS_INSTITUTIONAL else float(cvar_95),
-                "historical_volatility": float(returns.std() * np.sqrt(252)),
+                "historical_volatility": float(annualize_volatility(returns)),
                 "ml_predicted_volatility": float(ml_volatility),
                 "garch_volatility": garch_vol,
                 "max_drawdown": max_dd if isinstance(max_dd, dict) else {"max_drawdown": float(max_dd)},
@@ -472,13 +474,6 @@ class ComprehensiveIntegration:
         except Exception as e:
             logger.error(f"Recommendation generation failed: {e}")
             return {"action": "HOLD", "confidence": 0.5, "error": str(e)}
-    
-    def _calculate_max_drawdown(self, prices: pd.Series) -> float:
-        """Calculate maximum drawdown."""
-        cumulative = (1 + prices.pct_change()).cumprod()
-        running_max = cumulative.expanding().max()
-        drawdown = (cumulative - running_max) / running_max
-        return drawdown.min()
     
     def automated_daily_analysis(self) -> Dict[str, Any]:
         """

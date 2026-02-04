@@ -429,6 +429,7 @@ class AdvancedRiskMetrics:
     def maximum_drawdown(equity_curve: pd.Series) -> Dict[str, float]:
         """
         Calculate maximum drawdown with duration.
+        Uses core.utils for the drawdown formula (single source of truth).
         
         Args:
             equity_curve: Equity curve series
@@ -436,10 +437,8 @@ class AdvancedRiskMetrics:
         Returns:
             Drawdown statistics
         """
-        cumulative = equity_curve / equity_curve.iloc[0]
-        running_max = cumulative.expanding().max()
-        drawdown = (cumulative - running_max) / running_max
-        
+        from core.utils import drawdown_series_from_equity
+        drawdown = drawdown_series_from_equity(equity_curve)
         max_dd = drawdown.min()
         max_dd_idx = drawdown.idxmin()
         

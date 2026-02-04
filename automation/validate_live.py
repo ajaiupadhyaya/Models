@@ -173,14 +173,15 @@ def check_ml_models():
 
 
 def check_ai_analysis():
-    """Test AI analysis service."""
+    """Test AI analysis service. Skips when SKIP_AI_VALIDATION=1 (e.g. CI without API key)."""
+    import os
+    if os.getenv("SKIP_AI_VALIDATION", "").strip().lower() in ("1", "true", "yes"):
+        logger.info("⏭ Skipping AI analysis (SKIP_AI_VALIDATION=1)")
+        return True
     logger.info("🔍 Testing AI analysis...")
-    
     try:
         from core.ai_analysis import AIAnalysisService
-        
         service = AIAnalysisService()
-        
         if not service.client:
             logger.warning("⚠ OpenAI client not configured (API key missing?)")
             return True  # Not a failure, just disabled
