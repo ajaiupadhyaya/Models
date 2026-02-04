@@ -177,7 +177,9 @@ For a focused Render checklist (env vars for charts, AI, ML, and troubleshooting
 
 1. Scroll to **Environment** or **Environment Variables**.
 2. Click **Add Environment Variable**.
-3. Add each variable **one by one** (key = name, value = your secret):
+3. Add each variable **one by one**. Use the **exact Key** names (case-sensitive); use **Value** as described. **Formatting matters** — no trailing slashes on URLs, no quotes around simple values. For the full list, exact keys, and "do not set" rules (e.g. do **not** set `VITE_API_ORIGIN` or `PORT`), see **[RENDER_DEPLOY.md](RENDER_DEPLOY.md)** (especially the "Render environment page — formatting rules" and "Environment variables to add" sections).
+
+   Minimum set:
 
    | Key                     | Value |
    |-------------------------|--------|
@@ -188,7 +190,7 @@ For a focused Render checklist (env vars for charts, AI, ML, and troubleshooting
    | `TERMINAL_PASSWORD`     | Your chosen login password. |
    | `AUTH_SECRET`           | Your long random secret string. |
 
-   Do **not** set `PORT` — Render sets it.
+   Do **not** set `PORT` (Render sets it) or `VITE_API_ORIGIN` (single service uses same origin for API and WebSocket).
 
 ### B2.5. Create the service and get the URL
 
