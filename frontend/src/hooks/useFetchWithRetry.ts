@@ -16,8 +16,12 @@ export interface UseFetchWithRetryOptions<T> {
   retryOn5xxOnly?: boolean;
 }
 
+/** Message when 404 looks like API unreachable (e.g. HTML or wrong origin). */
+export const API_UNREACHABLE_404_MESSAGE =
+  "API unreachable or endpoint not found. Ensure the API is running and, if the app is on a different domain, set VITE_API_ORIGIN at build time.";
+
 /** User-friendly messages for 429, 404, and 5xx (used by panels). */
-export function normalizeError(json: unknown, status: number): string {
+export function normalizeError(json: unknown, status: number, contentType?: string | null): string {
   if (status === 429) {
     return "Too many requests. Try again in a minute.";
   }
@@ -25,6 +29,8 @@ export function normalizeError(json: unknown, status: number): string {
     return "Data temporarily unavailable. Please try again.";
   }
   if (status === 404) {
+    const looksLikeJson = contentType != null && contentType.toLowerCase().includes("application/json");
+    if (!looksLikeJson) return API_UNREACHABLE_404_MESSAGE;
     const d = json && typeof json === "object" ? (json as { detail?: unknown }).detail : null;
     const msg = d != null ? String(d) : "";
     if (/not found|no data|invalid|unknown/i.test(msg)) return msg;
@@ -125,8 +131,9 @@ export function useFetchWithRetry<T = unknown>(
     const doFetch = (): Promise<void> =>
       fetch(requestUrl, init)
         .then(async (res) => {
+          const contentType = res.headers.get("Content-Type");
           const json = await res.json().catch(() => ({}));
-          const errMsg = normalizeError(json, res.status);
+          const errMsg = normalizeError(json, res.status, contentType);
           const is5xx = res.status >= 500 && res.status < 600;
           const shouldRetry =
             attempt < maxRetries &&
@@ -150,7 +157,7 @@ export function useFetchWithRetry<T = unknown>(
 
           const parsed = parse ? parse(json) : (json as T);
           if (parse !== undefined && parsed === null) {
-            setError(normalizeError(json, res.status) || "Invalid response");
+            setError(normalizeError(json, res.status, contentType) || "Invalid response");
             setData(null);
             return;
           }
