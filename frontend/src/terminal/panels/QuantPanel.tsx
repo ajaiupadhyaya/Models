@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { resolveApiUrl } from "../../apiBase";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
+import { AreaChart, BarChart } from "../../charts";
+import type { TimeSeriesPoint } from "../../charts";
 
 interface ModelInfo {
   name: string;
@@ -15,6 +17,7 @@ interface BacktestResult {
   symbol: string;
   period: { start: string; end: string };
   metrics: Record<string, number | null>;
+  equity_curve?: Array<{ date: string; equity: number }>;
   status?: string;
 }
 
@@ -426,6 +429,18 @@ export const QuantPanel: React.FC = () => {
         {error && (
           <div style={{ color: "var(--accent-red)", marginBottom: 8 }}>{error}</div>
         )}
+        {backtest && backtest.equity_curve && backtest.equity_curve.length >= 2 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: "var(--accent)", marginBottom: 4, fontSize: 11 }}>Equity curve</div>
+            <AreaChart
+              data={backtest.equity_curve.map((p) => ({ date: new Date(p.date), value: p.equity })) as TimeSeriesPoint[]}
+              height={160}
+              marginPreset="compact"
+              title=""
+              className="chart-root"
+            />
+          </div>
+        )}
         {backtest && (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <tbody>
@@ -472,38 +487,58 @@ export const QuantPanel: React.FC = () => {
           </div>
           {compareError && <div style={{ color: "var(--accent-red)", fontSize: 11, marginBottom: 4 }}>{compareError}</div>}
           {compareResult && compareResult.strategies.length > 0 && (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Model</th>
-                  <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Sharpe</th>
-                  <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Max DD %</th>
-                  <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Return %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {compareResult.strategies.map((s) => (
-                  <tr key={s.model_name}>
-                    <td style={{ color: "var(--accent)" }}>{s.model_name}</td>
-                    {s.error ? (
-                      <td colSpan={3} style={{ color: "var(--accent-red)", fontSize: 10 }}>{s.error}</td>
-                    ) : (
-                      <>
-                        <td className="num-mono" style={{ textAlign: "right" }}>
-                          {(s.metrics?.sharpe_ratio ?? s.metrics?.sharpe) != null ? Number(s.metrics.sharpe_ratio ?? s.metrics.sharpe).toFixed(3) : "—"}
-                        </td>
-                        <td className="num-mono" style={{ textAlign: "right" }}>
-                          {(s.metrics?.max_drawdown_pct ?? s.metrics?.max_drawdown) != null ? `${Number(s.metrics.max_drawdown_pct ?? s.metrics.max_drawdown).toFixed(2)}%` : "—"}
-                        </td>
-                        <td className="num-mono" style={{ textAlign: "right" }}>
-                          {(s.metrics?.total_return_pct ?? s.metrics?.total_return ?? s.metrics?.cumulative_return) != null ? `${Number(s.metrics.total_return_pct ?? s.metrics.total_return ?? s.metrics.cumulative_return).toFixed(2)}%` : "—"}
-                        </td>
-                      </>
-                    )}
+            <>
+              <div style={{ marginBottom: 8 }}>
+                <BarChart
+                  data={compareResult.strategies.filter((s) => !s.error).map((s) => {
+                    const ret = (s.metrics?.total_return_pct ?? s.metrics?.total_return ?? s.metrics?.cumulative_return) ?? 0;
+                    return {
+                      label: s.model_name.slice(0, 14),
+                      value: Number(ret),
+                      color: Number(ret) >= 0 ? "var(--accent-green)" : "var(--accent-red)",
+                    };
+                  })}
+                  height={Math.min(140, compareResult.strategies.filter((s) => !s.error).length * 32)}
+                  marginPreset="compact"
+                  horizontal
+                  valueFormat={(v) => `${v.toFixed(1)}%`}
+                  title="Total return %"
+                  className="chart-root"
+                />
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Model</th>
+                    <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Sharpe</th>
+                    <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Max DD %</th>
+                    <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Return %</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {compareResult.strategies.map((s) => (
+                    <tr key={s.model_name}>
+                      <td style={{ color: "var(--accent)" }}>{s.model_name}</td>
+                      {s.error ? (
+                        <td colSpan={3} style={{ color: "var(--accent-red)", fontSize: 10 }}>{s.error}</td>
+                      ) : (
+                        <>
+                          <td className="num-mono" style={{ textAlign: "right" }}>
+                            {(s.metrics?.sharpe_ratio ?? s.metrics?.sharpe) != null ? Number(s.metrics.sharpe_ratio ?? s.metrics.sharpe).toFixed(3) : "—"}
+                          </td>
+                          <td className="num-mono" style={{ textAlign: "right" }}>
+                            {(s.metrics?.max_drawdown_pct ?? s.metrics?.max_drawdown) != null ? `${Number(s.metrics.max_drawdown_pct ?? s.metrics.max_drawdown).toFixed(2)}%` : "—"}
+                          </td>
+                          <td className="num-mono" style={{ textAlign: "right" }}>
+                            {(s.metrics?.total_return_pct ?? s.metrics?.total_return ?? s.metrics?.cumulative_return) != null ? `${Number(s.metrics.total_return_pct ?? s.metrics.total_return ?? s.metrics.cumulative_return).toFixed(2)}%` : "—"}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
         </div>
 

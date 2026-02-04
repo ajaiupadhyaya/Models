@@ -39,6 +39,26 @@ uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
 **Rate limiting (production):** Expensive endpoints (backtest run, AI analysis, company analyze) should be rate-limited per IP or per API key in production. Document limits in API docs when implemented.
 
+## Chart-ready data (D3 terminal)
+
+The React terminal uses D3.js for all economic/finance charting. The following endpoints return payloads intended for D3:
+
+| Endpoint | Purpose | D3 payload shape |
+|----------|---------|------------------|
+| `GET /api/v1/backtest/sample-data?symbol=&period=` | OHLCV for candlestick/volume | `{ candles: [{ date, open, high, low, close, volume? }] }` |
+| `GET /api/v1/data/macro` | Macro time series | `{ series: [{ series_id, description, data: [{ date, value }] }] }` |
+| `GET /api/v1/data/yield-curve` | Yield curve | `{ maturities: number[], yields: number[], date? }` |
+| `GET /api/v1/data/correlation?symbols=&period=` | Correlation matrix | `{ symbols: string[], matrix: number[][] }` |
+| `POST /api/v1/backtest/run` | Backtest results | `{ metrics, equity_curve: [{ date, equity }], ... }` — use `equity_curve` for D3 line/area |
+| `GET /api/v1/risk/metrics/{ticker}?period=` | Risk metrics | `{ var_95_pct, cvar_95_pct, volatility_annual_pct, max_drawdown_pct, sharpe_ratio, ... }` — use for D3 bar chart |
+| `GET /api/v1/risk/optimize?symbols=&period=&method=` | Portfolio weights | `{ symbols, weights, expected_return, volatility, sharpe_ratio }` — optimal point for efficient-frontier style viz |
+| `GET /api/v1/risk/stress?ticker=&period=` | Stress scenarios | `{ scenarios: [{ scenario_id, name, estimated_return_pct }] }` — use for D3 bar chart |
+| `GET /api/v1/ai/stock-analysis/{symbol}?include_prediction=` | AI analysis + prediction | `{ prediction: { next_price, confidence_interval_low, confidence_interval_high }, chart_overlay?: { next_price, low, high } }` — use `chart_overlay` or `prediction` for D3 prediction band |
+
+**Equity curve:** Backtest responses expose `equity_curve` as an array of `{ date: "YYYY-MM-DD", equity: number }`. The terminal uses this for D3 area/line charts (QuantPanel, PortfolioPanel).
+
+**Prediction band:** When `include_prediction=true`, stock-analysis returns `prediction` (and optionally `chart_overlay`) with `next_price`, `confidence_interval_low`, `confidence_interval_high` so the frontend can draw a confidence band on the price chart.
+
 ## API Endpoints
 
 ### Health & System

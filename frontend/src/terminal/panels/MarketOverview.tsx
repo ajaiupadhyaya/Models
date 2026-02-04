@@ -2,6 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useFetchWithRetry } from "../../hooks/useFetchWithRetry";
 import { useWebSocketPrice } from "../../hooks/useWebSocketPrice";
 import { useTerminal } from "../TerminalContext";
+import { resolveApiUrl } from "../../apiBase";
+import { getAuthHeaders } from "../../hooks/useFetchWithRetry";
+import { TimeSeriesLine } from "../../charts";
+import type { TimeSeriesPoint } from "../../charts";
 
 interface MarketSymbol {
   symbol: string;
@@ -25,9 +29,32 @@ function parseWatchlist(json: unknown): MarketSymbol[] | null {
   }));
 }
 
+function useSparklineData(symbol: string): TimeSeriesPoint[] {
+  const [data, setData] = useState<TimeSeriesPoint[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(resolveApiUrl(`/api/v1/backtest/sample-data?symbol=${symbol}&period=1mo`), { headers: getAuthHeaders() });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || cancelled) return;
+        const candles = (json.candles ?? []) as Array<{ date: string; close: number }>;
+        if (candles.length >= 2) {
+          setData(candles.map((c) => ({ date: new Date(c.date), value: c.close })));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [symbol]);
+  return data;
+}
+
 export const MarketOverview: React.FC = () => {
   const { primarySymbol, setPrimarySymbol, watchlist, setWatchlist } = useTerminal();
   const [addSymbol, setAddSymbol] = useState("");
+  const sparklineData = useSparklineData(primarySymbol);
   const symbolsParam = watchlist.length > 0 ? watchlist.join(",") : "AAPL";
   const url = `/api/v1/data/quotes?symbols=${symbolsParam}`;
   const { data: quotesData } = useFetchWithRetry<{ quotes?: Array<{ symbol: string; price?: number | null; change_pct?: number | null }> } | null>(url, {
@@ -112,6 +139,20 @@ export const MarketOverview: React.FC = () => {
         <div className="panel-error-inline">
           <span>{error}</span>
           <button type="button" className="ai-button" onClick={retry}>Retry</button>
+        </div>
+      )}
+      {sparklineData.length >= 2 && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ color: "var(--text-soft)", fontSize: 10, marginBottom: 4 }}>{primarySymbol} (1M)</div>
+          <TimeSeriesLine
+            data={sparklineData}
+            height={44}
+            marginPreset="sparkline"
+            showAxis={false}
+            strokeWidth={1.2}
+            className="chart-root"
+            style={{ minHeight: 44 }}
+          />
         </div>
       )}
       {symbols.length > 0 && (
