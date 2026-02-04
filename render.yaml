@@ -2,13 +2,12 @@
 # https://render.com/docs/blueprint-spec
 #
 # Usage: connect this repo in Render; create a Web Service from this spec.
-# Required env (set in Render dashboard → Environment):
-#   TERMINAL_USER, TERMINAL_PASSWORD, AUTH_SECRET  — login
-#   FRED_API_KEY                                    — Economic tab, macro, yield curve
-#   ALPHA_VANTAGE_API_KEY (optional)                — chart data; yfinance is default
-#   OPENAI_API_KEY (optional)                       — AI tab, NL query
-#   FINNHUB_API_KEY (optional)                      — News tab
-# See RENDER_DEPLOY.md for full list and troubleshooting.
+# Environment: set in Render dashboard → your service → Environment.
+#   - Use exact Key names (case-sensitive); no trailing slashes on URLs.
+#   - Do NOT set PORT (Render sets it) or VITE_API_ORIGIN (single service = same origin for API/WebSocket).
+# Required: TERMINAL_USER, TERMINAL_PASSWORD, AUTH_SECRET, FRED_API_KEY, ALPHA_VANTAGE_API_KEY
+# Optional: OPENAI_API_KEY, FINNHUB_API_KEY, ENABLE_METRICS, WEBSOCKET_ENABLED, paper trading vars
+# See RENDER_DEPLOY.md for full list, formatting rules, and troubleshooting.
 
 services:
   - type: web

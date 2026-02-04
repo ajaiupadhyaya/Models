@@ -6,33 +6,71 @@ This guide ensures the Bloomberg-style terminal works on Render: charts, AI, ML,
 
 1. **Connect repo** to Render and create a **Web Service** from the repo.
 2. **Build**: set **Dockerfile Path** to `./Dockerfile`, **Docker Context** to `.`.
-3. **Environment**: In the Render dashboard → your service → **Environment**, add these variables.
+3. **Environment**: In the Render dashboard → your service → **Environment**, add the variables below. Formatting matters — see the rules in the next section.
+
+---
+
+## Render environment page — formatting rules
+
+These rules prevent the terminal from failing to load features (tabs, charts, API calls) due to misconfigured env vars.
+
+- **Key names**: Copy exactly. Render is case-sensitive (e.g. `FRED_API_KEY` not `fred_api_key`). No spaces before or after the key.
+- **Values**: No trailing slashes on URLs. For example:
+  - `ALPHA_VANTAGE_API_KEY`: paste only the key string (no quotes).
+  - `ALPACA_API_BASE`: use `https://paper-api.alpaca.markets` (no trailing `/`).
+- **API / WebSocket**: This app uses one Web Service (API + frontend on the same URL). You do **not** set a separate API URL or webhook URL. All `/api/*` and WebSocket (`wss://`) requests go to the same host Render gives you (e.g. `https://your-service.onrender.com`). The frontend is built without `VITE_API_ORIGIN`, so it correctly uses the same origin.
+
+### Do not set on Render (single Web Service)
+
+| Key | Why |
+|-----|-----|
+| `PORT` | Render sets this automatically. |
+| `VITE_API_ORIGIN` | Only for split deploys (frontend on a different domain). For one Web Service, leave unset so the app and API use the same origin. Setting it incorrectly can break all API and WebSocket requests and make the terminal show "API unreachable" or empty tabs. |
+| Any "webhook URL" or "API base URL" | Not used. API and WebSocket are same-origin; no extra URL needed. |
+
+---
+
+## Environment variables to add
+
+Add these in **Render dashboard → your service → Environment**. Click **Add Environment Variable** and use **Key** and **Value** as below. Values: no trailing slashes; no quotes around simple values.
 
 ### Required for login and core app
 
-| Variable | Required | Notes |
-|----------|----------|--------|
-| `TERMINAL_USER` | Yes | Username to sign in (e.g. `admin`) |
-| `TERMINAL_PASSWORD` | Yes | Password to sign in |
-| `AUTH_SECRET` | Yes | Long random string for JWT (e.g. `openssl rand -hex 32`) |
+| Key | Value (example / notes) |
+|-----|--------------------------|
+| `TERMINAL_USER` | Username to sign in (e.g. `admin`) |
+| `TERMINAL_PASSWORD` | Your chosen password |
+| `AUTH_SECRET` | Long random string for JWT (e.g. output of `openssl rand -hex 32`) |
 
 ### Required for charts and data
 
-| Variable | Required | Notes |
-|----------|----------|--------|
-| `FRED_API_KEY` | Yes | [FRED API key](https://fred.stlouisfed.org/docs/api/api_key.html) — Economic tab, yield curve, macro |
-| `ALPHA_VANTAGE_API_KEY` | Yes | [Alpha Vantage key](https://www.alphavantage.co/support/#api-key) — optional for charts; yfinance is default |
+| Key | Value (example / notes) |
+|-----|--------------------------|
+| `FRED_API_KEY` | Your [FRED API key](https://fred.stlouisfed.org/docs/api/api_key.html) — Economic tab, yield curve, macro |
+| `ALPHA_VANTAGE_API_KEY` | Your [Alpha Vantage key](https://www.alphavantage.co/support/#api-key) — charts; yfinance is fallback if unset |
 
 ### Optional but recommended
 
-| Variable | Required | Notes |
-|----------|----------|--------|
-| `OPENAI_API_KEY` | No | [OpenAI key](https://platform.openai.com/api-keys) — AI tab, NL query, summaries |
-| `FINNHUB_API_KEY` | No | [Finnhub key](https://finnhub.io/) — News tab headlines |
-| `ENABLE_METRICS` | No | Set `true` for monitoring dashboard |
-| `WEBSOCKET_ENABLED` | No | Set `true` for live price ticker |
+| Key | Value (example / notes) |
+|-----|--------------------------|
+| `OPENAI_API_KEY` | Your [OpenAI key](https://platform.openai.com/api-keys) — AI tab, NL query, summaries |
+| `FINNHUB_API_KEY` | Your [Finnhub key](https://finnhub.io/) — News tab headlines |
+| `ENABLE_METRICS` | `true` (literal, no quotes) for monitoring dashboard |
+| `WEBSOCKET_ENABLED` | `true` (literal) for live price ticker; WebSocket uses same host, no separate URL |
+| `SAMPLE_DATA_SOURCE` | `yfinance` (default) or `data_fetcher` — no trailing slash |
 
-Render sets `PORT` automatically; the Dockerfile uses it. Do **not** set `VITE_API_ORIGIN` — the app and API are on the same URL.
+### Optional — paper trading (Alpaca)
+
+| Key | Value (example / notes) |
+|-----|--------------------------|
+| `ENABLE_PAPER_TRADING` | `true` to enable Paper Trading tab |
+| `ALPACA_API_KEY` | Alpaca API key |
+| `ALPACA_API_SECRET` | Alpaca API secret |
+| `ALPACA_API_BASE` | `https://paper-api.alpaca.markets` — **no trailing slash** |
+
+Render sets `PORT` automatically. For a single Web Service, do **not** add `VITE_API_ORIGIN` — the app and API are on the same URL, and the frontend is built to use same-origin for all API and WebSocket requests.
+
+---
 
 ## After deploy
 
@@ -43,13 +81,16 @@ Render sets `PORT` automatically; the Dockerfile uses it. Do **not** set `VITE_A
 
 ## If tabs show errors or "not found"
 
-1. **Same-origin**: You are using one Web Service. Do **not** set `VITE_API_ORIGIN`.
-2. **Logs**: In Render → your service → **Logs**, look for:
+1. **Environment formatting**: In Render → your service → **Environment**, ensure:
+   - Keys are spelled exactly (e.g. `FRED_API_KEY`, `TERMINAL_USER`). No trailing slashes on any URL (e.g. `ALPACA_API_BASE` = `https://paper-api.alpaca.markets`).
+   - **Do not** set `VITE_API_ORIGIN` for a single Web Service — if it is set, remove it and redeploy so the frontend uses the same origin for API and WebSocket.
+2. **Same-origin**: You are using one Web Service. The app expects API and frontend on the same URL; no separate API or webhook URL is needed.
+3. **Logs**: In Render → your service → **Logs**, look for:
    - `Routers loaded: ['auth', 'models', 'predictions', ...]` — confirms which routers started.
    - `Router X not available: ...` — that router failed to load (missing dep or config).
-3. **Missing routers**: If e.g. `ai` is not in `routers_loaded`, add `OPENAI_API_KEY`. If `data` is missing, check that `requirements-api.txt` deps installed (build logs).
-4. **Charts / sample data**: Uses yfinance by default; no key required. For more data, set `ALPHA_VANTAGE_API_KEY`.
-5. **Cold start**: Free tier may sleep; first request can take 30–60 s. Use **Retry** in the app or hit `/health` again.
+4. **Missing routers**: If e.g. `ai` is not in `routers_loaded`, add `OPENAI_API_KEY`. If `data` is missing, check that `requirements-api.txt` deps installed (build logs).
+5. **Charts / sample data**: Uses yfinance by default; no key required. For more data, set `ALPHA_VANTAGE_API_KEY`.
+6. **Cold start**: Free tier may sleep; first request can take 30–60 s. Use **Retry** in the app or hit `/health` again.
 
 ## Build notes
 
