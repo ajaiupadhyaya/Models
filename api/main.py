@@ -28,72 +28,42 @@ sys.path.insert(0, str(project_root))
 frontend_dist = project_root / "frontend" / "dist"
 serve_spa = (frontend_dist / "index.html").exists()
 
-# Lazy load routers to avoid import cascade issues
+# Lazy load routers to avoid import cascade issues; each router loaded in try/except
+# so one failure (e.g. missing optional dep) does not prevent others from loading.
 def get_routers():
     """
-    Lazy load API routers for the core domains.
-
-    The goal is to expose a clean, focused surface for the
-    Bloomberg-style terminal while keeping advanced/institutional
-    endpoints available but out of the default path.
+    Lazy load API routers for the core domains. Each router is loaded in try/except
+    so deploy (e.g. Render) works even if one module fails (missing dep, config, etc.).
     """
-    # Core domain routers
-    from api.models_api import router as models_router
-    from api.predictions_api import router as predictions_router
-    from api.backtesting_api import router as backtesting_router
-    from api.websocket_api import router as websocket_router
-    from api.monitoring import router as monitoring_router
-    from api.paper_trading_api import router as paper_trading_router
-    from api.investor_reports_api import router as investor_reports_router
-    from api.company_analysis_api import router as company_analysis_router
-    from api.ai_analysis_api import router as ai_router
-    from api.data_api import router as data_router
-    from api.risk_api import router as risk_router
+    routers: Dict[str, Any] = {}
 
-    routers = {
-        "models": models_router,
-        "predictions": predictions_router,
-        "backtesting": backtesting_router,
-        "websocket": websocket_router,
-        "monitoring": monitoring_router,
-        "paper_trading": paper_trading_router,
-        "investor_reports": investor_reports_router,
-        "company": company_analysis_router,
-        "ai": ai_router,
-        "data": data_router,
-        "risk": risk_router,
-    }
+    def _add(name: str, load_fn):
+        try:
+            router = load_fn()
+            if router is not None:
+                routers[name] = router
+        except Exception as e:
+            logger.warning("Router %s not available: %s", name, e)
 
-    try:
-        from api.automation_api import router as automation_router
-        routers["automation"] = automation_router
-    except Exception as e:
-        logger.info(f"Automation router not available: {e}")
-    try:
-        from api.orchestrator_api import router as orchestrator_router
-        routers["orchestrator"] = orchestrator_router
-    except Exception as e:
-        logger.info(f"Orchestrator router not available: {e}")
-    try:
-        from api.screener_api import router as screener_router
-        routers["screener"] = screener_router
-    except Exception as e:
-        logger.info(f"Screener router not available: {e}")
+    # Core domain routers (charts, AI, ML, data, risk, etc.)
+    _add("models", lambda: __import__("api.models_api", fromlist=["router"]).router)
+    _add("predictions", lambda: __import__("api.predictions_api", fromlist=["router"]).router)
+    _add("backtesting", lambda: __import__("api.backtesting_api", fromlist=["router"]).router)
+    _add("websocket", lambda: __import__("api.websocket_api", fromlist=["router"]).router)
+    _add("monitoring", lambda: __import__("api.monitoring", fromlist=["router"]).router)
+    _add("paper_trading", lambda: __import__("api.paper_trading_api", fromlist=["router"]).router)
+    _add("investor_reports", lambda: __import__("api.investor_reports_api", fromlist=["router"]).router)
+    _add("company", lambda: __import__("api.company_analysis_api", fromlist=["router"]).router)
+    _add("ai", lambda: __import__("api.ai_analysis_api", fromlist=["router"]).router)
+    _add("data", lambda: __import__("api.data_api", fromlist=["router"]).router)
+    _add("risk", lambda: __import__("api.risk_api", fromlist=["router"]).router)
 
-    # Advanced / institutional-grade routers stay importable but are not
-    # part of the default core surface. They can still be mounted
-    # manually from a custom main if desired.
-    try:
-        from api.comprehensive_api import router as comprehensive_router  # type: ignore
-        routers["comprehensive"] = comprehensive_router
-    except Exception as e:
-        logger.info(f"Comprehensive router not available: {e}")
-
-    try:
-        from api.institutional_api import router as institutional_router  # type: ignore
-        routers["institutional"] = institutional_router
-    except Exception as e:
-        logger.info(f"Institutional router not available: {e}")
+    # Optional routers
+    _add("automation", lambda: __import__("api.automation_api", fromlist=["router"]).router)
+    _add("orchestrator", lambda: __import__("api.orchestrator_api", fromlist=["router"]).router)
+    _add("screener", lambda: __import__("api.screener_api", fromlist=["router"]).router)
+    _add("comprehensive", lambda: __import__("api.comprehensive_api", fromlist=["router"]).router)
+    _add("institutional", lambda: __import__("api.institutional_api", fromlist=["router"]).router)
 
     return routers
 
@@ -149,9 +119,9 @@ async def lifespan(app: FastAPI):
         from api.models_api import load_saved_models
         loaded_models = await load_saved_models()
         app_state["models"].update(loaded_models)
-        logger.info(f"Loaded {len(loaded_models)} pre-trained models")
+        logger.info("Loaded %s pre-trained models", len(loaded_models))
     except Exception as e:
-        logger.warning(f"Could not load models: {e}")
+        logger.warning("Could not load models: %s", e)
 
     logger.info("API server ready!")
     
@@ -329,24 +299,37 @@ try:
 
     routers = get_routers()
     app_state["routers_loaded"] = list(routers.keys())
+    logger.info("Routers loaded: %s", app_state["routers_loaded"])
 
-    # Core domains
-    app.include_router(routers["models"], prefix="/api/v1/models", tags=["Models"])
-    app.include_router(routers["predictions"], prefix="/api/v1/predictions", tags=["Predictions"])
-    app.include_router(routers["backtesting"], prefix="/api/v1/backtest", tags=["Backtesting"])
-    app.include_router(routers["websocket"], prefix="/api/v1/ws", tags=["WebSocket"])
-    app.include_router(routers["monitoring"], prefix="/api/v1/monitoring", tags=["Monitoring"])
-    app.include_router(routers["paper_trading"], prefix="/api/v1/paper-trading", tags=["Paper Trading"])
-    app.include_router(routers["investor_reports"], tags=["Investor Reports"])
-    app.include_router(routers["company"], prefix="/api/v1/company", tags=["Company Analysis"])
-    app.include_router(routers["ai"], tags=["AI"])
-    app.include_router(routers["data"], prefix="/api/v1/data", tags=["Data"])
+    # Core domains (only include if loaded)
+    if "models" in routers:
+        app.include_router(routers["models"], prefix="/api/v1/models", tags=["Models"])
+    if "predictions" in routers:
+        app.include_router(routers["predictions"], prefix="/api/v1/predictions", tags=["Predictions"])
+    if "backtesting" in routers:
+        app.include_router(routers["backtesting"], prefix="/api/v1/backtest", tags=["Backtesting"])
+    if "websocket" in routers:
+        app.include_router(routers["websocket"], prefix="/api/v1/ws", tags=["WebSocket"])
+    if "monitoring" in routers:
+        app.include_router(routers["monitoring"], prefix="/api/v1/monitoring", tags=["Monitoring"])
+    if "paper_trading" in routers:
+        app.include_router(routers["paper_trading"], prefix="/api/v1/paper-trading", tags=["Paper Trading"])
+    if "investor_reports" in routers:
+        app.include_router(routers["investor_reports"], tags=["Investor Reports"])
+    if "company" in routers:
+        app.include_router(routers["company"], prefix="/api/v1/company", tags=["Company Analysis"])
+    if "ai" in routers:
+        app.include_router(routers["ai"], tags=["AI"])
+    if "data" in routers:
+        app.include_router(routers["data"], prefix="/api/v1/data", tags=["Data"])
     try:
         from api.news_api import router as news_router
         app.include_router(news_router, prefix="/api/v1/data", tags=["News"])
+        app_state["routers_loaded"].append("news")
     except Exception as e:
         logger.info("News router not available: %s", e)
-    app.include_router(routers["risk"], prefix="/api/v1/risk", tags=["Risk"])
+    if "risk" in routers:
+        app.include_router(routers["risk"], prefix="/api/v1/risk", tags=["Risk"])
 
     if "automation" in routers:
         app.include_router(routers["automation"], tags=["Automation"])
@@ -355,16 +338,15 @@ try:
     if "screener" in routers:
         app.include_router(routers["screener"], prefix="/api/v1/screener", tags=["Screener"])
 
-    # Advanced / optional domains
     if "comprehensive" in routers:
         app.include_router(routers["comprehensive"], tags=["Comprehensive"])
     if "institutional" in routers:
         app.include_router(routers["institutional"], tags=["Institutional"])
 
-    logger.info("Routers loaded successfully")
+    logger.info("Routers registered successfully")
 except Exception as e:
-    logger.warning(f"Failed to load some routers: {e}")
-    # Continue anyway - some routers can fail
+    logger.warning("Failed to load routers: %s", e)
+    app_state["routers_loaded"] = app_state.get("routers_loaded") or []
 
 # Serve built SPA when frontend/dist exists (Docker/production)
 # - Mount StaticFiles only at /assets (never at "/" — that would catch POST and return 405).

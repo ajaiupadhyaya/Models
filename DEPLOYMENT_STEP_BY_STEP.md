@@ -146,6 +146,8 @@ Pick **one** of: Railway, Render, or Fly.io. Each gives you a public URL. Steps 
 
 ## Option 2: Render
 
+For a focused Render checklist (env vars for charts, AI, ML, and troubleshooting), see **[RENDER_DEPLOY.md](RENDER_DEPLOY.md)**.
+
 ### B2.1. Sign in to Render
 
 1. Go to [https://render.com](https://render.com).
@@ -341,5 +343,9 @@ To change secrets later: `fly secrets set VARIABLE_NAME=new_value`, then `fly de
 - **“Invalid username or password”**: Ensure `TERMINAL_USER` and `TERMINAL_PASSWORD` are set exactly (no extra spaces) on the host.
 - **Blank or 502 page**: Wait a minute after deploy (cold start on free tiers). If it persists, check the service logs on the host.
 - **Charts/data not loading**: Confirm `FRED_API_KEY` and `ALPHA_VANTAGE_API_KEY` are set and valid; check the browser Network tab and the host logs for API errors.
+- **Tabs show "Not found" or "API unreachable"**:
+  1. **Same-origin deploy (one Docker service)**: The frontend and API are served from the same URL; do **not** set `VITE_API_ORIGIN`. If tabs still 404, check API logs for "router not available" — some tabs (Automation/Orchestrator, Screening, News) depend on optional routers; ensure their dependencies are installed (see `requirements-api.txt`).
+  2. **Split deploy (frontend and API on different URLs)**: Build the frontend with the API base URL: `VITE_API_ORIGIN=https://your-api.onrender.com npm run build` (no trailing slash). Without this, API requests go to the frontend host and return 404.
+  3. See [FEATURE_FIX_PLAN.md](FEATURE_FIX_PLAN.md) for a full endpoint audit and fix checklist.
 
 For more context, see [DEPLOY.md](DEPLOY.md) and [LAUNCH_GUIDE.md](LAUNCH_GUIDE.md).

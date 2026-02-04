@@ -23,9 +23,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt requirements-api.txt ./
+# API deps required (charts, AI, ML, auth). Project deps best-effort so Render build succeeds.
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install --only-binary :all: -r requirements.txt && \
-    pip install -r requirements-api.txt
+    pip install -r requirements-api.txt && \
+    (pip install -r requirements.txt || true)
 
 COPY . .
 COPY --from=frontend-build /app/frontend/dist /app/frontend/dist

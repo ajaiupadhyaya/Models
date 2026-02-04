@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import { resolveApiUrl } from "../apiBase";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { MarketOverview } from "./panels/MarketOverview";
 import { PrimaryInstrument } from "./panels/PrimaryInstrument";
@@ -149,6 +150,17 @@ export const TerminalShell: React.FC = () => {
   const [wsConnected, setWsConnected] = useState(false);
   const [lastBacktestSymbol, setLastBacktestSymbol] = useState<string | null>(null);
   const [watchlist, setWatchlistState] = useState<string[]>(loadWatchlist);
+  const [apiHealthy, setApiHealthy] = useState<boolean | null>(null);
+
+  const checkApiHealth = useCallback(() => {
+    fetch(resolveApiUrl("/health"))
+      .then((r) => setApiHealthy(r.ok))
+      .catch(() => setApiHealthy(false));
+  }, []);
+  useEffect(() => {
+    checkApiHealth();
+  }, [checkApiHealth]);
+
   const setWatchlist = useCallback((symbols: string[]) => {
     setWatchlistState(symbols);
     try {
@@ -260,6 +272,27 @@ export const TerminalShell: React.FC = () => {
           </div>
         </header>
 
+        {apiHealthy === false && (
+          <div
+            className="panel-error-inline"
+            style={{
+              margin: "0 8px 8px",
+              padding: "8px 12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            <span>
+              API unreachable. Tabs may show errors. Ensure the API is running and, if the app is on a different domain, set VITE_API_ORIGIN at build time.
+            </span>
+            <button type="button" className="ai-button" onClick={checkApiHealth}>
+              Retry
+            </button>
+          </div>
+        )}
         <div className="terminal-command-row" style={{ position: "relative" }}>
           <CommandBar onSubmit={handleCommand} />
         </div>
