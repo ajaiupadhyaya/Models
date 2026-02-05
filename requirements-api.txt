@@ -3,7 +3,8 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
 python-multipart==0.0.6
-websockets==12.0
+websockets>=16.0  # Required for asyncio support by openai and yfinance
+httpx<0.28  # Pin to maintain TestClient compatibility
 fuzzywuzzy>=0.18.0
 python-Levenshtein>=0.21.0
 # Auth (JWT) and config for Render/production

@@ -5,7 +5,7 @@ Institutional-grade time series and econometric methods
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from scipy.optimize import minimize
 from scipy.stats import norm, t
 import warnings

@@ -5,7 +5,7 @@ Enhanced with Monte Carlo simulation, scenario analysis, and proper WACC calcula
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from scipy.stats import norm
 import warnings
 warnings.filterwarnings('ignore')
