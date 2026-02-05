@@ -149,7 +149,7 @@ def fetch_recent_data(symbol: str, days: int = 60) -> pd.DataFrame:
         symbol,
         start=start_date.strftime("%Y-%m-%d"),
         end=end_date.strftime("%Y-%m-%d"),
-        progress=False
+        progress=False,
     )
     
     if data.empty:

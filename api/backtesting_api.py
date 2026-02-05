@@ -136,7 +136,7 @@ async def get_sample_data(
     """
     Get OHLCV sample data for charting (used by frontend Primary Instrument).
     Returns candles in format expected by the terminal candlestick chart.
-    Use source=data_fetcher when Alpha Vantage (or other) is configured for unified pipeline.
+    Uses a browser User-Agent so Yahoo Finance returns real data on cloud (Render).
     """
     try:
         source_val = source or (get_settings().data.sample_data_source_default if get_settings else "yfinance")
@@ -287,7 +287,7 @@ async def run_backtest(request: BacktestRequest) -> BacktestResponse:
             request.symbol,
             start=request.start_date,
             end=request.end_date,
-            progress=False
+            progress=False,
         )
         
         if data.empty:
@@ -541,7 +541,7 @@ async def walk_forward_analysis(request: WalkForwardRequest) -> Dict[str, Any]:
             request.symbol,
             start=request.start_date,
             end=request.end_date,
-            progress=False
+            progress=False,
         )
         
         if data.empty:

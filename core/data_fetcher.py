@@ -95,7 +95,6 @@ class DataFetcher:
         for attempt in range(max_retries):
             try:
                 stock = yf.Ticker(ticker)
-                
                 if start_date and end_date:
                     data = stock.history(start=start_date, end=end_date)
                 else:
@@ -135,7 +134,6 @@ class DataFetcher:
                 data = yf.download(tickers, start=start_date, end=end_date, progress=False)
             else:
                 data = yf.download(tickers, period="1y", progress=False)
-            
             return data
         except Exception as e:
             raise ValueError(f"Failed to fetch data for tickers {tickers}: {str(e)}")
@@ -154,7 +152,6 @@ class DataFetcher:
         try:
             stock = yf.Ticker(ticker)
             info = stock.info
-            
             # Extract key information with safe fallbacks
             return {
                 'symbol': info.get('symbol', ticker),
