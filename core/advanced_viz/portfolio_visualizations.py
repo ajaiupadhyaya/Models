@@ -363,7 +363,7 @@ class RiskVisualizations:
         
         # VaR line
         fig.add_vline(x=var_95, line_dash="dash", line_color="orange",
-                     annotation_text=f"VaR 95%: {var_95:.2%}", 
+                     annotation_text=f"VaR 95%: {var_95:.2%}",
                      annotation_position="top right")
         
         # CVaR line
@@ -406,7 +406,7 @@ class RiskVisualizations:
         
         # Add mean line
         mean_corr = np.mean(correlation_history)
-        fig.add_hline(y=mean_corr, line_dash="dash", 
+        fig.add_hline(y=mean_corr, line_dash="dash",
                      annotation_text=f"Mean: {mean_corr:.2f}")
         
         fig.update_layout(

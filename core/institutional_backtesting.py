@@ -205,7 +205,7 @@ class InstitutionalBacktestEngine(BacktestEngine):
         if 'position' in self.open_positions:
             trade = self.open_positions['position']['trade']
             exit_costs = self.calculate_transaction_costs(
-                trade.quantity, df['Close'].iloc[-1], 
+                trade.quantity, df['Close'].iloc[-1],
                 daily_volume.iloc[-1] if not pd.isna(daily_volume.iloc[-1]) else df['Volume'].iloc[-1],
                 volatility.iloc[-1] if not pd.isna(volatility.iloc[-1]) else 0.2
             )

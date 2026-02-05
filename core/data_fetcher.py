@@ -74,9 +74,9 @@ class DataFetcher:
             self.alpha_vantage_econ = None
     
     @cached(ttl=300)  # Cache for 5 minutes
-    def get_stock_data(self, 
-                      ticker: str, 
-                      start_date: Optional[str] = None, 
+    def get_stock_data(self,
+                      ticker: str,
+                      start_date: Optional[str] = None,
                       end_date: Optional[str] = None,
                       period: str = "1y") -> pd.DataFrame:
         """
@@ -112,8 +112,8 @@ class DataFetcher:
         
         return pd.DataFrame()
     
-    def get_multiple_stocks(self, 
-                           tickers: List[str], 
+    def get_multiple_stocks(self,
+                           tickers: List[str],
                            start_date: Optional[str] = None,
                            end_date: Optional[str] = None) -> pd.DataFrame:
         """
@@ -173,8 +173,8 @@ class DataFetcher:
             raise ValueError(f"Failed to fetch info for {ticker}: {str(e)}")
     
     @cached(ttl=3600)  # Cache for 1 hour (economic data updates less frequently)
-    def get_economic_indicator(self, 
-                               series_id: str, 
+    def get_economic_indicator(self,
+                               series_id: str,
                                start_date: Optional[str] = None,
                                end_date: Optional[str] = None) -> pd.Series:
         """
@@ -206,37 +206,37 @@ class DataFetcher:
             print(f"Error fetching FRED data: {e}")
             return pd.Series()
     
-    def get_unemployment_rate(self, 
+    def get_unemployment_rate(self,
                              start_date: Optional[str] = None,
                              end_date: Optional[str] = None) -> pd.Series:
         """Get US unemployment rate."""
         return self.get_economic_indicator('UNRATE', start_date, end_date)
     
-    def get_gdp(self, 
+    def get_gdp(self,
                start_date: Optional[str] = None,
                end_date: Optional[str] = None) -> pd.Series:
         """Get US GDP."""
         return self.get_economic_indicator('GDP', start_date, end_date)
     
-    def get_cpi(self, 
+    def get_cpi(self,
                start_date: Optional[str] = None,
                end_date: Optional[str] = None) -> pd.Series:
         """Get Consumer Price Index (inflation)."""
         return self.get_economic_indicator('CPIAUCSL', start_date, end_date)
     
-    def get_fed_funds_rate(self, 
+    def get_fed_funds_rate(self,
                           start_date: Optional[str] = None,
                           end_date: Optional[str] = None) -> pd.Series:
         """Get Federal Funds Rate."""
         return self.get_economic_indicator('FEDFUNDS', start_date, end_date)
     
-    def get_10y_treasury(self, 
+    def get_10y_treasury(self,
                         start_date: Optional[str] = None,
                         end_date: Optional[str] = None) -> pd.Series:
         """Get 10-Year Treasury Rate."""
         return self.get_economic_indicator('DGS10', start_date, end_date)
     
-    def get_nonfarm_payrolls(self, 
+    def get_nonfarm_payrolls(self,
                             start_date: Optional[str] = None,
                             end_date: Optional[str] = None) -> pd.Series:
         """Get Total Nonfarm Payrolls."""
@@ -261,8 +261,8 @@ class DataFetcher:
             'payrolls': self.get_nonfarm_payrolls(start_date, end_date)
         }
     
-    def get_alpha_vantage_data(self, 
-                               symbol: str, 
+    def get_alpha_vantage_data(self,
+                               symbol: str,
                                function: str = 'TIME_SERIES_DAILY') -> pd.DataFrame:
         """
         Fetch data from Alpha Vantage.
@@ -290,8 +290,8 @@ class DataFetcher:
             print(f"Error fetching Alpha Vantage data: {e}")
             return pd.DataFrame()
     
-    def get_crypto_data(self, 
-                       symbol: str, 
+    def get_crypto_data(self,
+                       symbol: str,
                        start_date: Optional[str] = None,
                        end_date: Optional[str] = None) -> pd.DataFrame:
         """

@@ -111,7 +111,7 @@ class SmartCache:
     def _enforce_size_limit(self):
         """Enforce maximum cache size."""
         total_size = sum(
-            self._get_cache_path(key).stat().st_size 
+            self._get_cache_path(key).stat().st_size
             for key in self._cache_metadata.keys()
             if self._get_cache_path(key).exists()
         )
@@ -132,7 +132,7 @@ class SmartCache:
                     del self._cache_metadata[key]
                 
                 total_size = sum(
-                    self._get_cache_path(k).stat().st_size 
+                    self._get_cache_path(k).stat().st_size
                     for k in self._cache_metadata.keys()
                     if self._get_cache_path(k).exists()
                 )
@@ -222,7 +222,7 @@ def optimize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     for col in df.columns:
         col_type = df[col].dtype
         
-        if col_type != object:
+        if col_type.kind != "O":  # skip object dtype columns
             c_min = df[col].min()
             c_max = df[col].max()
             

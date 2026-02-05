@@ -34,8 +34,8 @@ class FinancialDashboard:
         self.app.layout = html.Div([
             # Header
             html.Div([
-                html.H1("Financial Analysis Dashboard", 
-                       style={'textAlign': 'center', 'color': '#121212', 
+                html.H1("Financial Analysis Dashboard",
+                       style={'textAlign': 'center', 'color': '#121212',
                              'fontFamily': 'Georgia, serif', 'marginBottom': '30px'}),
                 html.P("Real-time market data and analysis",
                       style={'textAlign': 'center', 'color': '#666666',
@@ -132,7 +132,7 @@ class FinancialDashboard:
                 
                 # Price chart
                 price_fig = ChartBuilder.candlestick_chart(
-                    stock_data, 
+                    stock_data,
                     title=f"{ticker} Stock Price",
                     show_volume=True
                 )
@@ -188,14 +188,14 @@ class FinancialDashboard:
                     )
                     macro_fig.update_layout(template="plotly_white", height=400)
                 
-                return (price_fig, dist_fig, metrics_html, corr_fig, 
+                return (price_fig, dist_fig, metrics_html, corr_fig,
                        risk_return_fig, macro_fig)
             
             except Exception as e:
                 print(f"Error updating dashboard: {e}")
                 return self._empty_figures()
     
-    def _calculate_metrics(self, stock_data: pd.DataFrame, 
+    def _calculate_metrics(self, stock_data: pd.DataFrame,
                           returns: pd.Series) -> dict:
         """Calculate key financial metrics."""
         from .utils import calculate_sharpe_ratio, calculate_max_drawdown
@@ -226,7 +226,7 @@ class FinancialDashboard:
             html.Div([
                 html.Div([
                     html.P("Current Price", style={'margin': '5px', 'color': '#666'}),
-                    html.H4(f"${metrics['current_price']:.2f}", 
+                    html.H4(f"${metrics['current_price']:.2f}",
                            style={'margin': '5px', 'color': '#121212'})
                 ], style={'display': 'inline-block', 'width': '30%', 'textAlign': 'center',
                          'padding': '10px', 'backgroundColor': '#f9f9f9', 'borderRadius': '5px',
@@ -235,7 +235,7 @@ class FinancialDashboard:
                 html.Div([
                     html.P("Return", style={'margin': '5px', 'color': '#666'}),
                     html.H4(f"{metrics['price_change_pct']:+.2f}%",
-                           style={'margin': '5px', 
+                           style={'margin': '5px',
                                  'color': '#E3120B' if metrics['price_change_pct'] < 0 else '#326891'})
                 ], style={'display': 'inline-block', 'width': '30%', 'textAlign': 'center',
                          'padding': '10px', 'backgroundColor': '#f9f9f9', 'borderRadius': '5px',
@@ -285,7 +285,7 @@ class FinancialDashboard:
             xref="paper", yref="paper",
             x=0.5, y=0.5, showarrow=False
         )
-        return (empty_fig, empty_fig, html.Div("Error"), 
+        return (empty_fig, empty_fig, html.Div("Error"),
                empty_fig, empty_fig, empty_fig)
     
     def run(self, debug: bool = True, port: int = 8050):

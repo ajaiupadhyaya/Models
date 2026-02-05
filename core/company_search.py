@@ -200,7 +200,7 @@ class CompanySearch:
         
         return companies
     
-    def search(self, 
+    def search(self,
                query: str,
                limit: int = 10,
                min_score: int = 60) -> List[Dict]:
@@ -294,7 +294,7 @@ class CompanySearch:
             if sector.lower() in data.get('sector', '').lower()
         ]
     
-    def filter_by_market_cap(self, 
+    def filter_by_market_cap(self,
                             min_cap: Optional[float] = None,
                             max_cap: Optional[float] = None) -> List[Dict]:
         """Filter companies by market capitalization."""

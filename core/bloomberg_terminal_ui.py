@@ -11,7 +11,7 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import json
 
 from core.data_fetcher import DataFetcher
@@ -381,7 +381,7 @@ class BloombergTerminalUI:
             if not signals:
                 return html.Div([
                     html.P("No signals available", style={'color': BLOOMBERG_COLORS['text_secondary']}),
-                    html.Small("Signals will appear here when models generate trading recommendations", 
+                    html.Small("Signals will appear here when models generate trading recommendations",
                               style={'color': BLOOMBERG_COLORS['text_secondary'], 'fontSize': '11px'})
                 ])
             
