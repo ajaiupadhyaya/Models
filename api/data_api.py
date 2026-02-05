@@ -212,7 +212,22 @@ async def get_quotes(symbols: str = Query("AAPL,MSFT,GOOGL,SPY,QQQ", description
             return {"quotes": [{"symbol": s, "price": None, "change_pct": None} for s in sym_list]}
         quotes = []
         if len(sym_list) == 1:
-            close = data["Close"] if "Close" in data.columns else (data.iloc[:, 0] if len(data.columns) > 0 else None)
+            # Single ticker with group_by='ticker' has multi-level columns: (ticker, OHLCV)
+            if isinstance(data.columns, pd.MultiIndex):
+                # Extract Close column for the ticker
+                ticker = sym_list[0]
+                if (ticker, 'Close') in data.columns:
+                    close = data[(ticker, 'Close')]
+                else:
+                    # Fallback: try to find Close in level 1
+                    close_cols = [col for col in data.columns if col[1] == 'Close']
+                    close = data[close_cols[0]] if close_cols else None
+            else:
+                close = data["Close"] if "Close" in data.columns else (data.iloc[:, 3] if len(data.columns) > 3 else None)
+            
+            if close is not None and hasattr(close, "dropna"):
+                close = close.dropna()
+            
             if close is not None and hasattr(close, "iloc") and len(close) > 0:
                 last = float(close.iloc[-1])
                 prev = float(close.iloc[-2]) if len(close) > 1 else last
@@ -224,9 +239,17 @@ async def get_quotes(symbols: str = Query("AAPL,MSFT,GOOGL,SPY,QQQ", description
             for s in sym_list:
                 try:
                     if isinstance(data.columns, pd.MultiIndex):
-                        col = data["Close"][s] if s in data["Close"].columns else None
+                        # Multi-ticker: columns are (ticker, OHLCV)
+                        if (s, 'Close') in data.columns:
+                            col = data[(s, 'Close')]
+                        else:
+                            col = None
                     else:
                         col = data["Close"] if "Close" in data.columns else None
+                    
+                    if col is not None and hasattr(col, "dropna"):
+                        col = col.dropna()
+                    
                     if col is not None and hasattr(col, "iloc") and len(col) > 0:
                         last = float(col.iloc[-1])
                         prev = float(col.iloc[-2]) if len(col) > 1 else last

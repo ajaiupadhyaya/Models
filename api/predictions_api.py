@@ -155,6 +155,10 @@ def fetch_recent_data(symbol: str, days: int = 60) -> pd.DataFrame:
     if data.empty:
         raise ValueError(f"No data found for {symbol}")
     
+    # Flatten multi-level column index if present
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.get_level_values(0)
+    
     return data
 
 
