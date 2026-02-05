@@ -5,7 +5,7 @@ Fama-French, APT, Style Factors, Risk Factor Models
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from scipy.optimize import minimize
 from scipy.stats import t as t_dist
 import warnings
