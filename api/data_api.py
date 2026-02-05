@@ -49,17 +49,14 @@ async def get_macro() -> Dict[str, Any]:
     try:
         from core.data_fetcher import DataFetcher
         try:
-            from config import get_settings
+            from config.settings import get_settings
             if not get_settings().data.fred_configured:
-                return {"error": "FRED API key not configured. Set FRED_API_KEY in .env", "series": []}
+                return {"error": "FRED API key not configured. Set FRED_API_KEY in Render Environment.", "series": []}
         except ImportError:
             pass
         fetcher = DataFetcher()
         if not fetcher.fred:
-            return {
-                "error": "FRED API key not configured. Set FRED_API_KEY in .env",
-                "series": [],
-            }
+            return {"error": "FRED API key not configured. Set FRED_API_KEY in Render Environment.", "series": []}
 
         end_date = datetime.now().strftime("%Y-%m-%d")
         start_date = (datetime.now() - timedelta(days=365 * 2)).strftime("%Y-%m-%d")
@@ -104,14 +101,14 @@ async def get_yield_curve() -> Dict[str, Any]:
     try:
         from core.data_fetcher import DataFetcher
         try:
-            from config import get_settings
+            from config.settings import get_settings
             if not get_settings().data.fred_configured:
-                return {"error": "FRED API key not configured", "maturities": [], "yields": []}
+                return {"error": "FRED API key not configured. Set FRED_API_KEY in Render Environment.", "maturities": [], "yields": []}
         except ImportError:
             pass
         fetcher = DataFetcher()
         if not fetcher.fred:
-            return {"error": "FRED API key not configured", "maturities": [2, 5, 10, 30], "yields": []}
+            return {"error": "FRED API key not configured. Set FRED_API_KEY in Render Environment.", "maturities": [], "yields": []}
         end_date = datetime.now().strftime("%Y-%m-%d")
         start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
         series_ids = [("DGS2", 2), ("DGS5", 5), ("DGS10", 10), ("DGS30", 30)]
@@ -209,7 +206,7 @@ async def get_quotes(symbols: str = Query("AAPL,MSFT,GOOGL,SPY,QQQ", description
             return {"quotes": []}
         data = yf.download(sym_list, period="5d", progress=False, auto_adjust=True, group_by="ticker", threads=False)
         if data.empty:
-            return {"quotes": [{"symbol": s, "price": None, "change_pct": None} for s in sym_list]}
+            return {"quotes": [{"symbol": s, "price": None, "change_pct": None} for s in sym_list], "error": "No data from Yahoo Finance. Check Render logs."}
         quotes = []
         if len(sym_list) == 1:
             # Single ticker with group_by='ticker' has multi-level columns: (ticker, OHLCV)

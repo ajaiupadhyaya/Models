@@ -79,6 +79,22 @@ Render sets `PORT` automatically. For a single Web Service, do **not** add `VITE
 3. **Check API health**: open `https://your-service.onrender.com/health` — should return `{"status":"healthy",...}`.
 4. **Check loaded routers**: open `https://your-service.onrender.com/info` — `routers_loaded` lists which APIs are active (e.g. `models`, `predictions`, `ai`, `data`, `backtesting`).
 
+## Full functionality (no "No data" / empty tabs)
+
+- **Charts (Primary, Fundamental, etc.)** — Stock OHLCV: uses **Yahoo Finance** with a browser User-Agent so Render gets real data. No API key needed. If you still see "No data", check **Logs** (below).
+- **Economic tab (macro, yield curve)** — **Requires `FRED_API_KEY`**. Get a free key at [FRED API](https://fred.stlouisfed.org/docs/api/api_key.html). Without it, the Economic panel will show "FRED API key not configured".
+- **Quotes / ticker strip** — Same yfinance + User-Agent; no key. If empty, check Logs.
+- **AI tab** — **Requires `OPENAI_API_KEY`** for analysis and NL query.
+
+## Checking Render logs when features show "No data"
+
+1. In Render dashboard → your service → **Logs**.
+2. Reproduce the issue (e.g. open the tab that shows "No data"), then look in the logs for:
+   - `Sample data fetch failed for AAPL: ...` — charts; the message after the colon is the real error (e.g. network, JSON decode).
+   - `Quotes fetch failed: ...` — ticker strip / quotes.
+   - `Macro endpoint failed: ...` — Economic tab (often missing `FRED_API_KEY`).
+3. Fix from the message: missing env var → add it in **Environment** and **Redeploy**; network/JSON errors → Yahoo may be rate-limiting (retry later or check Render outbound access).
+
 ## If tabs show errors or "not found"
 
 1. **Environment formatting**: In Render → your service → **Environment**, ensure:
@@ -89,7 +105,7 @@ Render sets `PORT` automatically. For a single Web Service, do **not** add `VITE
    - `Routers loaded: ['auth', 'models', 'predictions', ...]` — confirms which routers started.
    - `Router X not available: ...` — that router failed to load (missing dep or config).
 4. **Missing routers**: If e.g. `ai` is not in `routers_loaded`, add `OPENAI_API_KEY`. If `data` is missing, check that `requirements-api.txt` deps installed (build logs).
-5. **Charts / sample data**: Uses yfinance by default; no key required. For more data, set `ALPHA_VANTAGE_API_KEY`.
+5. **Charts / sample data**: Uses yfinance default (no custom session). If you see "Impersonating chrome136 is not supported" in Logs, the app no longer passes a custom session so that error should be gone after redeploy. If charts are still empty, check Logs for "Sample data fetch failed" and fix the reported error.
 6. **Cold start**: Free tier may sleep; first request can take 30–60 s. Use **Retry** in the app or hit `/health` again.
 
 ## Build notes
