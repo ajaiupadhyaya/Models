@@ -23,19 +23,43 @@ class TTLCache:
 
     def __init__(self) -> None:
         self._store: Dict[str, tuple[Any, float]] = {}
+        self._stats = {'hits': 0, 'misses': 0, 'sets': 0, 'expirations': 0}
 
     def get(self, key: str) -> Optional[Any]:
         now = time.time()
         if key not in self._store:
+            self._stats['misses'] += 1
             return None
         val, expiry = self._store[key]
         if now >= expiry:
             del self._store[key]
+            self._stats['expirations'] += 1
+            self._stats['misses'] += 1
             return None
+        self._stats['hits'] += 1
         return val
 
     def set(self, key: str, value: Any, ttl_sec: int) -> None:
         self._store[key] = (value, time.time() + ttl_sec)
+        self._stats['sets'] += 1
+    
+    def get_stats(self) -> Dict[str, int]:
+        """Get cache statistics."""
+        stats = self._stats.copy()
+        stats['size'] = len(self._store)
+        if stats['hits'] + stats['misses'] > 0:
+            stats['hit_rate'] = round(stats['hits'] / (stats['hits'] + stats['misses']) * 100, 2)
+        else:
+            stats['hit_rate'] = 0.0
+        return stats
+    
+    def clear(self) -> None:
+        """Clear all cached entries."""
+        self._store.clear()
+    
+    def reset_stats(self) -> None:
+        """Reset statistics counters."""
+        self._stats = {'hits': 0, 'misses': 0, 'sets': 0, 'expirations': 0}
 
 
 _response_cache = TTLCache()

@@ -42,6 +42,7 @@ class InMemoryRateLimiter:
         self.max_requests = max_requests
         self.window_sec = window_sec
         self._requests: Dict[str, List[float]] = defaultdict(list)
+        self._stats = {'allowed': 0, 'blocked': 0}  # Track rate limit stats
 
     def _prune(self, ip: str, now: float) -> None:
         cutoff = now - self.window_sec
@@ -57,11 +58,21 @@ class InMemoryRateLimiter:
         times = self._requests[ip]
         if len(times) < self.max_requests:
             times.append(now)
+            self._stats['allowed'] += 1
             return True, 0
         # Oldest request in window determines when we can allow next
         oldest = min(times)
         retry_after = max(0, int(self.window_sec - (now - oldest)) + 1)
+        self._stats['blocked'] += 1
         return False, retry_after
+    
+    def get_stats(self) -> Dict[str, int]:
+        """Get rate limiter statistics."""
+        return self._stats.copy()
+    
+    def reset_stats(self) -> None:
+        """Reset statistics counters."""
+        self._stats = {'allowed': 0, 'blocked': 0}
 
 
 _limiter = InMemoryRateLimiter()

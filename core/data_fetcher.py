@@ -80,7 +80,7 @@ class DataFetcher:
                       end_date: Optional[str] = None,
                       period: str = "1y") -> pd.DataFrame:
         """
-        Fetch stock price data from Yahoo Finance.
+        Fetch stock price data from Yahoo Finance with retry logic.
         
         Args:
             ticker: Stock ticker symbol
@@ -91,21 +91,33 @@ class DataFetcher:
         Returns:
             DataFrame with OHLCV data
         """
-        stock = yf.Ticker(ticker)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                stock = yf.Ticker(ticker)
+                
+                if start_date and end_date:
+                    data = stock.history(start=start_date, end=end_date)
+                else:
+                    data = stock.history(period=period)
+                
+                if data.empty:
+                    raise ValueError(f"No data returned for {ticker}")
+                
+                return data
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise ValueError(f"Failed to fetch data for {ticker}: {str(e)}")
+                continue
         
-        if start_date and end_date:
-            data = stock.history(start=start_date, end=end_date)
-        else:
-            data = stock.history(period=period)
-        
-        return data
+        return pd.DataFrame()
     
     def get_multiple_stocks(self, 
                            tickers: List[str], 
                            start_date: Optional[str] = None,
                            end_date: Optional[str] = None) -> pd.DataFrame:
         """
-        Fetch multiple stocks at once.
+        Fetch multiple stocks at once with better error handling.
         
         Args:
             tickers: List of ticker symbols
@@ -115,12 +127,50 @@ class DataFetcher:
         Returns:
             DataFrame with multi-index columns
         """
-        if start_date and end_date:
-            data = yf.download(tickers, start=start_date, end=end_date)
-        else:
-            data = yf.download(tickers, period="1y")
+        if not tickers:
+            return pd.DataFrame()
         
-        return data
+        try:
+            if start_date and end_date:
+                data = yf.download(tickers, start=start_date, end=end_date, progress=False)
+            else:
+                data = yf.download(tickers, period="1y", progress=False)
+            
+            return data
+        except Exception as e:
+            raise ValueError(f"Failed to fetch data for tickers {tickers}: {str(e)}")
+    
+    @cached(ttl=3600)  # Cache for 1 hour
+    def get_stock_info(self, ticker: str) -> Dict:
+        """
+        Get comprehensive stock information including company details.
+        
+        Args:
+            ticker: Stock ticker symbol
+        
+        Returns:
+            Dictionary with stock information
+        """
+        try:
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            
+            # Extract key information with safe fallbacks
+            return {
+                'symbol': info.get('symbol', ticker),
+                'name': info.get('longName', info.get('shortName', ticker)),
+                'sector': info.get('sector', 'Unknown'),
+                'industry': info.get('industry', 'Unknown'),
+                'market_cap': info.get('marketCap', 0),
+                'pe_ratio': info.get('trailingPE', None),
+                'dividend_yield': info.get('dividendYield', 0),
+                'beta': info.get('beta', None),
+                'fifty_two_week_high': info.get('fiftyTwoWeekHigh', None),
+                'fifty_two_week_low': info.get('fiftyTwoWeekLow', None),
+                'current_price': info.get('currentPrice', info.get('regularMarketPrice', None))
+            }
+        except Exception as e:
+            raise ValueError(f"Failed to fetch info for {ticker}: {str(e)}")
     
     @cached(ttl=3600)  # Cache for 1 hour (economic data updates less frequently)
     def get_economic_indicator(self, 
