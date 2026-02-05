@@ -45,12 +45,10 @@ This document outlines the plan to fix (1) features appearing unavailable on the
    - Result: Lint job fails only on the rules we enforce (e.g. real errors), not on F401/E402/F841.
 
 2. **Backend tests**
-   - CI uses Python 3.12 and `requirements-ci.txt`. If Actions show test failures:
-     - Check the failing test name and traceback in the Actions log.
-     - Ensure `SKIP_AI_VALIDATION=1` is set (already in workflow `env`).
-     - Optional deps (e.g. OpenAI): tests should skip or mock when keys are missing.
-     - If a test imports a module only in `requirements.txt` (not `requirements-ci.txt`), add the dep to `requirements-ci.txt` or skip the test when the import fails.
-   - No code change unless a specific test is flaky or wrong; then fix that test or mark skip.
+   - **Dependency fixes (verified):**
+     - **websockets**: yfinance imports `websockets.asyncio.client`; `websockets==12.0` does not have that module. In `requirements-ci.txt`, use `websockets>=13.0` so CI and runtime work.
+     - **httpx**: Starlette/FastAPI `TestClient` passes `app=` to httpx; httpx 0.28+ removed that parameter. In `requirements-ci.txt`, use `httpx>=0.25.0,<0.28.0` so tests run.
+   - CI uses Python 3.12 and `requirements-ci.txt`. `SKIP_AI_VALIDATION=1` is set in workflow `env`. Optional deps (e.g. OpenAI, TensorFlow) are skipped or mocked when missing.
 
 3. **Frontend tests**
    - No change; keep `npm ci` and `npm run test`.
@@ -67,12 +65,11 @@ This document outlines the plan to fix (1) features appearing unavailable on the
 
 ---
 
-## 4. Quick verification
+## 4. Quick verification (all verified locally)
 
-- **Local**
-  - Backend: `pip install -r requirements-ci.txt && pytest tests/ -v --tb=short`
-  - Lint: `ruff check config/ api/ core/`
-  - Frontend: `cd frontend && npm ci && npm run test`
+- **Backend** (Python 3.12): `python3.12 -m venv .venv-ci && .venv-ci/bin/pip install -r requirements-ci.txt && SKIP_AI_VALIDATION=1 .venv-ci/bin/python -m pytest tests/ -v --tb=short` → **109 passed, 11 skipped**
+- **Lint**: `ruff check config/ api/ core/` → **All checks passed**
+- **Frontend**: `cd frontend && npm ci && npm run test` → **24 passed**
 - **Render**
   - Open `/health` and `/info`; set env vars per RENDER_DEPLOY.md; log in and use one feature (e.g. quotes, charts).
 
