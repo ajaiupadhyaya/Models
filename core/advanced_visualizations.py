@@ -67,7 +67,7 @@ class PublicationCharts:
             name='Base',
             x=labels,
             y=cumulative,
-            marker=dict(color='transparent'),
+            marker=dict(color='rgba(0,0,0,0)'),
             showlegend=False
         ))
         

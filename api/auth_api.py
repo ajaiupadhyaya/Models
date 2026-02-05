@@ -6,9 +6,13 @@ JWT tokens for session; no database for MVP.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Optional
 
-import jwt
+try:
+    import jwt
+except ImportError:
+    jwt = None  # type: ignore
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -17,6 +21,10 @@ from config.settings import get_settings
 
 router = APIRouter()
 security = HTTPBearer(auto_error=False)
+
+# Check if JWT is available; if not, this module is non-functional
+if jwt is None:
+    raise ImportError("PyJWT is required for auth_api. Install with: pip install PyJWT")
 
 
 class LoginRequest(BaseModel):
