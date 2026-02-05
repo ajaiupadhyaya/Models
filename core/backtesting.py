@@ -187,17 +187,22 @@ class SimpleMLPredictor:
 
 class BacktestEngine:
     """
-    Complete backtesting engine with ML prediction support.
+    Complete backtesting engine with ML prediction support and robust validation.
     """
     
     def __init__(self, initial_capital: float = 100000, commission: float = 0.001):
         """
-        Initialize backtesting engine.
+        Initialize backtesting engine with input validation.
         
         Args:
             initial_capital: Starting capital
             commission: Commission per trade (e.g., 0.001 = 0.1%)
         """
+        if initial_capital <= 0:
+            raise ValueError("Initial capital must be positive")
+        if commission < 0 or commission > 1:
+            raise ValueError("Commission must be between 0 and 1")
+        
         self.initial_capital = initial_capital
         self.commission = commission
         self.capital = initial_capital
@@ -212,7 +217,7 @@ class BacktestEngine:
                     signal_threshold: float = 0.3,
                     position_size: float = 0.1) -> Dict:
         """
-        Run backtest with signals.
+        Run backtest with signals and validation.
         
         Args:
             df: DataFrame with OHLCV data
@@ -223,6 +228,16 @@ class BacktestEngine:
         Returns:
             Backtest results dictionary
         """
+        # Validate inputs
+        if df.empty:
+            raise ValueError("DataFrame cannot be empty")
+        if 'Close' not in df.columns:
+            raise ValueError("DataFrame must have 'Close' column")
+        if len(signals) != len(df):
+            raise ValueError(f"Signals length ({len(signals)}) must match data length ({len(df)})")
+        if position_size <= 0 or position_size > 1:
+            raise ValueError("Position size must be between 0 and 1")
+        
         self.trades = []
         self.open_positions = {}
         self.equity_curve = []

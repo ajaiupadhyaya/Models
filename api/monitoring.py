@@ -22,6 +22,16 @@ import sys
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Import cache and rate_limit for stats
+try:
+    from api.cache import _response_cache
+    from api.rate_limit import _limiter
+    STATS_AVAILABLE = True
+except ImportError:
+    _response_cache = None
+    _limiter = None
+    STATS_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -516,4 +526,33 @@ async def get_metrics_history() -> Dict[str, Any]:
     
     except Exception as e:
         logger.error(f"Failed to get metrics history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/system/stats")
+async def get_system_stats() -> Dict[str, Any]:
+    """
+    Get system statistics including cache and rate limiter performance.
+    
+    Returns:
+        dict: System statistics with cache and rate limiter metrics
+    """
+    try:
+        stats = {
+            "timestamp": datetime.now().isoformat(),
+            "cache": None,
+            "rate_limiter": None
+        }
+        
+        if STATS_AVAILABLE:
+            if _response_cache:
+                stats["cache"] = _response_cache.get_stats()
+            
+            if _limiter:
+                stats["rate_limiter"] = _limiter.get_stats()
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error getting system stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
