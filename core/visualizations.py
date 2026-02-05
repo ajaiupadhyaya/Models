@@ -19,7 +19,7 @@ class ChartBuilder:
     """
     
     @staticmethod
-    def candlestick_chart(df: pd.DataFrame, 
+    def candlestick_chart(df: pd.DataFrame,
                          title: str = "Stock Price",
                          show_volume: bool = True) -> go.Figure:
         """
@@ -56,7 +56,7 @@ class ChartBuilder:
             )
             
             # Volume bars
-            colors = ['red' if df['Close'].iloc[i] < df['Open'].iloc[i] 
+            colors = ['red' if df['Close'].iloc[i] < df['Open'].iloc[i]
                      else 'green' for i in range(len(df))]
             fig.add_trace(
                 go.Bar(x=df.index, y=df['Volume'], name="Volume", marker_color=colors),
@@ -128,7 +128,7 @@ class ChartBuilder:
         return fig
     
     @staticmethod
-    def correlation_heatmap(df: pd.DataFrame, 
+    def correlation_heatmap(df: pd.DataFrame,
                            title: str = "Correlation Matrix") -> go.Figure:
         """
         Create correlation heatmap.

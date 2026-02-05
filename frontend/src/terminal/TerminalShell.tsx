@@ -242,6 +242,28 @@ export const TerminalShell: React.FC = () => {
     setActiveModule(next ?? "primary");
   }, [activeModule]);
 
+  if (apiHealthy === null) {
+    return (
+      <div className="login-page" style={{ alignItems: "center", justifyContent: "center" }}>
+        <p className="login-subtitle">Checking API…</p>
+      </div>
+    );
+  }
+
+  if (apiHealthy === false) {
+    return (
+      <div className="login-page" style={{ alignItems: "center", justifyContent: "center", gap: 16 }}>
+        <h2 className="login-title" style={{ fontSize: "1.25rem" }}>API unreachable</h2>
+        <p className="login-subtitle" style={{ maxWidth: 400, textAlign: "center" }}>
+          The backend is not responding. Ensure the API is running. On Render, check that the service is deployed and /health returns 200.
+        </p>
+        <button type="button" className="ai-button" onClick={checkApiHealth}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <TerminalContext.Provider
       value={{
@@ -271,28 +293,6 @@ export const TerminalShell: React.FC = () => {
             {wsConnected ? "Live" : "Connecting…"} • /api
           </div>
         </header>
-
-        {apiHealthy === false && (
-          <div
-            className="panel-error-inline"
-            style={{
-              margin: "0 8px 8px",
-              padding: "8px 12px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 8,
-            }}
-          >
-            <span>
-              API unreachable. Tabs may show errors. Ensure the API is running and, if the app is on a different domain, set VITE_API_ORIGIN at build time.
-            </span>
-            <button type="button" className="ai-button" onClick={checkApiHealth}>
-              Retry
-            </button>
-          </div>
-        )}
         <div className="terminal-command-row" style={{ position: "relative" }}>
           <CommandBar onSubmit={handleCommand} />
         </div>

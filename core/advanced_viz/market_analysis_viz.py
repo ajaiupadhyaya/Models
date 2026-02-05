@@ -181,7 +181,7 @@ class MarketAnalysisViz:
         )
         
         # Absolute
-        fig.add_trace(go.Scatter(x=stock_cumulative.index, 
+        fig.add_trace(go.Scatter(x=stock_cumulative.index,
                                 y=stock_cumulative, name='Stock',
                                 fill='tozeroy'), row=1, col=1)
         fig.add_trace(go.Scatter(x=benchmark_cumulative.index,

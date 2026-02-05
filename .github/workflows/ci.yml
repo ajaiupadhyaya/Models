@@ -40,7 +40,7 @@ jobs:
       - name: Install ruff
         run: pip install ruff
       - name: Lint config, api, core
-        run: ruff check config/ api/ core/ --output-format=concise || true
+        run: ruff check config/ api/ core/ --output-format=concise
 
   frontend:
     runs-on: ubuntu-latest

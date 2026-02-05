@@ -190,7 +190,7 @@ def calculate_correlation_matrix(returns_df: pd.DataFrame) -> pd.DataFrame:
     return returns_df.corr()
 
 
-def calculate_rolling_statistics(data: pd.Series, 
+def calculate_rolling_statistics(data: pd.Series,
                                  window: int = 30,
                                  stat: str = 'mean') -> pd.Series:
     """

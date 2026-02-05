@@ -248,7 +248,7 @@ class InteractiveCharts:
         mean = data.mean()
         std = data.std()
         
-        fig.add_vline(x=mean, line_dash="dash", line_color="red", 
+        fig.add_vline(x=mean, line_dash="dash", line_color="red",
                      annotation_text="Mean", annotation_position="top right")
         
         fig.update_layout(
@@ -332,7 +332,7 @@ class InteractiveCharts:
         values = list(data.values())
         
         # Determine colors based on values
-        colors = [self.colors['positive'] if v > 0 else self.colors['negative'] 
+        colors = [self.colors['positive'] if v > 0 else self.colors['negative']
                  for v in values]
         
         fig = go.Figure(go.Treemap(
