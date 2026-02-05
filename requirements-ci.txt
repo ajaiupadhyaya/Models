@@ -1,0 +1,50 @@
+# Lightweight CI requirements for running unit tests
+# Avoid heavy/system-level dependencies (e.g., TensorFlow, WeasyPrint)
+
+# Core data science
+numpy>=1.26.0
+pandas>=2.2.0
+scipy>=1.11.0
+statsmodels>=0.14.0
+scikit-learn>=1.3.0
+
+# Finance/data sources
+yfinance>=0.2.28
+pandas-datareader>=0.10.0
+fredapi>=0.5.1
+alpha-vantage>=2.3.1
+PyPortfolioOpt>=1.5.5
+cvxpy>=1.3.0
+arch>=6.2.0
+
+# API & web
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+websockets==12.0
+PyJWT>=2.8.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+beautifulsoup4==4.12.2
+
+# Reporting/utilities
+markdown==3.4.4
+jinja2==3.1.2
+tqdm==4.66.1
+python-dateutil==2.8.2
+pytz==2023.3
+fuzzywuzzy>=0.18.0
+python-Levenshtein>=0.21.0
+openpyxl>=3.1.2
+xlsxwriter>=3.1.2
+
+# Visualization (used in tests)
+plotly>=5.18.0
+
+# AI client (optional, tests skip if unavailable)
+openai>=1.0.0
+
+# Testing
+pytest==7.4.2
+pytest-cov==4.1.0

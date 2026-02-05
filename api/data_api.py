@@ -7,7 +7,7 @@ Endpoints for unified data access (macro, sample data source, economic calendar)
 import os
 import requests
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any, List, Optional
 import logging
 from pathlib import Path

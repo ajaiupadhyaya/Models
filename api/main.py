@@ -296,12 +296,20 @@ async def system_info() -> Dict[str, Any]:
 try:
     from api.auth_api import router as auth_router
     app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+except Exception as e:
+    logger.warning("Auth router not available: %s", e)
 
+routers = {}
+try:
     routers = get_routers()
     app_state["routers_loaded"] = list(routers.keys())
     logger.info("Routers loaded: %s", app_state["routers_loaded"])
+except Exception as e:
+    logger.warning("Failed to load routers: %s", e)
+    app_state["routers_loaded"] = []
 
-    # Core domains (only include if loaded)
+# Core domains (only include if loaded)
+try:
     if "models" in routers:
         app.include_router(routers["models"], prefix="/api/v1/models", tags=["Models"])
     if "predictions" in routers:
@@ -345,7 +353,7 @@ try:
 
     logger.info("Routers registered successfully")
 except Exception as e:
-    logger.warning("Failed to load routers: %s", e)
+    logger.warning("Failed to register routers: %s", e)
     app_state["routers_loaded"] = app_state.get("routers_loaded") or []
 
 # Serve built SPA when frontend/dist exists (Docker/production)

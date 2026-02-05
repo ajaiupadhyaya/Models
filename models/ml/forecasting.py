@@ -35,6 +35,7 @@ class TimeSeriesForecaster:
         self.model = None
         self.scaler = StandardScaler()
         self.feature_names = None
+        self.n_lags = 10  # Store n_lags for later use in predict
     
     def create_features(self, series: pd.Series, n_lags: int = 10) -> pd.DataFrame:
         """
@@ -81,6 +82,7 @@ class TimeSeriesForecaster:
             series: Time series to fit
             n_lags: Number of lag features
         """
+        self.n_lags = n_lags  # Store for use in predict
         # Create features
         feature_df = self.create_features(series, n_lags)
         
@@ -123,8 +125,8 @@ class TimeSeriesForecaster:
         current_series = series.copy()
         
         for _ in range(n_periods):
-            # Create features for last point
-            feature_df = self.create_features(current_series)
+            # Create features for last point with same n_lags as training
+            feature_df = self.create_features(current_series, self.n_lags)
             if len(feature_df) == 0:
                 break
             

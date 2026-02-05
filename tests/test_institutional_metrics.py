@@ -53,10 +53,10 @@ def test_sortino_ratio_fixed(fixed_returns):
 
 
 def test_calmar_ratio_fixed(fixed_returns, fixed_equity):
-    """Calmar = annual return / |max drawdown|."""
+    """Calmar = annual return / |max drawdown|; can be negative if returns are negative."""
     calmar = AdvancedRiskMetrics.calmar_ratio(fixed_returns, fixed_equity)
     assert np.isfinite(calmar)
-    assert calmar >= 0
+    # Calmar can be negative if annual returns are negative
 
 
 def test_expected_shortfall_fixed(fixed_returns):

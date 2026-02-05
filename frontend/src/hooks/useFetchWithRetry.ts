@@ -181,7 +181,7 @@ export function useFetchWithRetry<T = unknown>(
           setLoading(false);
         });
 
-    doFetch();
+    void doFetch();
   }, [url, maxRetries, retryDelayMs, parse, requestInit, retryOn5xxOnly, retryKey]);
 
   const effectiveDeps = deps ?? [url];
