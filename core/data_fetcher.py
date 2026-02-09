@@ -26,8 +26,10 @@ except ImportError:
 import requests
 from dotenv import load_dotenv
 from .data_cache import cached
+from .yfinance_session import get_yfinance_session
 import warnings
 warnings.filterwarnings('ignore')
+import time
 
 load_dotenv()
 
@@ -80,7 +82,7 @@ class DataFetcher:
                       end_date: Optional[str] = None,
                       period: str = "1y") -> pd.DataFrame:
         """
-        Fetch stock price data from Yahoo Finance with retry logic.
+        Fetch stock price data from Yahoo Finance with retry logic and proper session handling.
         
         Args:
             ticker: Stock ticker symbol
@@ -92,21 +94,28 @@ class DataFetcher:
             DataFrame with OHLCV data
         """
         max_retries = 3
+        session = get_yfinance_session()
+        
         for attempt in range(max_retries):
             try:
-                stock = yf.Ticker(ticker)
+                stock = yf.Ticker(ticker, session=session)
                 if start_date and end_date:
                     data = stock.history(start=start_date, end=end_date)
                 else:
                     data = stock.history(period=period)
                 
                 if data.empty:
+                    # Sometimes Yahoo Finance needs a moment, retry with delay
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+                        continue
                     raise ValueError(f"No data returned for {ticker}")
                 
                 return data
             except Exception as e:
                 if attempt == max_retries - 1:
                     raise ValueError(f"Failed to fetch data for {ticker}: {str(e)}")
+                time.sleep(1)  # Wait before retry
                 continue
         
         return pd.DataFrame()
@@ -114,14 +123,16 @@ class DataFetcher:
     def get_multiple_stocks(self,
                            tickers: List[str],
                            start_date: Optional[str] = None,
-                           end_date: Optional[str] = None) -> pd.DataFrame:
+                           end_date: Optional[str] = None,
+                           period: str = "1y") -> pd.DataFrame:
         """
-        Fetch multiple stocks at once with better error handling.
+        Fetch multiple stocks at once with better error handling and proper session.
         
         Args:
             tickers: List of ticker symbols
-            start_date: Start date
-            end_date: End date
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+            period: Period if dates not specified (default: '1y')
         
         Returns:
             DataFrame with multi-index columns
@@ -129,14 +140,30 @@ class DataFetcher:
         if not tickers:
             return pd.DataFrame()
         
-        try:
-            if start_date and end_date:
-                data = yf.download(tickers, start=start_date, end=end_date, progress=False)
-            else:
-                data = yf.download(tickers, period="1y", progress=False)
-            return data
-        except Exception as e:
-            raise ValueError(f"Failed to fetch data for tickers {tickers}: {str(e)}")
+        session = get_yfinance_session()
+        max_retries = 3
+        
+        for attempt in range(max_retries):
+            try:
+                if start_date and end_date:
+                    data = yf.download(tickers, start=start_date, end=end_date, 
+                                     progress=False, session=session)
+                else:
+                    data = yf.download(tickers, period=period, progress=False, 
+                                     session=session)
+                
+                if data.empty and attempt < max_retries - 1:
+                    time.sleep(1)
+                    continue
+                    
+                return data
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise ValueError(f"Failed to fetch data for tickers {tickers}: {str(e)}")
+                time.sleep(1)
+                continue
+        
+        return pd.DataFrame()
     
     @cached(ttl=3600)  # Cache for 1 hour
     def get_stock_info(self, ticker: str) -> Dict:
@@ -149,25 +176,39 @@ class DataFetcher:
         Returns:
             Dictionary with stock information
         """
-        try:
-            stock = yf.Ticker(ticker)
-            info = stock.info
-            # Extract key information with safe fallbacks
-            return {
-                'symbol': info.get('symbol', ticker),
-                'name': info.get('longName', info.get('shortName', ticker)),
-                'sector': info.get('sector', 'Unknown'),
-                'industry': info.get('industry', 'Unknown'),
-                'market_cap': info.get('marketCap', 0),
-                'pe_ratio': info.get('trailingPE', None),
-                'dividend_yield': info.get('dividendYield', 0),
-                'beta': info.get('beta', None),
-                'fifty_two_week_high': info.get('fiftyTwoWeekHigh', None),
-                'fifty_two_week_low': info.get('fiftyTwoWeekLow', None),
-                'current_price': info.get('currentPrice', info.get('regularMarketPrice', None))
-            }
-        except Exception as e:
-            raise ValueError(f"Failed to fetch info for {ticker}: {str(e)}")
+        session = get_yfinance_session()
+        max_retries = 3
+        
+        for attempt in range(max_retries):
+            try:
+                stock = yf.Ticker(ticker, session=session)
+                info = stock.info
+                
+                if not info and attempt < max_retries - 1:
+                    time.sleep(1)
+                    continue
+                
+                # Extract key information with safe fallbacks
+                return {
+                    'symbol': info.get('symbol', ticker),
+                    'name': info.get('longName', info.get('shortName', ticker)),
+                    'sector': info.get('sector', 'Unknown'),
+                    'industry': info.get('industry', 'Unknown'),
+                    'market_cap': info.get('marketCap', 0),
+                    'pe_ratio': info.get('trailingPE', None),
+                    'dividend_yield': info.get('dividendYield', 0),
+                    'beta': info.get('beta', None),
+                    'fifty_two_week_high': info.get('fiftyTwoWeekHigh', None),
+                    'fifty_two_week_low': info.get('fiftyTwoWeekLow', None),
+                    'current_price': info.get('currentPrice', info.get('regularMarketPrice', None))
+                }
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise ValueError(f"Failed to fetch info for {ticker}: {str(e)}")
+                time.sleep(1)
+                continue
+        
+        return {}
     
     @cached(ttl=3600)  # Cache for 1 hour (economic data updates less frequently)
     def get_economic_indicator(self,
@@ -290,25 +331,36 @@ class DataFetcher:
     def get_crypto_data(self,
                        symbol: str,
                        start_date: Optional[str] = None,
-                       end_date: Optional[str] = None) -> pd.DataFrame:
+                       end_date: Optional[str] = None,
+                       period: str = "1y") -> pd.DataFrame:
         """
-        Fetch cryptocurrency data.
+        Fetch cryptocurrency data using yfinance.
         
         Args:
             symbol: Crypto symbol (e.g., 'BTC-USD', 'ETH-USD')
-            start_date: Start date
-            end_date: End date
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+            period: Period if dates not specified (default: '1y')
         
         Returns:
             DataFrame with crypto price data
         """
-        return self.get_stock_data(symbol, start_date, end_date)
+        return self.get_stock_data(symbol, start_date, end_date, period)
     
     def get_company_info(self, ticker: str) -> Dict:
-        """Get company information and fundamentals."""
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        return info
+        """
+        Get company information and fundamentals.
+        Alias for get_stock_info with raw yfinance info.
+        """
+        session = get_yfinance_session()
+        
+        try:
+            stock = yf.Ticker(ticker, session=session)
+            info = stock.info
+            return info if info else {}
+        except Exception as e:
+            print(f"Error fetching company info for {ticker}: {e}")
+            return {}
     
     def search_fred_series(self, search_text: str) -> pd.DataFrame:
         """
