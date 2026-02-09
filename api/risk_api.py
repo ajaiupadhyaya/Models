@@ -516,3 +516,219 @@ async def calculate_factor_ic(
     except Exception as e:
         logger.error(f"Factor IC calculation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ Phase 3: Options Pricing Endpoints ============
+
+@router.get("/options/price", tags=["Risk", "Options"])
+async def price_option(
+    option_type: str = Query(..., description="'call' or 'put'"),
+    spot_price: float = Query(..., description="Current stock price"),
+    strike_price: float = Query(..., description="Strike price"),
+    days_to_expiry: int = Query(..., description="Days until expiration"),
+    volatility: float = Query(..., description="Annual volatility (e.g., 0.25 for 25%)"),
+    risk_free_rate: float = Query(0.05, description="Risk-free rate (e.g., 0.05 for 5%)"),
+    dividend_yield: float = Query(0.0, description="Continuous dividend yield")
+) -> Dict[str, Any]:
+    """
+    Price European option using Black-Scholes model.
+    
+    Phase 3 Awesome Quant Integration - Options Pricing
+    
+    Returns option price and implied volatility calculations.
+    """
+    try:
+        from models.derivatives.option_pricing import BlackScholes
+        
+        # Convert days to years
+        time_to_expiry = days_to_expiry / 365.0
+        
+        if time_to_expiry <= 0:
+            raise HTTPException(status_code=400, detail="Days to expiry must be positive")
+        
+        if volatility <= 0:
+            raise HTTPException(status_code=400, detail="Volatility must be positive")
+        
+        if option_type.lower() not in ["call", "put"]:
+            raise HTTPException(status_code=400, detail="Option type must be 'call' or 'put'")
+        
+        # Calculate price
+        if option_type.lower() == "call":
+            price = BlackScholes.call_price(
+                spot_price, strike_price, time_to_expiry,
+                risk_free_rate, volatility, dividend_yield
+            )
+        else:
+            price = BlackScholes.put_price(
+                spot_price, strike_price, time_to_expiry,
+                risk_free_rate, volatility, dividend_yield
+            )
+        
+        # Moneyness
+        moneyness = spot_price / strike_price
+        intrinsic = max(spot_price - strike_price, 0) if option_type.lower() == "call" else max(strike_price - spot_price, 0)
+        extrinsic = price - intrinsic
+        
+        return {
+            "option_type": option_type.lower(),
+            "spot_price": spot_price,
+            "strike_price": strike_price,
+            "days_to_expiry": days_to_expiry,
+            "time_to_expiry_years": round(time_to_expiry, 4),
+            "volatility": volatility,
+            "risk_free_rate": risk_free_rate,
+            "dividend_yield": dividend_yield,
+            "option_price": round(price, 4),
+            "intrinsic_value": round(intrinsic, 4),
+            "time_value": round(extrinsic, 4),
+            "moneyness": round(moneyness, 4),
+            "moneyness_type": "ITM" if (option_type.lower() == "call" and spot_price > strike_price) or (option_type.lower() == "put" and spot_price < strike_price) else "OTM" if (option_type.lower() == "call" and spot_price < strike_price) or (option_type.lower() == "put" and spot_price > strike_price) else "ATM",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Option pricing failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/options/greeks", tags=["Risk", "Options"])
+async def calculate_greeks(
+    option_type: str = Query(..., description="'call' or 'put'"),
+    spot_price: float = Query(..., description="Current stock price"),
+    strike_price: float = Query(..., description="Strike price"),
+    days_to_expiry: int = Query(..., description="Days until expiration"),
+    volatility: float = Query(..., description="Annual volatility"),
+    risk_free_rate: float = Query(0.05, description="Risk-free rate"),
+    dividend_yield: float = Query(0.0, description="Dividend yield")
+) -> Dict[str, Any]:
+    """
+    Calculate option Greeks (delta, gamma, vega, theta, rho).
+    
+    Phase 3 Awesome Quant Integration - Options Greeks
+    
+    Greeks measure option price sensitivity to various parameters.
+    """
+    try:
+        from models.derivatives.option_pricing import OptionAnalyzer
+        
+        # Convert days to years
+        time_to_expiry = days_to_expiry / 365.0
+        
+        if time_to_expiry <= 0:
+            raise HTTPException(status_code=400, detail="Days to expiry must be positive")
+        
+        if option_type.lower() not in ["call", "put"]:
+            raise HTTPException(status_code=400, detail="Option type must be 'call' or 'put'")
+        
+        # Get complete analysis
+        analysis = OptionAnalyzer.analyze_option(
+            option_type.lower(),
+            spot_price,
+            strike_price,
+            time_to_expiry,
+            risk_free_rate,
+            volatility,
+            dividend_yield
+        )
+        
+        return {
+            "option_type": option_type.lower(),
+            "spot_price": spot_price,
+            "strike_price": strike_price,
+            "days_to_expiry": days_to_expiry,
+            "price": analysis["price"],
+            "greeks": {
+                "delta": analysis["delta"],
+                "gamma": analysis["gamma"],
+                "vega": analysis["vega"],
+                "theta": analysis["theta"],
+                "rho": analysis["rho"]
+            },
+            "values": {
+                "intrinsic": analysis["intrinsic_value"],
+                "time_value": analysis["time_value"]
+            },
+            "moneyness": {
+                "ratio": analysis["moneyness"],
+                "type": analysis["moneyness_type"]
+            },
+            "interpretations": {
+                "delta": f"Option price moves ${abs(analysis['delta']):.2f} for $1 move in underlying",
+                "gamma": f"Delta changes by {abs(analysis['gamma']):.4f} for $1 move",
+                "vega": f"Option price changes ${abs(analysis['vega']):.2f} for 1% volatility increase",
+                "theta": f"Option loses ${abs(analysis['theta']):.2f} per day from time decay",
+                "rho": f"Option price changes ${abs(analysis['rho']):.2f} for 1% rate change"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Greeks calculation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/options/implied-volatility", tags=["Risk", "Options"])
+async def calculate_implied_volatility(
+    option_type: str = Query(..., description="'call' or 'put'"),
+    market_price: float = Query(..., description="Observed market price of option"),
+    spot_price: float = Query(..., description="Current stock price"),
+    strike_price: float = Query(..., description="Strike price"),
+    days_to_expiry: int = Query(..., description="Days until expiration"),
+    risk_free_rate: float = Query(0.05, description="Risk-free rate"),
+    dividend_yield: float = Query(0.0, description="Dividend yield")
+) -> Dict[str, Any]:
+    """
+    Calculate implied volatility from market option price.
+    
+    Phase 3 Awesome Quant Integration - Implied Volatility
+    
+    Backs out the volatility implied by the market price.
+    """
+    try:
+        from models.derivatives.option_pricing import ImpliedVolatility
+        
+        # Convert days to years
+        time_to_expiry = days_to_expiry / 365.0
+        
+        if time_to_expiry <= 0:
+            raise HTTPException(status_code=400, detail="Days to expiry must be positive")
+        
+        if option_type.lower() not in ["call", "put"]:
+            raise HTTPException(status_code=400, detail="Option type must be 'call' or 'put'")
+        
+        # Calculate implied volatility
+        if option_type.lower() == "call":
+            iv = ImpliedVolatility.call_iv(
+                market_price, spot_price, strike_price,
+                time_to_expiry, risk_free_rate, dividend_yield
+            )
+        else:
+            iv = ImpliedVolatility.put_iv(
+                market_price, spot_price, strike_price,
+                time_to_expiry, risk_free_rate, dividend_yield
+            )
+        
+        if iv is None:
+            raise HTTPException(status_code=400, detail="Could not calculate implied volatility (check inputs)")
+        
+        return {
+            "option_type": option_type.lower(),
+            "market_price": market_price,
+            "spot_price": spot_price,
+            "strike_price": strike_price,
+            "days_to_expiry": days_to_expiry,
+            "implied_volatility": round(iv, 4),
+            "implied_volatility_pct": round(iv * 100, 2),
+            "interpretation": f"Market implies {iv*100:.1f}% annual volatility",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Implied volatility calculation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
