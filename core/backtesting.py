@@ -188,15 +188,21 @@ class SimpleMLPredictor:
 class BacktestEngine:
     """
     Complete backtesting engine with ML prediction support and robust validation.
+    Integrated with TradingCalendar for realistic trading day filtering.
     """
     
-    def __init__(self, initial_capital: float = 100000, commission: float = 0.001):
+    def __init__(self, 
+                 initial_capital: float = 100000, 
+                 commission: float = 0.001,
+                 exchange: Optional[str] = None):
         """
         Initialize backtesting engine with input validation.
         
         Args:
             initial_capital: Starting capital
             commission: Commission per trade (e.g., 0.001 = 0.1%)
+            exchange: Optional exchange for trading calendar (NYSE, NASDAQ, etc.)
+                     If provided, backtest only trades on actual trading days
         """
         if initial_capital <= 0:
             raise ValueError("Initial capital must be positive")
@@ -210,6 +216,15 @@ class BacktestEngine:
         self.open_positions = {}
         self.equity_curve = []
         self.signals = []
+        
+        # Trading calendar integration (Phase 1 - exchange-calendars)
+        self.calendar = None
+        if exchange:
+            try:
+                from core.trading_calendar import TradingCalendar
+                self.calendar = TradingCalendar(exchange)
+            except Exception as e:
+                warnings.warn(f"Could not load trading calendar: {e}")
     
     def run_backtest(self,
                     df: pd.DataFrame,
@@ -218,6 +233,7 @@ class BacktestEngine:
                     position_size: float = 0.1) -> Dict:
         """
         Run backtest with signals and validation.
+        Filters to trading days if exchange calendar is configured.
         
         Args:
             df: DataFrame with OHLCV data
@@ -237,6 +253,28 @@ class BacktestEngine:
             raise ValueError(f"Signals length ({len(signals)}) must match data length ({len(df)})")
         if position_size <= 0 or position_size > 1:
             raise ValueError("Position size must be between 0 and 1")
+        
+        # Filter to trading days if calendar is available
+        if self.calendar:
+            try:
+                # Get trading days in the date range
+                start_date = df.index[0].strftime('%Y-%m-%d')
+                end_date = df.index[-1].strftime('%Y-%m-%d')
+                trading_days = self.calendar.trading_days(start_date, end_date)
+                
+                # Filter DataFrame to only trading days
+                df_copy = df.copy()
+                df_copy.index = pd.to_datetime(df_copy.index)
+                
+                # Create a mask for trading days
+                mask = df_copy.index.normalize().isin(trading_days.normalize())
+                df = df_copy[mask]
+                signals = signals[mask.values]
+                
+                if len(df) == 0:
+                    raise ValueError("No trading days found in date range")
+            except Exception as e:
+                warnings.warn(f"Trading calendar filtering failed: {e}. Proceeding with all days.")
         
         self.trades = []
         self.open_positions = {}

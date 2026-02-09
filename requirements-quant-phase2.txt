@@ -1,0 +1,17 @@
+# Phase 2: Awesome Quant Integration Dependencies
+# Sentiment Analysis & Advanced ML
+
+# Sentiment Analysis (FinBERT)
+transformers>=4.30.0
+torch>=2.0.0
+sentencepiece>=0.1.99
+
+# ML Feature Engineering
+scikit-learn>=1.3.0  # Already in requirements but ensuring version
+
+# News/Text Processing (optional, for future enhancement)
+# textblob>=0.17.1
+# newspaper3k>=0.2.8
+
+# Factor Analysis (already installed in Phase 1)
+# alphalens-reloaded>=0.4.3

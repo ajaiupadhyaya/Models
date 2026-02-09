@@ -22,10 +22,21 @@ except ImportError:
     EnsemblePredictor = None
     RLReadyEnvironment = None
 
+try:
+    from .feature_engineering import (
+        LabelGenerator,
+        FeatureTransformer
+    )
+except ImportError:
+    LabelGenerator = None
+    FeatureTransformer = None
+
 __all__ = [
     'TimeSeriesForecaster',
     'AnomalyDetector',
     'LSTMPredictor',
     'EnsemblePredictor',
-    'RLReadyEnvironment'
+    'RLReadyEnvironment',
+    'LabelGenerator',
+    'FeatureTransformer'
 ]
