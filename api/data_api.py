@@ -23,6 +23,25 @@ router = APIRouter()
 CACHE_TTL_CALENDAR = 3600  # 1 hour
 
 
+@router.get("/health-check")
+async def data_sources_health_check() -> Dict[str, Any]:
+    """
+    Health check endpoint for data sources.
+    Returns operational status of yfinance, FRED, and other data providers.
+    """
+    try:
+        from core.data_fetcher_enhanced import DataSourceHealthChecker
+        health = DataSourceHealthChecker.check_all_sources()
+        return health
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "sources": {}
+        }
+
+
 def _series_to_list(series) -> List[Dict[str, Any]]:
     """Convert pandas Series to list of {date, value} for JSON."""
     if series is None or series.empty:
