@@ -11,7 +11,7 @@ Unified interface for fetching financial data from multiple sources:
 - Forex: OANDA, yfinance
 """
 
-from .base import DataProvider, DataProviderRegistry, OHLCV, FundamentalsData
+from .base import DataProvider, DataProviderRegistry, OHLCV, FundamentalsData, AssetType
 from .polygon_provider import PolygonProvider
 from .iex_provider import IEXProvider
 from .coingecko_provider import CoinGeckoProvider
@@ -23,6 +23,7 @@ __all__ = [
     "DataProviderRegistry",
     "OHLCV",
     "FundamentalsData",
+    "AssetType",
     "PolygonProvider",
     "IEXProvider",
     "CoinGeckoProvider",
