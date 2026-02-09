@@ -95,10 +95,11 @@ class DataFetcher:
         """
         max_retries = 3
         session = get_yfinance_session()
+        ticker_kwargs = {"session": session} if session is not None else {}
         
         for attempt in range(max_retries):
             try:
-                stock = yf.Ticker(ticker, session=session)
+                stock = yf.Ticker(ticker, **ticker_kwargs)
                 if start_date and end_date:
                     data = stock.history(start=start_date, end=end_date)
                 else:
@@ -145,12 +146,22 @@ class DataFetcher:
         
         for attempt in range(max_retries):
             try:
+                download_kwargs = {"session": session} if session is not None else {}
                 if start_date and end_date:
-                    data = yf.download(tickers, start=start_date, end=end_date, 
-                                     progress=False, session=session)
+                    data = yf.download(
+                        tickers,
+                        start=start_date,
+                        end=end_date,
+                        progress=False,
+                        **download_kwargs,
+                    )
                 else:
-                    data = yf.download(tickers, period=period, progress=False, 
-                                     session=session)
+                    data = yf.download(
+                        tickers,
+                        period=period,
+                        progress=False,
+                        **download_kwargs,
+                    )
                 
                 if data.empty and attempt < max_retries - 1:
                     time.sleep(1)
@@ -177,11 +188,12 @@ class DataFetcher:
             Dictionary with stock information
         """
         session = get_yfinance_session()
+        ticker_kwargs = {"session": session} if session is not None else {}
         max_retries = 3
         
         for attempt in range(max_retries):
             try:
-                stock = yf.Ticker(ticker, session=session)
+                stock = yf.Ticker(ticker, **ticker_kwargs)
                 info = stock.info
                 
                 if not info and attempt < max_retries - 1:
@@ -353,9 +365,10 @@ class DataFetcher:
         Alias for get_stock_info with raw yfinance info.
         """
         session = get_yfinance_session()
+        ticker_kwargs = {"session": session} if session is not None else {}
         
         try:
-            stock = yf.Ticker(ticker, session=session)
+            stock = yf.Ticker(ticker, **ticker_kwargs)
             info = stock.info
             return info if info else {}
         except Exception as e:
