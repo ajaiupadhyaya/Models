@@ -394,3 +394,137 @@ class DataFetcher:
         except Exception as e:
             print(f"Error searching FRED: {e}")
             return pd.DataFrame()
+    
+    def initialize_provider_registry(self):
+        """
+        Initialize multi-provider registry with fallback chains.
+        
+        Returns:
+            DataProviderRegistry with all providers registered
+        
+        This enables fetching from multiple providers with automatic fallback:
+        - Equities: Polygon → IEX → yfinance
+        - Crypto: CoinGecko → yfinance
+        - News: NewsAPI
+        - Fundamentals: SEC EDGAR, Polygon, IEX
+        """
+        from .data_providers import (
+            DataProviderRegistry, AssetType,
+            PolygonProvider, IEXProvider, CoinGeckoProvider,
+            NewsAPIProvider, SECEdgarProvider
+        )
+        
+        registry = DataProviderRegistry()
+        
+        # Register equity providers
+        try:
+            polygon = PolygonProvider()
+            if polygon.validate_api_key():
+                registry.register(polygon)
+                print("✓ Polygon.io registered")
+        except Exception as e:
+            print(f"⚠ Polygon.io not available: {e}")
+        
+        try:
+            iex = IEXProvider()
+            if iex.validate_api_key():
+                registry.register(iex)
+                print("✓ IEX Cloud registered")
+        except Exception as e:
+            print(f"⚠ IEX not available: {e}")
+        
+        # Register crypto provider
+        try:
+            coingecko = CoinGeckoProvider()
+            if coingecko.validate_api_key():
+                registry.register(coingecko)
+                print("✓ CoinGecko registered")
+        except Exception as e:
+            print(f"⚠ CoinGecko not available: {e}")
+        
+        # Register news provider
+        try:
+            newsapi = NewsAPIProvider()
+            if newsapi.validate_api_key():
+                registry.register(newsapi)
+                print("✓ NewsAPI registered")
+        except Exception as e:
+            print(f"⚠ NewsAPI not available: {e}")
+        
+        # Register fundamentals provider
+        try:
+            sec_edgar = SECEdgarProvider()
+            if sec_edgar.validate_api_key():
+                registry.register(sec_edgar)
+                print("✓ SEC EDGAR registered")
+        except Exception as e:
+            print(f"⚠ SEC EDGAR not available: {e}")
+        
+        # Set fallback chains (primary → secondary → tertiary)
+        registry.set_fallback_chain([
+            "polygon",        # Premium equities data
+            "iex",           # Fallback for equities
+            # Note: yfinance is not registered but can be fallback in app-level logic
+        ])
+        
+        return registry
+    
+    def get_crypto_latest_price(self, symbol: str) -> float:
+        """
+        Get latest crypto price using CoinGecko provider.
+        
+        Args:
+            symbol: Crypto symbol (BTC, ETH, etc.)
+        
+        Returns:
+            Latest price in USD
+        """
+        try:
+            from .data_providers import CoinGeckoProvider, AssetType
+            coingecko = CoinGeckoProvider()
+            if coingecko.supports_asset_type(AssetType.CRYPTO):
+                return coingecko.fetch_latest_price(symbol)
+        except Exception as e:
+            print(f"CoinGecko error: {e}")
+        
+        # Fallback to yfinance
+        return self.get_stock_data(f"{symbol}-USD", period="1d")["Close"].iloc[-1]
+    
+    def get_news(self, symbol: str, limit: int = 10) -> List[Dict]:
+        """
+        Get news articles for a symbol using NewsAPI.
+        
+        Args:
+            symbol: Stock symbol
+            limit: Maximum articles to return
+        
+        Returns:
+            List of news articles with title, source, date, URL
+        """
+        try:
+            from .data_providers import NewsAPIProvider
+            newsapi = NewsAPIProvider()
+            articles = newsapi.fetch_news(symbol, limit)
+            return articles if articles else []
+        except Exception as e:
+            print(f"NewsAPI error: {e}")
+            return []
+    
+    def get_fundamentals_from_sec(self, symbol: str) -> Dict:
+        """
+        Get company fundamentals from SEC EDGAR.
+        
+        Args:
+            symbol: Stock symbol
+        
+        Returns:
+            Dictionary with financial metrics
+        """
+        try:
+            from .data_providers import SECEdgarProvider
+            sec = SECEdgarProvider()
+            fund = sec.fetch_fundamentals(symbol)
+            return fund.to_dict() if fund else {}
+        except Exception as e:
+            print(f"SEC EDGAR error: {e}")
+            return {}
