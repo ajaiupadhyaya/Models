@@ -1,0 +1,19 @@
+# Phase 3 dependencies - Awesome Quant Integration
+# Options pricing, advanced visualization, deep RL
+
+# Options pricing and Greeks
+vollib>=0.1.23                    # Implied volatility calculations
+py_vollib>=1.0.1                  # Python implementation of Black-Scholes
+
+# Advanced visualization
+plotly>=5.18.0                     # Already installed, keeping for reference
+kaleido>=0.2.1                     # Static image export for plotly
+
+# Deep reinforcement learning
+ray[rllib]>=2.9.0                  # Distributed RL framework
+gymnasium>=0.29.0                  # RL environment standard (replaces gym)
+dm-tree>=0.1.8                     # Required by ray
+
+# Optional: High-frequency trading tools
+# zipline-reloaded>=3.0.3           # Event-driven backtesting (optional)
+# backtrader>=1.9.78.123            # Alternative backtesting (optional)
