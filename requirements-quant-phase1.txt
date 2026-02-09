@@ -1,0 +1,15 @@
+# Phase 1 Requirements - Awesome Quant Integration
+
+# Advanced Time-Series Analysis
+pmdarima>=2.0.3  # Auto-ARIMA, SARIMAX, seasonal decomposition
+tsfresh>=0.19.0  # Automatic time-series feature extraction
+
+# Advanced Portfolio Optimization
+riskfolio-lib>=0.3.0  # CVaR, risk parity, entropy pooling optimization
+empyrical>=0.5.5      # Financial risk/performance metrics (Sortino, Calmar, etc.)
+
+# Factor Analysis
+alphalens-reloaded>=0.4.1  # Systematic factor analysis and tearsheets
+
+# Trading Calendar Awareness
+exchange-calendars>=4.2  # NYSE, NASDAQ, LSE, TSE, etc. trading day calendars

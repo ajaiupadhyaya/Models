@@ -8,7 +8,7 @@ Endpoints for generating predictions from trained models:
 - Multi-model ensemble predictions
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional, Literal
 import logging
@@ -579,4 +579,265 @@ async def get_historical_signals(
         raise
     except Exception as e:
         logger.error(f"Historical signals failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/forecast-arima/{ticker}")
+async def forecast_arima(
+    ticker: str,
+    steps: int = Query(20, description="Number of steps to forecast"),
+    seasonal: bool = Query(False, description="Include seasonal component"),
+    period: str = Query("1y", description="Historical data period")
+) -> Dict[str, Any]:
+    """
+    Auto-ARIMA time-series forecasting with confidence intervals.
+    Automatically selects ARIMA(p,d,q) or SARIMAX parameters.
+    
+    Phase 1 Awesome Quant Integration - pmdarima
+    """
+    try:
+        from models.timeseries.advanced_ts import AutoArimaForecaster
+        from core.data_fetcher import DataFetcher
+        
+        fetcher = DataFetcher()
+        data = fetcher.get_stock_data(ticker.upper(), period=period)
+        
+        if data is None or data.empty or "Close" not in data.columns:
+            raise HTTPException(status_code=404, detail=f"No data for {ticker}")
+        
+        if len(data) < 50:
+            raise HTTPException(status_code=400, detail="Insufficient data for ARIMA (need 50+ points)")
+        
+        # Calculate returns
+        returns = data["Close"].pct_change().dropna()
+        
+        # Fit Auto-ARIMA
+        forecaster = AutoArimaForecaster(seasonal=seasonal, m=252 if seasonal else 1)
+        fit_result = forecaster.fit(returns)
+        
+        # Generate forecast
+        forecast, conf_int = forecaster.forecast(steps=steps)
+        
+        return {
+            "ticker": ticker.upper(),
+            "period": period,
+            "model_order": fit_result["order"],
+            "seasonal_order": fit_result.get("seasonal_order"),
+            "aic": round(fit_result["aic"], 2),
+            "bic": round(fit_result["bic"], 2),
+            "forecast_steps": steps,
+            "forecast": [round(float(v), 6) for v in forecast],
+            "confidence_intervals": {
+                "lower": [round(float(v), 6) for v in conf_int["lower"]],
+                "upper": [round(float(v), 6) for v in conf_int["upper"]]
+            },
+            "current_price": round(float(data["Close"].iloc[-1]), 2),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"ARIMA forecast failed for {ticker}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/extract-features/{ticker}")
+async def extract_features(
+    ticker: str,
+    period: str = Query("1y", description="Historical data period"),
+    kind: str = Query("minimal", description="Feature set: minimal (~25) or comprehensive (700+)"),
+    max_features: int = Query(20, description="Max features to return")
+) -> Dict[str, Any]:
+    """
+    Extract time-series features for ML/DL models using tsfresh.
+    Returns statistical and mathematical features from price data.
+    
+    Phase 1 Awesome Quant Integration - tsfresh
+    """
+    try:
+        from models.timeseries.advanced_ts import TSFeatureExtractor
+        from core.data_fetcher import DataFetcher
+        
+        fetcher = DataFetcher()
+        data = fetcher.get_stock_data(ticker.upper(), period=period)
+        
+        if data is None or data.empty or "Close" not in data.columns:
+            raise HTTPException(status_code=404, detail=f"No data for {ticker}")
+        
+        if len(data) < 100:
+            raise HTTPException(status_code=400, detail="Insufficient data for feature extraction (need 100+ points)")
+        
+        # Calculate returns
+        returns_df = pd.DataFrame({
+            "returns": data["Close"].pct_change().dropna()
+        })
+        
+        # Extract features
+        features = TSFeatureExtractor.extract_relevant_features(
+            returns_df,
+            column="returns",
+            kind=kind,
+            max_features=max_features
+        )
+        
+        # Convert to dict
+        feature_dict = {}
+        if not features.empty:
+            row = features.iloc[0]
+            feature_dict = {str(k): round(float(v), 6) for k, v in row.items() if pd.notna(v)}
+        
+        return {
+            "ticker": ticker.upper(),
+            "period": period,
+            "feature_kind": kind,
+            "num_features": len(feature_dict),
+            "max_requested": max_features,
+            "features": feature_dict,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Feature extraction failed for {ticker}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ Phase 2: Sentiment Analysis Endpoints ============
+
+@router.get("/sentiment/{ticker}", tags=["Predictions", "Sentiment"])
+async def get_sentiment_analysis(
+    ticker: str,
+    use_finbert: bool = Query(False, description="Use FinBERT (requires GPU) or simple rule-based"),
+    news_count: int = Query(10, description="Number of recent news to analyze")
+) -> Dict[str, Any]:
+    """
+    Analyze sentiment from financial news for a stock ticker.
+    
+    Phase 2 Awesome Quant Integration - Sentiment Analysis
+    
+    Returns aggregated sentiment score, individual text analysis, and trading signal.
+    """
+    try:
+        # Import yfinance for news
+        import yfinance as yf
+        
+        # Get news
+        stock = yf.Ticker(ticker.upper())
+        news_data = stock.news
+        
+        if not news_data or len(news_data) == 0:
+            raise HTTPException(status_code=404, detail=f"No news found for {ticker}")
+        
+        # Extract headlines
+        headlines = [item.get('title', '') for item in news_data[:news_count] if item.get('title')]
+        
+        if not headlines:
+            raise HTTPException(status_code=404, detail=f"No headlines extracted for {ticker}")
+        
+        # Analyze sentiment
+        if use_finbert:
+            try:
+                from models.nlp.sentiment import FinBERTSentiment
+                analyzer = FinBERTSentiment()
+                sentiment_df = analyzer.analyze(headlines)
+                aggregate = analyzer.get_aggregate_sentiment(headlines)
+            except Exception as e:
+                logger.warning(f"FinBERT failed, falling back to SimpleSentiment: {e}")
+                from models.nlp.sentiment import SimpleSentiment
+                analyzer = SimpleSentiment()
+                sentiment_df = analyzer.analyze(headlines)
+                # Calculate aggregate manually
+                sentiment_map = {'positive': 1, 'neutral': 0, 'negative': -1}
+                sentiment_score = sentiment_df['sentiment'].map(sentiment_map).mean()
+                aggregate = {
+                    'overall_sentiment': sentiment_df['sentiment'].mode()[0] if not sentiment_df.empty else 'neutral',
+                    'sentiment_score': sentiment_score,
+                    'positive_ratio': (sentiment_df['sentiment'] == 'positive').sum() / len(sentiment_df),
+                    'negative_ratio': (sentiment_df['sentiment'] == 'negative').sum() / len(sentiment_df),
+                    'neutral_ratio': (sentiment_df['sentiment'] == 'neutral').sum() / len(sentiment_df),
+                    'avg_confidence': sentiment_df['confidence'].mean(),
+                    'num_texts': len(sentiment_df)
+                }
+        else:
+            from models.nlp.sentiment import SimpleSentiment
+            analyzer = SimpleSentiment()
+            sentiment_df = analyzer.analyze(headlines)
+            sentiment_map = {'positive': 1, 'neutral': 0, 'negative': -1}
+            sentiment_score = sentiment_df['sentiment'].map(sentiment_map).mean()
+            aggregate = {
+                'overall_sentiment': sentiment_df['sentiment'].mode()[0] if not sentiment_df.empty else 'neutral',
+                'sentiment_score': sentiment_score,
+                'positive_ratio': (sentiment_df['sentiment'] == 'positive').sum() / len(sentiment_df),
+                'negative_ratio': (sentiment_df['sentiment'] == 'negative').sum() / len(sentiment_df),
+                'neutral_ratio': (sentiment_df['sentiment'] == 'neutral').sum() / len(sentiment_df),
+                'avg_confidence': sentiment_df['confidence'].mean(),
+                'num_texts': len(sentiment_df)
+            }
+        
+        # Generate trading signal
+        signal_map = {
+            'positive': 'BUY',
+            'negative': 'SELL',
+            'neutral': 'HOLD'
+        }
+        trading_signal = signal_map[aggregate['overall_sentiment']]
+        
+        # Individual text analysis
+        text_analysis = sentiment_df.to_dict('records')
+        
+        return {
+            "ticker": ticker.upper(),
+            "analyzer": "FinBERT" if use_finbert else "SimpleSentiment",
+            "aggregate_sentiment": aggregate,
+            "trading_signal": trading_signal,
+            "signal_strength": aggregate['sentiment_score'],
+            "individual_analysis": text_analysis,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Sentiment analysis failed for {ticker}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sentiment/batch", tags=["Predictions", "Sentiment"])
+async def batch_sentiment_analysis(
+    tickers: str = Query(..., description="Comma-separated ticker symbols"),
+    use_finbert: bool = Query(False, description="Use FinBERT or simple rule-based"),
+    news_count: int = Query(5, description="Number of news per ticker")
+) -> Dict[str, Any]:
+    """
+    Analyze sentiment for multiple tickers in batch.
+    
+    Phase 2 Awesome Quant Integration
+    """
+    try:
+        ticker_list = [t.strip().upper() for t in tickers.split(',')]
+        
+        results = {}
+        for ticker in ticker_list:
+            try:
+                result = await get_sentiment_analysis(ticker, use_finbert, news_count)
+                results[ticker] = {
+                    "overall_sentiment": result["aggregate_sentiment"]["overall_sentiment"],
+                    "sentiment_score": result["aggregate_sentiment"]["sentiment_score"],
+                    "trading_signal": result["trading_signal"],
+                    "confidence": result["aggregate_sentiment"]["avg_confidence"]
+                }
+            except HTTPException as e:
+                results[ticker] = {"error": str(e.detail)}
+        
+        return {
+            "tickers": ticker_list,
+            "num_analyzed": len(results),
+            "results": results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Batch sentiment analysis failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

@@ -179,6 +179,71 @@ Navigate to `notebooks/` for example models.
 - Pairs Trading
 - Factor Investing
 
+## 🚀 Awesome Quant Integration (NEW!)
+
+**We've created a comprehensive integration guide to upgrade your project with best-in-class libraries from the Awesome Quant ecosystem!**
+
+### 📖 Read the Integration Guides
+
+1. **[AWESOME_QUANT_INTEGRATION_GUIDE.md](AWESOME_QUANT_INTEGRATION_GUIDE.md)** — Master guide covering:
+   - Gap analysis: What you have vs. what's in Awesome Quant
+   - 3-phase roadmap for integration (Immediate, Medium-term, Advanced)
+   - ROI assessment for each library
+   - Implementation examples
+
+2. **[PHASE1_IMPLEMENTATION_GUIDE.md](PHASE1_IMPLEMENTATION_GUIDE.md)** — Ready-to-implement code for:
+   - ✅ **Advanced Time-Series** (auto-ARIMA forecasting with pmdarima)
+   - ✅ **CVaR Portfolio Optimization** (tail-risk aware portfolios with riskfolio-lib)
+   - ✅ **Trading Calendar** (NYSE/NASDAQ awareness via exchange-calendars)
+   - ✅ **Enhanced Metrics** (Sortino, Calmar ratios via empyrical)
+   - ✅ **Factor Analysis** (alphalens tearsheets and IC analysis)
+
+### 🚀 Quick Start: Phase 1 (This Week)
+
+```bash
+# Install Phase 1 advanced quant libraries
+pip install -r requirements-quant-phase1.txt
+
+# This adds:
+# - pmdarima (auto-ARIMA forecasting)
+# - riskfolio-lib (CVaR, entropy pooling)
+# - empyrical (comprehensive risk metrics)
+# - alphalens (factor analysis)
+# - exchange-calendars (trading day awareness)
+```
+
+Then follow [PHASE1_IMPLEMENTATION_GUIDE.md](PHASE1_IMPLEMENTATION_GUIDE.md) to:
+1. Copy implementation files
+2. Add new API endpoints
+3. Test with provided examples
+4. Deploy enhanced capabilities
+
+### 📊 Impact Summary
+
+| Capability | Current | After Phase 1 | Benefit |
+|-----------|---------|---------------|---------|
+| Portfolio optimization | Mean-variance, risk parity | + CVaR, entropy pooling | Tail-risk aware |
+| Time-series forecasting | Custom ARIMA | Auto-ARIMA + SARIMAX | Better accuracy |
+| Factor analysis | Manual | Alphalens framework | Systematic alpha |
+| Risk metrics | Sharpe, Sortino | + Calmar, capture ratios | Comprehensive view |
+| Backtesting | Calendar-agnostic | NYSE/NASDAQ aware | Fewer errors |
+
+---
+
+## 🧰 Quant Research Resources
+
+We maintain a curated catalog of quant and CS tools, research, and learning resources in
+[awesomequantreadme.md](awesomequantreadme.md). Use it to extend this project responsibly:
+
+- **Core analytics stack**: Prioritize numpy, pandas, scipy, statsmodels, and arch for reliable baselines.
+- **Backtesting & research**: Evaluate vectorbt, backtrader, QSTrader, quantstats, and pyfolio-reloaded to expand experiments.
+- **Portfolio & risk**: Consider PyPortfolioOpt and Riskfolio-Lib for optimization and risk modeling.
+- **Data tooling**: Explore pandas-datareader, yfinance, and vendor SDKs as alternate data sources.
+
+**See [AWESOME_QUANT_INTEGRATION_GUIDE.md](AWESOME_QUANT_INTEGRATION_GUIDE.md) for how we incorporated these into your project.**
+
+If you adopt a library from the list, document why it was chosen and add minimal examples in notebooks.
+
 ## 🔧 Quick Examples
 
 ### High-Performance C++ Quant Library
