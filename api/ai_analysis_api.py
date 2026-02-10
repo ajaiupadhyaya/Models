@@ -21,7 +21,7 @@ from models.ml.advanced_trading import EnsemblePredictor, LSTMPredictor
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/ai", tags=["AI Analysis"])
+router = APIRouter(tags=["AI Analysis"])
 
 data_fetcher = DataFetcher()
 ai_service = get_ai_service()

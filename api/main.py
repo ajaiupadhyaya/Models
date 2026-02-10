@@ -24,6 +24,67 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Custom JSON encoder to handle numpy, pandas, and NaN values
+import json
+import numpy as np
+import pandas as pd
+from decimal import Decimal
+
+class CustomJSONEncoder(json.JSONEncoder):
+    """JSON encoder that handles numpy/pandas types and NaN values"""
+    def default(self, obj):
+        if isinstance(obj, (np.integer, np.int32, np.int64)):
+            return int(obj)
+        elif isinstance(obj, (np.floating, np.float32, np.float64)):
+            if np.isnan(obj) or np.isinf(obj):
+                return None  # Convert NaN/Inf to None
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (pd.Series, pd.Index)):
+            return obj.tolist()
+        elif isinstance(obj, pd.DataFrame):
+            return obj.to_dict(orient='records')
+        elif isinstance(obj, Decimal):
+            return float(obj)
+        elif pd.isna(obj):
+            return None
+        return super().default(obj)
+
+# Configure FastAPI to use custom JSON encoder
+from fastapi.encoders import jsonable_encoder
+
+original_jsonable_encoder = jsonable_encoder
+
+def patched_jsonable_encoder(obj, *args, **kwargs):
+    """Patched encoder that handles NaN/Inf values"""
+    if isinstance(obj, float):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+    elif isinstance(obj, dict):
+        return {k: patched_jsonable_encoder(v, *args, **kwargs) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [patched_jsonable_encoder(item, *args, **kwargs) for item in obj]
+    return original_jsonable_encoder(obj, *args, **kwargs)
+
+# Monkey patch the encoder
+import fastapi.encoders
+fastapi.encoders.jsonable_encoder = patched_jsonable_encoder
+
+# Add a response middleware to clean NaN/Inf values
+class NaNInfCleanupMiddleware(BaseHTTPMiddleware):
+    """Middleware to clean NaN and Inf values from responses before JSON serialization"""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # For JSON responses, we need to clean the data before serialization
+        if "application/json" in response.headers.get("content-type", ""):
+            try:
+                # This is handled by the patched encoder above
+                pass
+            except:
+                pass
+        return response
+
 # Built frontend (Docker/production); when present, serve SPA from same origin
 frontend_dist = project_root / "frontend" / "dist"
 serve_spa = (frontend_dist / "index.html").exists()
@@ -323,11 +384,11 @@ try:
     if "paper_trading" in routers:
         app.include_router(routers["paper_trading"], prefix="/api/v1/paper-trading", tags=["Paper Trading"])
     if "investor_reports" in routers:
-        app.include_router(routers["investor_reports"], tags=["Investor Reports"])
+        app.include_router(routers["investor_reports"], prefix="/api/v1/reports", tags=["Investor Reports"])
     if "company" in routers:
         app.include_router(routers["company"], prefix="/api/v1/company", tags=["Company Analysis"])
     if "ai" in routers:
-        app.include_router(routers["ai"], tags=["AI"])
+        app.include_router(routers["ai"], prefix="/api/v1/ai", tags=["AI"])
     if "data" in routers:
         app.include_router(routers["data"], prefix="/api/v1/data", tags=["Data"])
     try:
@@ -340,16 +401,16 @@ try:
         app.include_router(routers["risk"], prefix="/api/v1/risk", tags=["Risk"])
 
     if "automation" in routers:
-        app.include_router(routers["automation"], tags=["Automation"])
+        app.include_router(routers["automation"], prefix="/api/v1/automation", tags=["Automation"])
     if "orchestrator" in routers:
-        app.include_router(routers["orchestrator"], tags=["Orchestrator"])
+        app.include_router(routers["orchestrator"], prefix="/api/v1/orchestrator", tags=["Orchestrator"])
     if "screener" in routers:
         app.include_router(routers["screener"], prefix="/api/v1/screener", tags=["Screener"])
 
     if "comprehensive" in routers:
-        app.include_router(routers["comprehensive"], tags=["Comprehensive"])
+        app.include_router(routers["comprehensive"], prefix="/api/v1/comprehensive", tags=["Comprehensive"])
     if "institutional" in routers:
-        app.include_router(routers["institutional"], tags=["Institutional"])
+        app.include_router(routers["institutional"], prefix="/api/v1/institutional", tags=["Institutional"])
 
     logger.info("Routers registered successfully")
 except Exception as e:

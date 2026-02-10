@@ -21,7 +21,7 @@ import json
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/reports", tags=["investor-reports"])
+router = APIRouter(tags=["investor-reports"])
 
 
 # Request/Response Models

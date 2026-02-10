@@ -16,7 +16,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/paper-trading", tags=["paper-trading"])
+router = APIRouter(tags=["Paper Trading"])
 
 
 # Request/Response Models

@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from core.comprehensive_integration import ComprehensiveIntegration
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/comprehensive", tags=["Comprehensive"])
+router = APIRouter(tags=["Comprehensive"])
 
 # Global integration instance
 _integration: Optional[ComprehensiveIntegration] = None
