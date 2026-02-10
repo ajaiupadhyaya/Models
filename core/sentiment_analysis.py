@@ -241,7 +241,7 @@ class SentimentAnalyzer:
         
         # Count subjective indicators
         sentiment_word_count = sum(
-            1 for word in words 
+            1 for word in words
             if word in self.positive_words or word in self.negative_words
         )
         

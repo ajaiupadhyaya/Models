@@ -48,7 +48,7 @@ class IEXProvider(DataProvider):
             raise ValueError("IEX API key not configured")
         
         if interval != "1day":
-            raise ValueError(f"IEX only supports daily data")
+            raise ValueError("IEX only supports daily data")
         
         # Calculate IEX range parameter
         days_diff = (end_date - start_date).days
