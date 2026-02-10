@@ -1,0 +1,133 @@
+{
+  "healthy": [
+    {
+      "endpoint": "GET /health",
+      "status": "\u2713 WORKING",
+      "response": {
+        "status": "healthy",
+        "models_loaded": 0,
+        "active_connections": 0,
+        "metrics_collector": true
+      }
+    }
+  ],
+  "working": [
+    {
+      "endpoint": "GET /info",
+      "status": "\u2713 WORKING",
+      "routers": [
+        "models",
+        "predictions",
+        "backtesting",
+        "websocket",
+        "monitoring",
+        "paper_trading",
+        "investor_reports",
+        "company",
+        "ai",
+        "data",
+        "risk",
+        "automation",
+        "orchestrator",
+        "screener",
+        "comprehensive",
+        "institutional",
+        "news"
+      ]
+    },
+    {
+      "endpoint": "POST /api/auth/login",
+      "status": "\u2713 WORKING",
+      "authenticated": true
+    },
+    {
+      "endpoint": "GET /api/v1/backtest/sample-data?ticker=AAPL&period=1y",
+      "status": "\u2713 WORKING"
+    },
+    {
+      "endpoint": "GET /api/v1/backtest/metrics",
+      "status": "\u2713 WORKING"
+    },
+    {
+      "endpoint": "GET /api/v1/risk/metrics/AAPL",
+      "status": "\u2713 WORKING"
+    },
+    {
+      "endpoint": "GET /api/v1/models",
+      "status": "\u2713 WORKING"
+    }
+  ],
+  "broken": [
+    {
+      "endpoint": "GET /api/v1/data/historical/AAPL?period=1mo",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/data/price/AAPL",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/data/macro/gdp",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/data/macro/inflation",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "POST /api/v1/backtest/technical",
+      "error": "Status 422"
+    },
+    {
+      "endpoint": "GET /api/v1/risk/var/AAPL",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "POST /api/v1/risk/stress",
+      "error": "Status 405"
+    },
+    {
+      "endpoint": "GET /api/v1/company/info/AAPL",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/company/fundamentals/AAPL",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/company/valuation/AAPL",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/ai/analyze/AAPL",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "POST /api/v1/predictions/predict",
+      "error": "Status 422"
+    },
+    {
+      "endpoint": "GET /api/v1/paper-trading/portfolio",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/paper-trading/positions",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/paper-trading/account",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/monitoring/metrics",
+      "error": "Status 404"
+    },
+    {
+      "endpoint": "GET /api/v1/investor-reports",
+      "error": "Status 404"
+    }
+  ],
+  "not_implemented": [],
+  "api_keys_missing": [],
+  "warnings": []
+}

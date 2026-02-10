@@ -12,7 +12,7 @@ from core.integration_institutional import InstitutionalIntegration
 import numpy as np
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/institutional", tags=["Institutional"])
+router = APIRouter(tags=["Institutional"])
 
 # Global institutional integration instance
 _institutional: Optional[InstitutionalIntegration] = None

@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from core.enhanced_orchestrator import EnhancedOrchestrator
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/orchestrator", tags=["Orchestrator"])
+router = APIRouter(tags=["Orchestrator"])
 
 # Global orchestrator instance (enhanced engine)
 _orchestrator: Optional[EnhancedOrchestrator] = None

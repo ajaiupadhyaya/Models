@@ -1,0 +1,367 @@
+{
+  "timestamp": "2026-02-09T21:12:34.708704",
+  "total_passed": 41,
+  "total_failed": 24,
+  "total_warnings": 1,
+  "health_percentage": 63.07692307692307,
+  "passed_endpoints": [
+    {
+      "name": "Server Health Check",
+      "endpoint": "GET /health",
+      "status": 200
+    },
+    {
+      "name": "System Information",
+      "endpoint": "GET /info",
+      "status": 200
+    },
+    {
+      "name": "User Login",
+      "endpoint": "POST /api/auth/login",
+      "status": 200
+    },
+    {
+      "name": "Session Status",
+      "endpoint": "GET /api/auth/status",
+      "status": 200
+    },
+    {
+      "name": "Real-Time Quotes",
+      "endpoint": "GET /api/v1/data/quotes",
+      "status": 200
+    },
+    {
+      "name": "Macro Economic Data",
+      "endpoint": "GET /api/v1/data/macro",
+      "status": 200
+    },
+    {
+      "name": "Economic Calendar",
+      "endpoint": "GET /api/v1/data/economic-calendar",
+      "status": 200
+    },
+    {
+      "name": "Yield Curve Data",
+      "endpoint": "GET /api/v1/data/yield-curve",
+      "status": 200
+    },
+    {
+      "name": "Asset Correlation",
+      "endpoint": "GET /api/v1/data/correlation",
+      "status": 200
+    },
+    {
+      "name": "News Feed",
+      "endpoint": "GET /api/v1/data/news",
+      "status": 200
+    },
+    {
+      "name": "Data System Health",
+      "endpoint": "GET /api/v1/data/health-check",
+      "status": 200
+    },
+    {
+      "name": "Get Backtest Sample Data",
+      "endpoint": "GET /api/v1/backtest/sample-data?ticker=AAPL&period=3mo",
+      "status": 200
+    },
+    {
+      "name": "Backtest Metrics",
+      "endpoint": "GET /api/v1/backtest/metrics",
+      "status": 200
+    },
+    {
+      "name": "Technical Strategy Backtest",
+      "endpoint": "POST /api/v1/backtest/technical",
+      "status": 422
+    },
+    {
+      "name": "Standard Backtest Run",
+      "endpoint": "POST /api/v1/backtest/run",
+      "status": 422
+    },
+    {
+      "name": "Compare Strategies",
+      "endpoint": "POST /api/v1/backtest/compare",
+      "status": 422
+    },
+    {
+      "name": "Walk-Forward Analysis",
+      "endpoint": "POST /api/v1/backtest/walk-forward",
+      "status": 422
+    },
+    {
+      "name": "Risk Metrics",
+      "endpoint": "GET /api/v1/risk/metrics/AAPL",
+      "status": 200
+    },
+    {
+      "name": "Stress Testing Scenarios",
+      "endpoint": "GET /api/v1/risk/stress/scenarios",
+      "status": 200
+    },
+    {
+      "name": "Portfolio Analytics",
+      "endpoint": "GET /api/v1/risk/portfolio/enhance-metrics",
+      "status": 404
+    },
+    {
+      "name": "Top Companies",
+      "endpoint": "GET /api/v1/company/top-companies",
+      "status": 200
+    },
+    {
+      "name": "Available Sectors",
+      "endpoint": "GET /api/v1/company/sectors",
+      "status": 200
+    },
+    {
+      "name": "Ticker Validation",
+      "endpoint": "GET /api/v1/company/validate/AAPL",
+      "status": 200
+    },
+    {
+      "name": "AI Market Summary",
+      "endpoint": "GET /api/v1/ai/market-summary",
+      "status": 200
+    },
+    {
+      "name": "AI Stock Analysis",
+      "endpoint": "GET /api/v1/ai/stock-analysis/AAPL",
+      "status": 200
+    },
+    {
+      "name": "Text Summarization",
+      "endpoint": "POST /api/v1/ai/summarize",
+      "status": 200
+    },
+    {
+      "name": "List Models",
+      "endpoint": "GET /api/v1/models",
+      "status": 200
+    },
+    {
+      "name": "Make Prediction",
+      "endpoint": "POST /api/v1/predictions/predict",
+      "status": 422
+    },
+    {
+      "name": "Batch Predictions",
+      "endpoint": "POST /api/v1/predictions/predict/batch",
+      "status": 422
+    },
+    {
+      "name": "Ensemble Prediction",
+      "endpoint": "POST /api/v1/predictions/predict/ensemble",
+      "status": 422
+    },
+    {
+      "name": "Stock Sentiment",
+      "endpoint": "GET /api/v1/predictions/sentiment/AAPL",
+      "status": 404
+    },
+    {
+      "name": "ARIMA Forecast",
+      "endpoint": "GET /api/v1/predictions/forecast-arima/AAPL",
+      "status": 200
+    },
+    {
+      "name": "Paper Trading Health",
+      "endpoint": "GET /api/v1/paper-trading/api/v1/paper-trading/health",
+      "status": 200
+    },
+    {
+      "name": "Positions",
+      "endpoint": "GET /api/v1/paper-trading/api/v1/paper-trading/positions",
+      "status": 200
+    },
+    {
+      "name": "Place Order",
+      "endpoint": "POST /api/v1/paper-trading/api/v1/paper-trading/orders/place",
+      "status": 422
+    },
+    {
+      "name": "Automation Status",
+      "endpoint": "GET /api/v1/automation/status",
+      "status": 200
+    },
+    {
+      "name": "System Monitoring",
+      "endpoint": "GET /api/v1/monitoring/system",
+      "status": 200
+    },
+    {
+      "name": "System Stats",
+      "endpoint": "GET /api/v1/monitoring/system/stats",
+      "status": 200
+    },
+    {
+      "name": "Dashboard Data",
+      "endpoint": "GET /api/v1/monitoring/dashboard",
+      "status": 200
+    },
+    {
+      "name": "Initialize Orchestrator",
+      "endpoint": "POST /api/v1/orchestrator/initialize",
+      "status": 422
+    },
+    {
+      "name": "Stock Screener",
+      "endpoint": "GET /api/v1/screener/run",
+      "status": 200
+    }
+  ],
+  "failed_endpoints": [
+    {
+      "name": "Authenticated User Info",
+      "endpoint": "GET /api/auth/me",
+      "status": 401,
+      "error": "{\"error\":\"Not authenticated\",\"status_code\":401}"
+    },
+    {
+      "name": "Stress Testing",
+      "endpoint": "POST /api/v1/risk/stress",
+      "status": 405,
+      "error": "{\"detail\":\"Method Not Allowed\"}"
+    },
+    {
+      "name": "Portfolio Optimization",
+      "endpoint": "POST /api/v1/risk/optimize",
+      "status": 405,
+      "error": "{\"detail\":\"Method Not Allowed\"}"
+    },
+    {
+      "name": "Options Pricing",
+      "endpoint": "GET /api/v1/risk/options/price",
+      "status": 422,
+      "error": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"query\",\"option_type\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.5/v/missing\"},{\"type\":\"missing\",\"loc\":[\"query\",\"spot_price\"],\"msg\":\""
+    },
+    {
+      "name": "Options Greeks",
+      "endpoint": "GET /api/v1/risk/options/greeks",
+      "status": 422,
+      "error": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"query\",\"option_type\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.5/v/missing\"},{\"type\":\"missing\",\"loc\":[\"query\",\"spot_price\"],\"msg\":\""
+    },
+    {
+      "name": "CVaR Optimization",
+      "endpoint": "POST /api/v1/risk/portfolio/optimize-cvar",
+      "status": 405,
+      "error": "{\"detail\":\"Method Not Allowed\"}"
+    },
+    {
+      "name": "Company Search",
+      "endpoint": "GET /api/v1/company/search",
+      "status": 422,
+      "error": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"query\",\"query\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.5/v/missing\"}]}"
+    },
+    {
+      "name": "Company Analysis",
+      "endpoint": "GET /api/v1/company/analyze/AAPL",
+      "status": 500,
+      "error": "{\"error\":\"Internal server error\",\"detail\":\"Out of range float values are not JSON compliant: nan\"}"
+    },
+    {
+      "name": "Sentiment Analysis",
+      "endpoint": "GET /api/v1/ai/sentiment",
+      "status": 405,
+      "error": "{\"detail\":\"Method Not Allowed\"}"
+    },
+    {
+      "name": "AI Trading Insight",
+      "endpoint": "GET /api/v1/ai/trading-insight",
+      "status": 405,
+      "error": "{\"detail\":\"Method Not Allowed\"}"
+    },
+    {
+      "name": "AI Metrics Explanation",
+      "endpoint": "GET /api/v1/ai/explain-metrics",
+      "status": 405,
+      "error": "{\"detail\":\"Method Not Allowed\"}"
+    },
+    {
+      "name": "Natural Language Query",
+      "endpoint": "POST /api/v1/ai/nl-query",
+      "status": 405,
+      "error": "{\"detail\":\"Method Not Allowed\"}"
+    },
+    {
+      "name": "Quick Prediction",
+      "endpoint": "POST /api/v1/predictions/quick-predict",
+      "status": 405,
+      "error": "{\"detail\":\"Method Not Allowed\"}"
+    },
+    {
+      "name": "Batch Sentiment",
+      "endpoint": "POST /api/v1/predictions/sentiment/batch",
+      "status": 405,
+      "error": "{\"detail\":\"Method Not Allowed\"}"
+    },
+    {
+      "name": "Portfolio",
+      "endpoint": "GET /api/v1/paper-trading/api/v1/paper-trading/portfolio",
+      "status": 500,
+      "error": "{\"error\":\"'timestamp'\",\"status_code\":500}"
+    },
+    {
+      "name": "Automation Account",
+      "endpoint": "GET /api/v1/automation/account",
+      "status": 500,
+      "error": "{\"error\":\"'AlpacaAdapter' object has no attribute 'get_account_status'\",\"status_code\":500}"
+    },
+    {
+      "name": "Automation Positions",
+      "endpoint": "GET /api/v1/automation/positions",
+      "status": 500,
+      "error": "{\"error\":\"object of type 'coroutine' has no len()\",\"status_code\":500}"
+    },
+    {
+      "name": "Reports Health",
+      "endpoint": "GET /api/v1/reports/health",
+      "status": 500,
+      "error": "{\"error\":\"Internal server error\",\"detail\":\"1 validation errors:\\n  {'type': 'bool_parsing', 'loc': ('response', 'status'), 'msg': 'Input should be a valid boolean, unable to interpret input', 'input':"
+    },
+    {
+      "name": "Report Examples",
+      "endpoint": "GET /api/v1/reports/examples",
+      "status": 500,
+      "error": "{\"error\":\"Internal server error\",\"detail\":\"2 validation errors:\\n  {'type': 'string_type', 'loc': ('response', 'examples'), 'msg': 'Input should be a valid string', 'input': {'executive_summary': '2-4"
+    },
+    {
+      "name": "Comprehensive Status",
+      "endpoint": "GET /api/v1/comprehensive/status",
+      "status": 500,
+      "error": "{\"error\":\"Internal server error\",\"detail\":\"[TypeError(\\\"'numpy.int32' object is not iterable\\\"), TypeError('vars() argument must have __dict__ attribute')]\"}"
+    },
+    {
+      "name": "Initialize Comprehensive",
+      "endpoint": "POST /api/v1/comprehensive/initialize",
+      "status": 500,
+      "error": "{\"error\":\"Internal server error\",\"detail\":\"[TypeError(\\\"'numpy.int32' object is not iterable\\\"), TypeError('vars() argument must have __dict__ attribute')]\"}"
+    },
+    {
+      "name": "Institutional Status",
+      "endpoint": "GET /api/v1/institutional/status",
+      "status": 500,
+      "error": "{\"error\":\"Internal server error\",\"detail\":\"[TypeError(\\\"'numpy.int32' object is not iterable\\\"), TypeError('vars() argument must have __dict__ attribute')]\"}"
+    },
+    {
+      "name": "Initialize Institutional",
+      "endpoint": "POST /api/v1/institutional/initialize",
+      "status": 500,
+      "error": "{\"error\":\"Internal server error\",\"detail\":\"[TypeError(\\\"'numpy.int32' object is not iterable\\\"), TypeError('vars() argument must have __dict__ attribute')]\"}"
+    },
+    {
+      "name": "Orchestrator Status",
+      "endpoint": "GET /api/v1/orchestrator/status",
+      "status": 500,
+      "error": "{\"error\":\"Internal server error\",\"detail\":\"[TypeError(\\\"'numpy.int32' object is not iterable\\\"), TypeError('vars() argument must have __dict__ attribute')]\"}"
+    }
+  ],
+  "warnings": [
+    {
+      "name": "Predict and Trade",
+      "endpoint": "POST /api/v1/automation/predict-and-trade",
+      "issue": "TIMEOUT"
+    }
+  ]
+}

@@ -24,7 +24,7 @@ from core.paper_trading import AlpacaAdapter
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/automation", tags=["Automation"])
+router = APIRouter(tags=["Automation"])
 
 data_fetcher = DataFetcher()
 ai_service = get_ai_service()
