@@ -1,0 +1,131 @@
+{
+  "timestamp": "2026-02-10T02:24:48.005837",
+  "summary": {
+    "total_tests": 17,
+    "passed": 15,
+    "failed": 2,
+    "pass_rate": "88.2%"
+  },
+  "features": {
+    "working": [
+      {
+        "name": "Main health endpoint",
+        "status": "pass",
+        "details": "Basic health check"
+      },
+      {
+        "name": "API documentation accessible",
+        "status": "pass",
+        "details": "FastAPI auto-generated docs"
+      },
+      {
+        "name": "Data API health check",
+        "status": "pass",
+        "details": "Data fetching service health"
+      },
+      {
+        "name": "User login",
+        "status": "pass",
+        "details": "Demo user authentication"
+      },
+      {
+        "name": "JWT token generation",
+        "status": "pass",
+        "details": "Successfully generated auth token"
+      },
+      {
+        "name": "Stock data fetching (quotes)",
+        "status": "pass",
+        "details": "yfinance integration for stock data"
+      },
+      {
+        "name": "Economic calendar data",
+        "status": "pass",
+        "details": "Economic events calendar"
+      },
+      {
+        "name": "Yield curve data",
+        "status": "pass",
+        "details": "FRED API integration working"
+      },
+      {
+        "name": "Company search",
+        "status": "pass",
+        "details": "Fuzzy company name search"
+      },
+      {
+        "name": "Ticker validation",
+        "status": "pass",
+        "details": "Validate ticker symbols"
+      },
+      {
+        "name": "Sample backtest data",
+        "status": "pass",
+        "details": "Generate sample market data"
+      },
+      {
+        "name": "Risk metrics calculation",
+        "status": "pass",
+        "details": "VaR, CVaR, volatility, Sharpe"
+      },
+      {
+        "name": "Stress test scenarios",
+        "status": "pass",
+        "details": "Available stress test scenarios"
+      },
+      {
+        "name": "Quick stock prediction",
+        "status": "pass",
+        "details": "Fast ML-based price prediction"
+      },
+      {
+        "name": "Available ML models",
+        "status": "pass",
+        "details": "List trained models"
+      },
+      {
+        "name": "System monitoring",
+        "status": "pass",
+        "details": "CPU, memory, disk metrics"
+      },
+      {
+        "name": "Recent predictions log",
+        "status": "pass",
+        "details": "Track prediction history"
+      }
+    ],
+    "limited": [
+      {
+        "name": "Paper trading",
+        "status": "limited",
+        "details": "Requires ALPACA_API_KEY and ALPACA_API_SECRET in .env"
+      },
+      {
+        "name": "AI analysis",
+        "status": "limited",
+        "details": "Requires OPENAI_API_KEY in .env"
+      },
+      {
+        "name": "News feed",
+        "status": "limited",
+        "details": "May require FINNHUB_API_KEY for real-time news"
+      }
+    ],
+    "broken": [
+      {
+        "name": "Company fundamental analysis",
+        "status": "fail",
+        "error": "Test returned False",
+        "details": "DCF valuation, ratios, metrics"
+      },
+      {
+        "name": "Technical strategy backtest",
+        "status": "fail",
+        "error": "Test returned False",
+        "details": "SMA crossover strategy"
+      }
+    ],
+    "fixes_applied": [],
+    "to_remove": []
+  }
+}
