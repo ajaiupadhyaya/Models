@@ -1,0 +1,28 @@
+{
+  "max_workers": 4,
+  "data_update_frequency": "daily",
+  "ml_retrain_frequency": "weekly",
+  "trading_enabled": false,
+  "monitoring_enabled": true,
+  "alert_thresholds": {
+    "data_quality": 0.95,
+    "model_accuracy": 0.70,
+    "portfolio_drawdown": 0.10
+  },
+  "symbols": [
+    "SPY",
+    "QQQ",
+    "DIA",
+    "AAPL",
+    "MSFT",
+    "GOOGL"
+  ],
+  "economic_indicators": [
+    "UNRATE",
+    "GDP",
+    "CPIAUCSL",
+    "FEDFUNDS",
+    "DGS10",
+    "PAYEMS"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "watchlist": [
+    "SPY",
+    "QQQ",
+    "IWM",
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "TSLA",
+    "NVDA",
+    "META"
+  ],
+  "preferred_period": "1y",
+  "risk_tolerance": "moderate",
+  "auto_refresh": true,
+  "refresh_interval": 300
+}
