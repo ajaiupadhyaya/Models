@@ -26,6 +26,10 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# CRITICAL: Disable curl_cffi in yfinance BEFORE any yfinance imports
+# This must be imported first to prevent Yahoo Finance blocking
+from core import yfinance_session
+
 # Custom JSON encoder to handle numpy, pandas, and NaN values
 import json
 import numpy as np

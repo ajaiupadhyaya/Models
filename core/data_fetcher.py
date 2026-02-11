@@ -3,6 +3,9 @@ Data fetching module with API integrations for real-time financial and economic 
 Supports FRED, Alpha Vantage, Yahoo Finance, and more.
 """
 
+# CRITICAL: Import this FIRST to disable curl_cffi before yfinance loads
+from . import yfinance_session
+
 import os
 import pandas as pd
 import numpy as np
