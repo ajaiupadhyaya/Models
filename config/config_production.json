@@ -1,0 +1,89 @@
+{
+  "environment": "production",
+  "performance_profile": "balanced",
+  "timezone": "US/Eastern",
+  "verbose": false,
+  "data": {
+    "max_retries": 5,
+    "retry_delay": 2.0,
+    "cache_ttl": 300,
+    "cache_max_mb": 2000,
+    "parallel_workers": 15,
+    "rate_limit_per_second": 20.0,
+    "enable_compression": true,
+    "enable_prefetch": true,
+    "intraday_update_interval": 60,
+    "daily_update_time": "08:00"
+  },
+  "trading": {
+    "enabled": true,
+    "max_position_size_pct": 0.10,
+    "max_daily_loss_pct": 0.02,
+    "max_correlation": 0.65,
+    "max_sector_exposure_pct": 0.30,
+    "min_trade_amount": 500.0,
+    "commission_pct": 0.0008,
+    "slippage_pct": 0.0015,
+    "hours_only": true,
+    "auto_stop_loss": true,
+    "auto_take_profit": true
+  },
+  "ml": {
+    "models_enabled": ["lstm", "ensemble", "traditional"],
+    "lstm_enabled": true,
+    "lstm_lookback": 30,
+    "lstm_hidden_units": 128,
+    "lstm_epochs": 50,
+    "lstm_batch_size": 64,
+    "ensemble_enabled": true,
+    "ensemble_models": 7,
+    "predict_on_new_data": true,
+    "retrain_frequency": "daily",
+    "validation_split": 0.2
+  },
+  "monitoring": {
+    "enabled": true,
+    "log_level": "INFO",
+    "log_file": "logs/production.log",
+    "alert_discord_webhook": "YOUR_WEBHOOK_URL",
+    "alert_email": "alerts@yourcompany.com",
+    "alert_on_large_loss": true,
+    "large_loss_threshold_pct": 0.05,
+    "alert_on_position_near_stop": true,
+    "position_risk_threshold_pct": 0.75,
+    "alert_on_data_quality": true,
+    "data_quality_threshold": 0.98,
+    "collect_metrics": true,
+    "metrics_interval_seconds": 30
+  },
+  "api": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8000,
+    "workers": 8,
+    "reload": false,
+    "cors_enabled": true,
+    "auth_enabled": true,
+    "auth_token": "YOUR_API_TOKEN",
+    "rate_limit_requests": 1000,
+    "rate_limit_seconds": 60
+  },
+  "portfolio": {
+    "initial_capital": 1000000.0,
+    "base_currency": "USD",
+    "watchlist": ["SPY", "QQQ", "IWM", "GLD", "TLT", "BND", "SCHF", "AAPL", "MSFT", "GOOGL", "NVDA", "META"],
+    "excluded_symbols": [],
+    "rebalance_frequency": "monthly",
+    "target_allocations": {
+      "SPY": 0.35,
+      "QQQ": 0.20,
+      "IWM": 0.10,
+      "TLT": 0.15,
+      "GLD": 0.10,
+      "BND": 0.05,
+      "SCHF": 0.05
+    },
+    "target_return_pct": 0.15,
+    "target_volatility_pct": 0.12
+  }
+}
