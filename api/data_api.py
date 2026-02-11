@@ -13,6 +13,8 @@ import logging
 from pathlib import Path
 import sys
 from datetime import datetime, timedelta
+import asyncio
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -21,6 +23,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 CACHE_TTL_CALENDAR = 3600  # 1 hour
+
+# Timeout configurations (seconds)
+TIMEOUT_YFINANCE_QUOTES = 10
+TIMEOUT_YFINANCE_HISTORICAL = 20
+TIMEOUT_FRED_API = 10
+TIMEOUT_EXTERNAL_API = 15
+
+# Thread pool for blocking operations
+executor = ThreadPoolExecutor(max_workers=4)
 
 
 @router.get("/health-check")
@@ -188,7 +199,7 @@ async def get_economic_calendar(
             "sort_order": "asc",
             "limit": min(limit, 200),
         }
-        resp = requests.get(url, params=params, timeout=15)
+        resp = requests.get(url, params=params, timeout=TIMEOUT_FRED_API)
         resp.raise_for_status()
         data = resp.json()
         release_dates = data.get("release_dates", [])
@@ -223,7 +234,23 @@ async def get_quotes(symbols: str = Query("AAPL,MSFT,GOOGL,SPY,QQQ", description
         sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:20]
         if not sym_list:
             return {"quotes": []}
-        data = yf.download(sym_list, period="5d", progress=False, auto_adjust=True, group_by="ticker", threads=False)
+        
+        # Fetch with timeout to prevent hanging
+        def _fetch():
+            return yf.download(sym_list, period="5d", progress=False, auto_adjust=True, group_by="ticker", threads=False)
+        
+        try:
+            data = await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(executor, _fetch),
+                timeout=TIMEOUT_YFINANCE_QUOTES
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Quotes fetch timed out for {symbols}")
+            return {
+                "quotes": [{"symbol": s, "price": None, "change_pct": None} for s in sym_list],
+                "error": "Data fetch timed out. Please try again."
+            }
+        
         if data.empty:
             return {"quotes": [{"symbol": s, "price": None, "change_pct": None} for s in sym_list], "error": "No data from Yahoo Finance. Check Render logs."}
         quotes = []
@@ -302,7 +329,19 @@ async def get_correlation(
         sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:15]
         if len(sym_list) < 2:
             return {"symbols": [], "matrix": [], "error": "Provide at least 2 symbols"}
-        data = yf.download(sym_list, period=period, progress=False, auto_adjust=True, group_by="ticker", threads=False)
+        
+        # Fetch with timeout
+        def _fetch():
+            return yf.download(sym_list, period=period, progress=False, auto_adjust=True, group_by="ticker", threads=False)
+        
+        try:
+            data = await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(executor, _fetch),
+                timeout=TIMEOUT_YFINANCE_HISTORICAL
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Correlation fetch timed out for {symbols}")
+            return {"symbols": sym_list, "matrix": [], "error": "Data fetch timed out. Try a shorter period."}
         if data.empty:
             return {"symbols": sym_list, "matrix": [], "error": "No price data"}
         if isinstance(data.columns, pd.MultiIndex):
