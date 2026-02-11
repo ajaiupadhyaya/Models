@@ -54,6 +54,7 @@ Add these in **Render dashboard → your service → Environment**. Click **Add 
 | Key | Value (example / notes) |
 |-----|--------------------------|
 | `OPENAI_API_KEY` | Your [OpenAI key](https://platform.openai.com/api-keys) — AI tab, NL query, summaries |
+| `OPENAI_TIMEOUT` | `30.0` (seconds) — Prevents OpenAI API hangs; adjust if needed |
 | `FINNHUB_API_KEY` | Your [Finnhub key](https://finnhub.io/) — News tab headlines |
 | `ENABLE_METRICS` | `true` (literal, no quotes) for monitoring dashboard |
 | `WEBSOCKET_ENABLED` | `true` (literal) for live price ticker; WebSocket uses same host, no separate URL |

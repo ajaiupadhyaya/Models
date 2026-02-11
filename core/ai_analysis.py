@@ -40,6 +40,8 @@ class AIAnalysisService:
         self.client = None
         # Default to a fast, capable OpenAI model; can be overridden via env.
         self.model = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
+        # Timeout for OpenAI API calls (prevent indefinite hangs)
+        self.timeout = float(os.getenv("OPENAI_TIMEOUT", "30.0"))
 
         if self.provider == "openai":
             if not HAS_OPENAI:
@@ -48,8 +50,8 @@ class AIAnalysisService:
 
             if self.api_key:
                 try:
-                    self.client = OpenAI(api_key=self.api_key)
-                    logger.info("OpenAI client initialized")
+                    self.client = OpenAI(api_key=self.api_key, timeout=self.timeout)
+                    logger.info("OpenAI client initialized with timeout=%.1fs", self.timeout)
                 except Exception as e:  # pragma: no cover - defensive
                     logger.error(f"Failed to initialize OpenAI: {e}")
         else:

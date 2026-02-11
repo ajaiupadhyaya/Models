@@ -23,10 +23,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt requirements-api.txt ./
-# API deps required (charts, AI, ML, auth). Project deps best-effort so Render build succeeds.
+
+# Install core API deps first (required for deployment)
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements-api.txt && \
-    (pip install -r requirements.txt || true)
+    pip install -r requirements-api.txt
+
+# Install optional ML/quant deps (best effort - don't fail build if missing)
+# This makes cold start faster by skipping heavy deps if they time out
+RUN pip install -r requirements.txt || \
+    echo "WARNING: Some optional dependencies could not be installed. ML features may be limited."
 
 COPY . .
 COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
