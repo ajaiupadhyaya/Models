@@ -13,6 +13,8 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from contextlib import asynccontextmanager
 from typing import Dict, Any, List, Optional
 import logging
@@ -221,8 +223,6 @@ app = FastAPI(
 )
 
 # Request logging middleware: log method, path, status, duration
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 import time
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
