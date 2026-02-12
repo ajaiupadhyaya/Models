@@ -190,9 +190,9 @@ class BacktestEngine:
     Complete backtesting engine with ML prediction support and robust validation.
     Integrated with TradingCalendar for realistic trading day filtering.
     """
-    
-    def __init__(self, 
-                 initial_capital: float = 100000, 
+
+    def __init__(self,
+                 initial_capital: float = 100000,
                  commission: float = 0.001,
                  exchange: Optional[str] = None):
         """

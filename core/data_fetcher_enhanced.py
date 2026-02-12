@@ -27,7 +27,7 @@ class DataFetcherRateLimiter:
         """Wait if we've exceeded rate limit."""
         now = time.time()
         # Remove requests older than 1 minute
-        self.requests = [req_time for req_time in self.requests 
+        self.requests = [req_time for req_time in self.requests
                         if now - req_time < 60]
         
         if len(self.requests) >= self.max_requests:
