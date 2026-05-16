@@ -321,7 +321,169 @@ export const FundamentalPanel: React.FC = () => {
         {!hasContent && (
           <div className="panel-body-muted">No fundamental data returned. Ensure API and data sources are configured.</div>
         )}
+        <EquityResearchSection symbol={primarySymbol} />
       </div>
     </section>
   );
 };
+
+type EquityTab = "statements" | "dcf" | "comps" | "lbo";
+
+function EquityResearchSection({ symbol }: { symbol: string }) {
+  const [tab, setTab] = useState<EquityTab>("statements");
+  const [period, setPeriod] = useState<"annual" | "quarterly">("annual");
+  const [dcfWacc, setDcfWacc] = useState(0.1);
+  const [dcfGrowth, setDcfGrowth] = useState(0.03);
+  const [dcfResult, setDcfResult] = useState<Record<string, unknown> | null>(null);
+  const [dcfLoading, setDcfLoading] = useState(false);
+  const [lboEntry, setLboEntry] = useState(10);
+  const [lboDE, setLboDE] = useState(0.6);
+  const [lboRate, setLboRate] = useState(0.06);
+  const [lboExit, setLboExit] = useState(10);
+  const [lboHold, setLboHold] = useState(5);
+  const [lboResult, setLboResult] = useState<Record<string, unknown> | null>(null);
+  const [lboLoading, setLboLoading] = useState(false);
+
+  const statementsUrl = `/api/v1/equity/statements/${symbol}?period=${period}`;
+  const compsUrl = `/api/v1/equity/comps/${symbol}`;
+  const { data: statements, loading: stLoading } = useFetchWithRetry<{ income?: { period_end: string; data: Record<string, unknown> }[]; balance_sheet?: unknown[]; cash_flow?: unknown[] } | null>(statementsUrl, { deps: [symbol, period] });
+  const { data: comps, loading: compsLoading } = useFetchWithRetry<{ multiples?: { ticker: string; name?: string; market_cap?: number; pe_ratio?: number; ev_ebitda?: number }[] } | null>(compsUrl, { deps: [symbol] });
+
+  const runDcf = () => {
+    setDcfLoading(true);
+    setDcfResult(null);
+    fetch(resolveApiUrl("/api/v1/equity/dcf"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ ticker: symbol, wacc: dcfWacc, terminal_growth: dcfGrowth }),
+    })
+      .then((r) => r.json())
+      .then((data) => setDcfResult(data))
+      .catch(() => setDcfResult({ error: "Request failed" }))
+      .finally(() => setDcfLoading(false));
+  };
+
+  const runLbo = () => {
+    setLboLoading(true);
+    setLboResult(null);
+    fetch(resolveApiUrl("/api/v1/equity/lbo"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({
+        ticker: symbol,
+        entry_multiple: lboEntry,
+        debt_equity_ratio: lboDE,
+        interest_rate: lboRate,
+        exit_multiple: lboExit,
+        hold_years: lboHold,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => setLboResult(data))
+      .catch(() => setLboResult({ error: "Request failed" }))
+      .finally(() => setLboLoading(false));
+  };
+
+  const tabs: { id: EquityTab; label: string }[] = [
+    { id: "statements", label: "Statements" },
+    { id: "dcf", label: "DCF" },
+    { id: "comps", label: "Comps" },
+    { id: "lbo", label: "LBO" },
+  ];
+
+  return (
+    <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+      <div style={{ color: "var(--accent)", marginBottom: 8 }}>Equity Research (real data)</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        {tabs.map((t) => (
+          <button key={t.id} type="button" className="ai-button" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {tab === "statements" && (
+        <>
+          <div style={{ marginBottom: 8 }}>
+            <button type="button" className="ai-button" style={{ marginRight: 8 }} onClick={() => setPeriod("annual")}>Annual</button>
+            <button type="button" className="ai-button" onClick={() => setPeriod("quarterly")}>Quarterly</button>
+          </div>
+          {stLoading && <div className="panel-body-muted">Loading statements…</div>}
+          {!stLoading && statements?.income && statements.income.length > 0 && (
+            <div style={{ fontSize: 11 }}>
+              {statements.income.slice(0, 3).map((row, i) => (
+                <div key={i} style={{ marginBottom: 8 }}>
+                  <span style={{ color: "var(--text-soft)" }}>{row.period_end}</span>
+                  <pre style={{ margin: "4px 0 0", whiteSpace: "pre-wrap", maxHeight: 120, overflow: "auto" }}>{JSON.stringify(row.data, null, 0).slice(0, 400)}…</pre>
+                </div>
+              ))}
+            </div>
+          )}
+          {!stLoading && statements && !statements.income?.length && <div className="panel-body-muted">No statement data. Run data refresh or add FMP key.</div>}
+        </>
+      )}
+      {tab === "dcf" && (
+        <>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 11 }}>WACC</span>
+              <input type="number" step={0.01} value={dcfWacc} onChange={(e) => setDcfWacc(Number(e.target.value))} style={{ width: 60, padding: 4 }} />
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 11 }}>Term growth</span>
+              <input type="number" step={0.01} value={dcfGrowth} onChange={(e) => setDcfGrowth(Number(e.target.value))} style={{ width: 60, padding: 4 }} />
+            </label>
+            <button type="button" className="ai-button" onClick={runDcf} disabled={dcfLoading}>{dcfLoading ? "Calculating…" : "Calculate DCF"}</button>
+          </div>
+          {dcfResult && ("error" in dcfResult ? <div className="panel-body-muted">{String(dcfResult.error)}</div> : (
+            <div className="num-mono" style={{ fontSize: 11 }}>
+              Intrinsic value: ${Number(dcfResult.intrinsic_value_per_share ?? 0).toFixed(2)} | Current: ${dcfResult.current_price != null ? Number(dcfResult.current_price).toFixed(2) : "—"} | Upside: {dcfResult.upside_downside_pct != null ? `${Number(dcfResult.upside_downside_pct).toFixed(1)}%` : "—"}
+            </div>
+          ))}
+        </>
+      )}
+      {tab === "comps" && (
+        <>
+          {compsLoading && <div className="panel-body-muted">Loading comps…</div>}
+          {!compsLoading && comps?.multiples && comps.multiples.length > 0 && (
+            <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ color: "var(--accent)" }}>
+                  <th style={{ textAlign: "left", padding: "4px 8px" }}>Ticker</th>
+                  <th style={{ textAlign: "right" }}>P/E</th>
+                  <th style={{ textAlign: "right" }}>EV/EBITDA</th>
+                  <th style={{ textAlign: "right" }}>Market cap</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comps.multiples.slice(0, 10).map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: "4px 8px" }}>{r.ticker}</td>
+                    <td className="num-mono" style={{ textAlign: "right" }}>{r.pe_ratio != null ? Number(r.pe_ratio).toFixed(1) : "—"}</td>
+                    <td className="num-mono" style={{ textAlign: "right" }}>{r.ev_ebitda != null ? Number(r.ev_ebitda).toFixed(1) : "—"}</td>
+                    <td className="num-mono" style={{ textAlign: "right" }}>{r.market_cap != null ? (Number(r.market_cap) / 1e9).toFixed(2) + "B" : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {!compsLoading && comps && !comps.multiples?.length && <div className="panel-body-muted">No comps. FMP key required.</div>}
+        </>
+      )}
+      {tab === "lbo" && (
+        <>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+            <input type="number" placeholder="Entry mult" value={lboEntry} onChange={(e) => setLboEntry(Number(e.target.value))} style={{ width: 70, padding: 4 }} />
+            <input type="number" step={0.1} placeholder="D/E" value={lboDE} onChange={(e) => setLboDE(Number(e.target.value))} style={{ width: 60, padding: 4 }} />
+            <input type="number" step={0.01} placeholder="Rate" value={lboRate} onChange={(e) => setLboRate(Number(e.target.value))} style={{ width: 60, padding: 4 }} />
+            <input type="number" placeholder="Exit mult" value={lboExit} onChange={(e) => setLboExit(Number(e.target.value))} style={{ width: 70, padding: 4 }} />
+            <input type="number" placeholder="Years" value={lboHold} onChange={(e) => setLboHold(Number(e.target.value))} style={{ width: 50, padding: 4 }} />
+            <button type="button" className="ai-button" onClick={runLbo} disabled={lboLoading}>{lboLoading ? "…" : "Run LBO"}</button>
+          </div>
+          {lboResult && ("error" in lboResult ? <div className="panel-body-muted">{String(lboResult.error)}</div> : (
+            <div className="num-mono" style={{ fontSize: 11 }}>IRR: {lboResult.irr != null ? `${Number(lboResult.irr).toFixed(1)}%` : "—"} | MOIC: {lboResult.moic != null ? Number(lboResult.moic).toFixed(2) : "—"}</div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}

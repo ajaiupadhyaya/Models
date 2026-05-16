@@ -1,13 +1,18 @@
 import React from "react";
 
 export type ActiveModule =
+  | "dataStatus"
   | "primary"
   | "fundamental"
   | "technical"
   | "quant"
   | "economic"
   | "news"
+  | "newsSentiment"
   | "portfolio"
+  | "backtest"
+  | "optimizer"
+  | "stressTest"
   | "paper"
   | "automation"
   | "screening"
@@ -41,17 +46,21 @@ export function useTerminal(): TerminalContextValue {
 }
 
 export const COMMAND_HELP: { code: string; desc: string }[] = [
+  { code: "DATA / STATUS", desc: "Data ingestion status dashboard" },
   { code: "GP [ticker]", desc: "Graph / Primary instrument" },
   { code: "FA [ticker]", desc: "Fundamental analysis" },
   { code: "FLDS [ticker]", desc: "Technical / Fields" },
   { code: "ECO", desc: "Economic indicators" },
   { code: "N [ticker]", desc: "News" },
+  { code: "NS / SENT [ticker]", desc: "News + sentiment view" },
   { code: "PORT", desc: "Portfolio & strategies" },
+  { code: "OPT", desc: "Portfolio optimizer" },
+  { code: "STRESS", desc: "Stress testing" },
   { code: "PAPER", desc: "Paper trading" },
   { code: "AUTO / ORCH", desc: "Automation / Orchestrator" },
   { code: "SCREEN", desc: "Screening & discovery" },
   { code: "AI [query]", desc: "AI assistant (or type freely)" },
-  { code: "BACKTEST [ticker]", desc: "Run strategy backtest" },
+  { code: "BACKTEST / BT [ticker]", desc: "Run strategy backtest" },
   { code: "TRAIN [ticker]", desc: "Quant / Train model" },
   { code: "WORKSPACE [name]", desc: "Switch workspace" },
   { code: "? or HELP", desc: "Show this help" },
@@ -59,13 +68,18 @@ export const COMMAND_HELP: { code: string; desc: string }[] = [
 ];
 
 export const MODULES_ORDER: ActiveModule[] = [
+  "dataStatus",
   "primary",
   "fundamental",
   "technical",
   "quant",
   "economic",
   "news",
+  "newsSentiment",
   "portfolio",
+  "backtest",
+  "optimizer",
+  "stressTest",
   "paper",
   "automation",
   "screening",

@@ -40,6 +40,46 @@ METRICS_DIR = Path(__file__).parent.parent / "data" / "metrics"
 METRICS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+@router.get("/api-health")
+async def api_health() -> Dict[str, Any]:
+    """Return health status for external data sources."""
+    try:
+        from core.data_fetcher_enhanced import DataSourceHealthChecker
+        return DataSourceHealthChecker.check_all_sources()
+    except Exception as e:
+        logger.error(f"API health check failed: {e}")
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "sources": {}
+        }
+
+
+@router.get("/api-health/summary")
+async def api_health_summary() -> Dict[str, Any]:
+    """Return summarized health status for data sources."""
+    try:
+        from core.data_fetcher_enhanced import DataSourceHealthChecker
+        payload = DataSourceHealthChecker.check_all_sources()
+        sources = payload.get("sources", {})
+        summary = {
+            "operational": sum(1 for s in sources.values() if s.get("operational")),
+            "degraded": sum(1 for s in sources.values() if s.get("status") == "degraded"),
+            "error": sum(1 for s in sources.values() if s.get("status") == "error"),
+            "not_configured": sum(1 for s in sources.values() if s.get("status") == "not_configured"),
+            "total": len(sources),
+        }
+        return {"timestamp": payload.get("timestamp"), "summary": summary, "sources": sources}
+    except Exception as e:
+        logger.error(f"API health summary failed: {e}")
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "summary": {},
+            "sources": {}
+        }
+
+
 class MetricsCollector:
     """Collect and track system metrics."""
     

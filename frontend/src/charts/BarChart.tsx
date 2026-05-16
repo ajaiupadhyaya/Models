@@ -1,7 +1,8 @@
 /**
  * D3 bar chart for risk metrics, model comparison, sector distribution, etc.
+ * Includes tooltip on hover and axis labels.
  */
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { CHART_MARGIN_PRESETS, getChartMargin } from "./theme";
 
@@ -21,6 +22,8 @@ export interface BarChartProps {
   horizontal?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
 }
 
 export const BarChart: React.FC<BarChartProps> = ({
@@ -33,8 +36,13 @@ export const BarChart: React.FC<BarChartProps> = ({
   horizontal = false,
   className = "chart-root",
   style,
+  xAxisLabel,
+  yAxisLabel,
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const setTooltipRef = useRef(setTooltip);
+  setTooltipRef.current = setTooltip;
 
   useEffect(() => {
     if (!ref.current || data.length === 0) return;
@@ -58,6 +66,16 @@ export const BarChart: React.FC<BarChartProps> = ({
     const minVal = Math.min(...values, 0);
     const span = maxVal - minVal || 1;
 
+    const showTooltip = (evt: MouseEvent, d: BarChartDatum) => {
+      const container = el.parentElement?.getBoundingClientRect() ?? el.getBoundingClientRect();
+      setTooltipRef.current({
+        x: evt.clientX - container.left,
+        y: evt.clientY - container.top - 8,
+        text: `${d.label}: ${valueFormat(d.value)}`,
+      });
+    };
+    const hideTooltip = () => setTooltipRef.current(null);
+
     if (horizontal) {
       const yScale = d3.scaleBand().domain(labels).range([0, innerHeight]).padding(0.2);
       const xScale = d3.scaleLinear().domain([Math.min(0, minVal), Math.max(0, maxVal)]).range([0, innerWidth]);
@@ -75,7 +93,32 @@ export const BarChart: React.FC<BarChartProps> = ({
         .attr("x", (d) => (d.value >= 0 ? xScale(0) : xScale(d.value)))
         .attr("width", (d) => Math.abs(xScale(d.value) - xScale(0)))
         .attr("fill", (d) => d.color ?? "var(--accent)")
-        .attr("opacity", 0.85);
+        .attr("opacity", 0.85)
+        .style("cursor", "pointer")
+        .on("mouseover", showTooltip)
+        .on("mousemove", showTooltip)
+        .on("mouseleave", hideTooltip);
+      if (xAxisLabel) {
+        g.append("text")
+          .attr("x", innerWidth / 2)
+          .attr("y", innerHeight + margin.bottom - 4)
+          .attr("text-anchor", "middle")
+          .attr("fill", "var(--text-soft)")
+          .attr("font-size", 9)
+          .attr("font-family", "var(--font-mono)")
+          .text(xAxisLabel);
+      }
+      if (yAxisLabel) {
+        g.append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -innerHeight / 2)
+          .attr("y", -margin.left + 12)
+          .attr("text-anchor", "middle")
+          .attr("fill", "var(--text-soft)")
+          .attr("font-size", 9)
+          .attr("font-family", "var(--font-mono)")
+          .text(yAxisLabel);
+      }
     } else {
       const xScale = d3.scaleBand().domain(labels).range([0, innerWidth]).padding(0.2);
       const yScale = d3.scaleLinear().domain([Math.min(0, minVal), Math.max(0, maxVal) + span * 0.1]).range([innerHeight, 0]);
@@ -93,7 +136,32 @@ export const BarChart: React.FC<BarChartProps> = ({
         .attr("y", (d) => (d.value >= 0 ? yScale(d.value) : yScale(0)))
         .attr("height", (d) => Math.abs(yScale(d.value) - yScale(0)))
         .attr("fill", (d) => d.color ?? "var(--accent)")
-        .attr("opacity", 0.85);
+        .attr("opacity", 0.85)
+        .style("cursor", "pointer")
+        .on("mouseover", showTooltip)
+        .on("mousemove", showTooltip)
+        .on("mouseleave", hideTooltip);
+      if (xAxisLabel) {
+        g.append("text")
+          .attr("x", innerWidth / 2)
+          .attr("y", innerHeight + margin.bottom - 4)
+          .attr("text-anchor", "middle")
+          .attr("fill", "var(--text-soft)")
+          .attr("font-size", 9)
+          .attr("font-family", "var(--font-mono)")
+          .text(xAxisLabel);
+      }
+      if (yAxisLabel) {
+        g.append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -innerHeight / 2)
+          .attr("y", -margin.left + 12)
+          .attr("text-anchor", "middle")
+          .attr("fill", "var(--text-soft)")
+          .attr("font-size", 9)
+          .attr("font-family", "var(--font-mono)")
+          .text(yAxisLabel);
+      }
     }
 
     if (title) {
@@ -105,10 +173,19 @@ export const BarChart: React.FC<BarChartProps> = ({
         .attr("font-family", "var(--font-mono)")
         .text(title);
     }
-  }, [data, widthProp, height, marginPreset, title, valueFormat, horizontal, className]);
+
+    return () => setTooltipRef.current(null);
+  }, [data, widthProp, height, marginPreset, title, valueFormat, horizontal, xAxisLabel, yAxisLabel]);
 
   if (data.length === 0) return null;
   return (
-    <div ref={ref} className={className} style={{ minHeight: height, ...style }} />
+    <div className={className} style={{ position: "relative", minHeight: height, ...style }}>
+      <div ref={ref} style={{ width: "100%", minHeight: height }} />
+      {tooltip && (
+        <div className="chart-tooltip" style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)" }}>
+          {tooltip.text}
+        </div>
+      )}
+    </div>
   );
 };

@@ -17,6 +17,7 @@ from .iex_provider import IEXProvider
 from .coingecko_provider import CoinGeckoProvider
 from .newsapi_provider import NewsAPIProvider
 from .sec_edgar_provider import SECEdgarProvider
+from .fmp_provider import FMPProvider
 
 __all__ = [
     "DataProvider",
@@ -29,4 +30,5 @@ __all__ = [
     "CoinGeckoProvider",
     "NewsAPIProvider",
     "SECEdgarProvider",
+    "FMPProvider",
 ]

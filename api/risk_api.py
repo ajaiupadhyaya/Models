@@ -1,15 +1,16 @@
 """
 Risk API
 
-Endpoints for VaR, CVaR, volatility, and stress metrics per symbol.
+Endpoints for VaR, CVaR, volatility, stress metrics, portfolio optimizer, stress testing.
 Used by the terminal Portfolio panel for risk analytics.
 """
 
 from fastapi import APIRouter, HTTPException, Query
-from typing import Dict, Any, List
+from pydantic import BaseModel, Field
+from typing import Dict, Any, List, Optional
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import sys
 
 project_root = Path(__file__).parent.parent
@@ -17,6 +18,18 @@ sys.path.insert(0, str(project_root))
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+class OptimizeRequest(BaseModel):
+    tickers: List[str] = Field(..., description="List of ticker symbols")
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    risk_free_rate: float = 0.02
+
+
+class StressTestRequest(BaseModel):
+    tickers: List[str] = Field(..., description="List of ticker symbols")
+    weights: Optional[Dict[str, float]] = None
 
 
 @router.get("/metrics/{ticker}")
@@ -88,6 +101,153 @@ async def get_risk_metrics(ticker: str, period: str = "1y") -> Dict[str, Any]:
             "sharpe_ratio": 0.0,
             "error": str(e),
         }
+
+
+@router.post("/portfolio/valuate")
+async def portfolio_valuate(body: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Value a portfolio from body { "holdings": [ {symbol, shares} or {symbol, weight} ] }.
+    Uses latest prices from DB or DataFetcher (no hardcoded prices).
+    """
+    from core.db import get_ohlcv_range
+    holdings = body.get("holdings") if isinstance(body, dict) else []
+    if not isinstance(holdings, list):
+        holdings = []
+    from datetime import datetime, timedelta, timezone
+    if not holdings:
+        return {"total_value": 0, "positions": [], "error": "No holdings"}
+    end = datetime.now(timezone.utc)
+    start = (end - timedelta(days=5)).strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
+    positions = []
+    total = 0.0
+    for h in holdings:
+        sym = (h.get("symbol") or h.get("ticker") or "").upper()
+        if not sym:
+            continue
+        shares = h.get("shares")
+        weight = h.get("weight")
+        price = None
+        rows = get_ohlcv_range(sym, start, end_str)
+        if rows:
+            price = float(rows[-1]["close"])
+        if price is None:
+            try:
+                from core.data_fetcher import DataFetcher
+                df = DataFetcher().get_stock_data(sym, period="5d")
+                if df is not None and not df.empty and "Close" in df.columns:
+                    price = float(df["Close"].iloc[-1])
+            except Exception:
+                pass
+        if price is None:
+            positions.append({"symbol": sym, "shares": shares, "weight": weight, "price": None, "value": None})
+            continue
+        sh = float(shares or 0)
+        val = sh * price if sh > 0 else None
+        if val is not None:
+            total += val
+        positions.append({"symbol": sym, "shares": sh if sh > 0 else None, "weight": weight, "price": round(price, 2), "value": round(val, 2) if val is not None else None})
+    if total == 0 and any(h.get("weight") is not None for h in holdings):
+        notional = 1_000_000.0
+        for i, h in enumerate(holdings):
+            w = h.get("weight")
+            if w is not None and i < len(positions) and positions[i].get("price"):
+                v = float(w) * notional
+                positions[i]["value"] = round(v, 2)
+                positions[i]["shares"] = round(v / positions[i]["price"], 2)
+                total += v
+    return {"total_value": round(total, 2), "positions": positions}
+
+
+@router.get("/portfolio/correlation")
+async def portfolio_correlation(
+    symbols: str = Query("AAPL,MSFT,GOOGL", description="Comma-separated symbols"),
+    period: str = Query("1y"),
+) -> Dict[str, Any]:
+    """Correlation matrix of returns from real price data (DB or fetcher)."""
+    import numpy as np
+    import pandas as pd
+    sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:20]
+    if len(sym_list) < 2:
+        return {"matrix": {}, "symbols": [], "error": "Provide at least 2 symbols"}
+    from core.db import get_ohlcv_range
+    from datetime import datetime, timedelta, timezone
+    days = 365 if "y" in period else 30 * int(period.replace("m", "").replace("d", "")) if period.replace("m", "").replace("d", "").isdigit() else 365
+    end = datetime.now(timezone.utc)
+    start = (end - timedelta(days=days)).strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
+    data = {}
+    for sym in sym_list:
+        rows = get_ohlcv_range(sym, start, end_str)
+        if rows:
+            data[sym] = [r["close"] for r in rows]
+    if not data:
+        try:
+            from core.data_fetcher import DataFetcher
+            df = DataFetcher().get_stock_data(",".join(sym_list), period=period)
+            if df is not None and not df.empty:
+                if isinstance(df.columns, pd.MultiIndex):
+                    for s in sym_list:
+                        if (s,) in df.columns.get_level_values(0):
+                            data[s] = df[s]["Close"].dropna().tolist()
+                elif "Close" in df.columns:
+                    data[sym_list[0]] = df["Close"].tolist()
+        except Exception as e:
+            logger.warning("Correlation data fetch failed: %s", e)
+    if len(data) < 2:
+        return {"matrix": {}, "symbols": sym_list, "error": "Insufficient price data"}
+    df = pd.DataFrame(data).dropna()
+    if len(df) < 20:
+        return {"matrix": {}, "symbols": sym_list, "error": "Need at least 20 observations"}
+    ret = df.pct_change().dropna()
+    corr = ret.corr()
+    return {"matrix": corr.round(4).to_dict(), "symbols": list(corr.columns)}
+
+
+@router.post("/optimize")
+async def post_portfolio_optimize(req: OptimizeRequest) -> Dict[str, Any]:
+    """
+    Mean-variance portfolio optimization from real historical returns (DB).
+    Returns optimal weights, expected return, volatility, Sharpe, efficient frontier plot data.
+    """
+    end = req.end_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    start = req.start_date or (datetime.now(timezone.utc) - timedelta(days=365 * 5)).strftime("%Y-%m-%d")
+    try:
+        from core.optimizer_service import run_optimization
+        result = run_optimization(
+            tickers=req.tickers,
+            start_date=start,
+            end_date=end,
+            risk_free_rate=req.risk_free_rate,
+        )
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("Optimize failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/stress-test")
+async def post_stress_test(req: StressTestRequest) -> Dict[str, Any]:
+    """
+    Apply historical crisis scenarios using real OHLCV from DB during crisis windows.
+    Scenarios: 2008 Financial Crisis, COVID Crash, Dot-com Bust, 2022 Rate Shock.
+    Returns portfolio drawdown per scenario, worst single-day loss, recovery time.
+    """
+    try:
+        from core.stress_test_service import run_stress_test
+        result = run_stress_test(tickers=req.tickers, weights=req.weights)
+        if "error" in result and not result.get("scenarios"):
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("Stress test failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/stress/scenarios")
@@ -387,9 +547,10 @@ async def analyze_multi_factor(
     - Residual risk
     """
     try:
+        import numpy as np
         from models.factors.multi_factor import MultiFactorModel
         import yfinance as yf
-        
+
         # Download asset data
         asset = yf.download(ticker.upper(), period=period, progress=False)
         if asset.empty or "Close" not in asset.columns:
@@ -458,9 +619,10 @@ async def calculate_factor_ic(
     High IC indicates predictive power.
     """
     try:
+        import pandas as pd
         from models.factors.factor_analysis import SimpleFactorAnalysis
         import yfinance as yf
-        
+
         # Get universe data
         universe_list = [s.strip().upper() for s in universe_symbols.split(',')]
         data = yf.download(universe_list, period=period, progress=False)

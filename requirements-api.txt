@@ -10,8 +10,9 @@ python-Levenshtein>=0.21.0
 # Auth (JWT) and config for Render/production
 PyJWT>=2.8.0
 python-dotenv>=1.0.0
-# AI (OpenAI) for stock analysis and NL query
+# AI (OpenAI + Anthropic) for stock analysis and NL query
 openai>=1.0.0
+anthropic>=0.18.0
 requests>=2.31.0
 
 # Existing project dependencies (from requirements.txt)
@@ -33,3 +34,15 @@ xlsxwriter>=3.1.2
 # RL Dependencies
 stable-baselines3==2.1.0
 gymnasium>=0.29.0
+
+# Database (PostgreSQL + TimescaleDB)
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9
+alembic>=1.13.0
+
+# Celery + Redis (workers)
+celery[redis]>=5.3.0
+redis>=5.0.0
+
+# News sentiment (no external API)
+vaderSentiment>=3.3.2

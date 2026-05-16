@@ -83,9 +83,33 @@ def test_terminal_settings_load_structure():
     assert hasattr(settings, "data")
     assert hasattr(settings, "backtest")
     assert hasattr(settings, "ai")
+    assert hasattr(settings, "infra")
     assert settings.data is not None
     assert settings.backtest is not None
     assert settings.ai is not None
+    assert settings.infra is not None
+
+
+def test_newsapi_key_uses_canonical_env(monkeypatch):
+    """Data settings should use canonical NEWSAPI_KEY."""
+    import config.settings as mod
+    mod._settings = None
+    monkeypatch.setenv("NEWSAPI_KEY", "news-key")
+    s = mod.get_settings()
+    assert s.data.newsapi_key == "news-key"
+
+
+def test_infra_settings_from_env(monkeypatch):
+    """Infra settings should load DATABASE_URL and REDIS_URL."""
+    import config.settings as mod
+    mod._settings = None
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db")
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    s = mod.get_settings()
+    assert s.infra.database_url == "postgresql://user:pass@localhost:5432/db"
+    assert s.infra.redis_url == "redis://localhost:6379/0"
+    assert s.infra.database_configured is True
+    assert s.infra.redis_configured is True
 
 
 def test_get_settings_singleton():

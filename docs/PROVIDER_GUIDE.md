@@ -1,7 +1,7 @@
 # Multi-Provider Data System - Implementation Guide
 
 **Status:** Phase 1.1 Complete (WIP)  
-**Last Updated:** February 9, 2026  
+**Last Updated:** February 16, 2026  
 **Components:** 5 providers registered, 18 unit tests passing
 
 ---
@@ -21,6 +21,16 @@ The system now supports 5 data providers with automatic fallback chains:
 | **SEC EDGAR** | FUNDAMENTALS | None | ✅ Registered | 10/sec (free) |
 | **yfinance** | EQUITY, CRYPTO | None | ✅ Fallback | Unlimited |
 
+### Additional APIs (Non-Provider Integrations)
+
+| API | Purpose | API Key | Notes |
+|-----|---------|---------|-------|
+| **FRED** | Macroeconomic data | FRED_API_KEY | Used for macro dashboard and indicators |
+| **Alpha Vantage** | Equity time series, fundamentals | ALPHA_VANTAGE_API_KEY | Use daily endpoints on free tier |
+| **Finnhub** | Company news | FINNHUB_API_KEY | Used by /api/v1/news endpoints |
+| **OpenAI** | AI analysis and reports | OPENAI_API_KEY | Powers AI analysis endpoints |
+| **Alpaca** | Paper trading | ALPACA_API_KEY / ALPACA_API_SECRET | Optional trading execution only |
+
 ---
 
 ## Installation & Setup
@@ -38,6 +48,19 @@ NEWSAPI_KEY=sk_...
 # Macro (existing)
 FRED_API_KEY=...
 ALPHA_VANTAGE_API_KEY=...
+
+# News + AI
+FINNHUB_API_KEY=...
+NEWSAPI_KEY=...
+OPENAI_API_KEY=...
+
+# SEC EDGAR User-Agent (required)
+SEC_USER_AGENT=financial-terminal/1.0 (contact: you@example.com)
+
+# Paper Trading (optional)
+ALPACA_API_KEY=...
+ALPACA_API_SECRET=...
+ALPACA_BASE_URL=https://paper-api.alpaca.markets
 ```
 
 ### 2. Install Dependencies
@@ -57,6 +80,13 @@ All providers are implemented; dependencies already included:
 ```bash
 python -m pytest tests/test_data_providers.py -v
 # Should see: 18 passed, 3 skipped (skipped = API keys not set)
+```
+
+### 4. Health Check Endpoint
+
+```bash
+# Run the health check endpoint to verify API integrations
+curl http://localhost:8000/api/v1/data/health-check
 ```
 
 ---

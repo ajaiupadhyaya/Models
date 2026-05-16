@@ -9,7 +9,6 @@ import os
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import logging
-import requests
 
 from .base import DataProvider, OHLCV, FundamentalsData, AssetType
 
@@ -73,12 +72,14 @@ class IEXProvider(DataProvider):
         ohlcv_list = []
         
         try:
-            resp = requests.get(url, params=params, timeout=self.timeout)
+            resp = self._request("get", url, params=params)
             
             if resp.status_code == 401:
                 raise ValueError("Invalid IEX API key")
             if resp.status_code == 404:
                 raise ValueError(f"Symbol {symbol} not found on IEX")
+            if resp.status_code == 429:
+                raise ValueError("IEX rate limit exceeded")
             
             resp.raise_for_status()
             data = resp.json()

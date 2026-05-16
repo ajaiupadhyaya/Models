@@ -14,7 +14,13 @@ import { ScreeningPanel } from "./panels/ScreeningPanel";
 import { PaperTradingPanel } from "./panels/PaperTradingPanel";
 import { AutomationPanel } from "./panels/AutomationPanel";
 import { AiInsightsPanel } from "./panels/AiInsightsPanel";
+import { DataStatusPanel } from "./panels/DataStatusPanel";
+import { BacktestPanel } from "./panels/BacktestPanel";
+import { OptimizerPanel } from "./panels/OptimizerPanel";
+import { StressTestPanel } from "./panels/StressTestPanel";
+import { NewsSentimentPanel } from "./panels/NewsSentimentPanel";
 import { CommandBar } from "./CommandBar";
+import { TickerSearchBar } from "./TickerSearchBar";
 import { TickerStrip } from "./TickerStrip";
 import {
   TerminalContext,
@@ -28,13 +34,18 @@ import {
 } from "./TerminalContext";
 
 const MODULE_LABELS: Record<ActiveModule, string> = {
+  dataStatus: "Data Status",
   primary: "Primary",
   fundamental: "Fundamental",
   technical: "Technical",
   quant: "Quant",
   economic: "Economic",
   news: "News",
+  newsSentiment: "News & Sentiment",
   portfolio: "Portfolio",
+  backtest: "Backtest",
+  optimizer: "Optimizer",
+  stressTest: "Stress Test",
   paper: "Paper",
   automation: "Automation",
   screening: "Screening",
@@ -90,6 +101,8 @@ function saveLayout(layout: { [id: string]: number }) {
 
 function MainContent({ activeModule }: { activeModule: ActiveModule }) {
   switch (activeModule) {
+    case "dataStatus":
+      return <DataStatusPanel />;
     case "primary":
       return (
         <>
@@ -107,8 +120,16 @@ function MainContent({ activeModule }: { activeModule: ActiveModule }) {
       return <EconomicPanel />;
     case "news":
       return <NewsPanel />;
+    case "newsSentiment":
+      return <NewsSentimentPanel />;
     case "portfolio":
       return <PortfolioPanel />;
+    case "backtest":
+      return <BacktestPanel />;
+    case "optimizer":
+      return <OptimizerPanel />;
+    case "stressTest":
+      return <StressTestPanel />;
     case "paper":
       return <PaperTradingPanel />;
     case "automation":
@@ -185,7 +206,8 @@ export const TerminalShell: React.FC = () => {
 
   const handleRunBacktest = useCallback((symbol: string) => {
     setLastBacktestSymbol(symbol);
-    setActiveModule("quant");
+    setPrimarySymbol(symbol);
+    setActiveModule("backtest");
   }, []);
 
   const handleLayoutChanged = useCallback((layout: { [id: string]: number }) => {
@@ -286,9 +308,10 @@ export const TerminalShell: React.FC = () => {
       }}
     >
       <div className="terminal-root">
-        <header className="terminal-header">
+        <header className="terminal-header" style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div className="terminal-title">BLOOMBERG</div>
-          <div className="terminal-status">
+          <TickerSearchBar />
+          <div className="terminal-status" style={{ marginLeft: "auto" }}>
             <span className={`terminal-status-dot ${wsConnected ? "live" : ""}`} aria-hidden />
             {wsConnected ? "Live" : "Connecting…"} • /api
           </div>

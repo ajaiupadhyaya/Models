@@ -9,7 +9,7 @@ Free tier: No API key required
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import logging
-import requests
+import os
 import json
 
 from .base import DataProvider, OHLCV, FundamentalsData, AssetType
@@ -67,7 +67,7 @@ class SECEdgarProvider(DataProvider):
                 "output": "json",
             }
             
-            resp = requests.get(url, params=params, timeout=self.timeout)
+            resp = self._request("get", url, params=params, headers=self._headers())
             resp.raise_for_status()
             data = resp.json()
             
@@ -97,7 +97,7 @@ class SECEdgarProvider(DataProvider):
             # Fetch company facts (aggregated financials)
             # https://data.sec.gov/api/xbrl/companyfacts/CIK0000000051.json
             url = f"{self.BASE_URL}/companyfacts/CIK{cik}.json"
-            resp = requests.get(url, timeout=self.timeout)
+            resp = self._request("get", url, headers=self._headers())
             
             if resp.status_code == 404:
                 logger.warning(f"Company facts not found for CIK {cik}")
@@ -165,7 +165,8 @@ class SECEdgarProvider(DataProvider):
         try:
             # Test with known company (Apple Inc.)
             url = "https://www.sec.gov/cgi-bin/browse-edgar"
-            resp = requests.get(
+            resp = self._request(
+                "get",
                 url,
                 params={
                     "action": "getcompany",
@@ -174,7 +175,16 @@ class SECEdgarProvider(DataProvider):
                     "output": "json",
                 },
                 timeout=5,
+                headers=self._headers(),
             )
             return resp.status_code == 200
         except:
             return False
+
+    def _headers(self) -> Dict[str, str]:
+        """Provide SEC-compliant headers with a user agent."""
+        user_agent = os.getenv("SEC_USER_AGENT", "financial-terminal/1.0 (contact: support@example.com)")
+        return {
+            "User-Agent": user_agent,
+            "Accept-Encoding": "gzip, deflate",
+        }

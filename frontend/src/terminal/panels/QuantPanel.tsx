@@ -2,8 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { resolveApiUrl } from "../../apiBase";
 import { useFetchWithRetry, getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { useTerminal } from "../TerminalContext";
-import { AreaChart, BarChart } from "../../charts";
-import type { TimeSeriesPoint } from "../../charts";
+import { BarChart, TimeSeriesLine } from "../../charts";
+import { TERMINAL_API_ENDPOINTS } from "../endpoints";
 
 interface ModelInfo {
   name: string;
@@ -35,14 +35,11 @@ function parseModels(json: unknown): ModelInfo[] | null {
 const MODEL_TYPES = ["simple", "ensemble", "lstm"] as const;
 
 export const QuantPanel: React.FC = () => {
-  const { primarySymbol, lastBacktestSymbol } = useTerminal();
-  const { data: modelsList, error: modelsError, loading: modelsLoading, retry: modelsRetry } = useFetchWithRetry<ModelInfo[] | null>("/api/v1/models", {
+  const { primarySymbol, setActiveModule } = useTerminal();
+  const { data: modelsList, retry: modelsRetry } = useFetchWithRetry<ModelInfo[] | null>(TERMINAL_API_ENDPOINTS.models, {
     parse: parseModels,
   });
   const models = modelsList ?? [];
-  const [backtest, setBacktest] = useState<BacktestResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [compareModels, setCompareModels] = useState<string[]>([]);
   const [compareResult, setCompareResult] = useState<{
     strategies: Array<{ model_name: string; metrics?: Record<string, number | null>; error?: string }>;
@@ -62,7 +59,7 @@ export const QuantPanel: React.FC = () => {
   const [wfResult, setWfResult] = useState<Record<string, unknown> | null>(null);
   const [wfLoading, setWfLoading] = useState(false);
   const [wfError, setWfError] = useState<string | null>(null);
-  const symbol = lastBacktestSymbol || primarySymbol;
+  const symbol = primarySymbol;
   useEffect(() => { if (models.length > 0 && !wfModel) setWfModel(models[0].name); }, [models, wfModel]);
 
   // Train form state
@@ -91,12 +88,40 @@ export const QuantPanel: React.FC = () => {
   const [techLoading, setTechLoading] = useState(false);
   const [techError, setTechError] = useState<string | null>(null);
 
+  const [factorSymbols, setFactorSymbols] = useState("AAPL,MSFT,GOOGL,AMZN,META,NVDA,JPM,V,PG,JNJ");
+  const [factorFactors, setFactorFactors] = useState("momentum,value,quality,low_vol,size");
+  const [factorResult, setFactorResult] = useState<{ factors?: string[]; ranked?: Array<{ symbol: string; scores?: Record<string, number>; composite?: number }> } | null>(null);
+  const [factorLoading, setFactorLoading] = useState(false);
+  const [factorError, setFactorError] = useState<string | null>(null);
+
+  const [pairsSym1, setPairsSym1] = useState("XOM");
+  const [pairsSym2, setPairsSym2] = useState("CVX");
+  const [pairsResult, setPairsResult] = useState<{
+    spread_series?: Array<{ date: string; spread: number }>;
+    zscore_series?: Array<{ date: string; zscore: number }>;
+    zscore_current?: number;
+    signals?: Array<{ date: string; signal: string }>;
+    cointegrated?: boolean;
+    backtest_sharpe?: number;
+  } | null>(null);
+  const [pairsLoading, setPairsLoading] = useState(false);
+  const [pairsError, setPairsError] = useState<string | null>(null);
+
+  const [optionsTicker, setOptionsTicker] = useState(primarySymbol);
+  const [optionsResult, setOptionsResult] = useState<{
+    calls?: Array<{ expiry: string; strike: number; market_price: number; model_price: number; iv: number }>;
+    puts?: Array<{ expiry: string; strike: number; market_price: number; model_price: number; iv: number }>;
+    spot_price?: number;
+  } | null>(null);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
+
   const runTrain = useCallback(async () => {
     const modelName = trainModelName.trim() || `model_${trainSymbol}_${trainModelType}`;
     setTrainLoading(true);
     setTrainResult(null);
     try {
-      const res = await fetch(resolveApiUrl("/api/v1/models/train"), {
+      const res = await fetch(resolveApiUrl(TERMINAL_API_ENDPOINTS.trainModel), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
@@ -125,42 +150,6 @@ export const QuantPanel: React.FC = () => {
     }
   }, [trainSymbol, trainModelName, trainModelType, trainStart, trainEnd, modelsRetry]);
 
-  const runBacktest = useCallback(async () => {
-    const modelName = models[0]?.name ?? "default";
-    const end = new Date();
-    const start = new Date();
-    start.setFullYear(start.getFullYear() - 1);
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(resolveApiUrl("/api/v1/backtest/run"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          model_name: modelName,
-          symbol,
-          start_date: start.toISOString().slice(0, 10),
-          end_date: end.toISOString().slice(0, 10),
-          initial_capital: 100000,
-          commission: 0.001,
-          position_size: 0.2,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(json?.detail ?? `HTTP ${res.status}`);
-        setBacktest(null);
-        return;
-      }
-      setBacktest(json as BacktestResult);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed");
-      setBacktest(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [models, symbol]);
-
   const runCompare = useCallback(async () => {
     const toCompare = compareModels.length >= 2 ? compareModels : models.slice(0, 2).map((m) => m.name);
     if (toCompare.length < 2) {
@@ -174,7 +163,7 @@ export const QuantPanel: React.FC = () => {
     setCompareError(null);
     setCompareResult(null);
     try {
-      const res = await fetch(resolveApiUrl("/api/v1/backtest/compare"), {
+      const res = await fetch(resolveApiUrl(TERMINAL_API_ENDPOINTS.backtestCompare), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
@@ -215,7 +204,7 @@ export const QuantPanel: React.FC = () => {
     setWfError(null);
     setWfResult(null);
     try {
-      const res = await fetch(resolveApiUrl("/api/v1/backtest/walk-forward"), {
+      const res = await fetch(resolveApiUrl(TERMINAL_API_ENDPOINTS.backtestWalkForward), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
@@ -245,7 +234,7 @@ export const QuantPanel: React.FC = () => {
     setTechError(null);
     setTechBacktest(null);
     try {
-      const res = await fetch(resolveApiUrl("/api/v1/backtest/technical"), {
+      const res = await fetch(resolveApiUrl(TERMINAL_API_ENDPOINTS.backtestTechnical), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
@@ -272,17 +261,74 @@ export const QuantPanel: React.FC = () => {
     }
   }, [symbol, techStart, techEnd, techFast, techSlow]);
 
-  useEffect(() => {
-    if (lastBacktestSymbol && models.length > 0 && !backtest && !loading) {
-      runBacktest();
+  const runFactorRank = useCallback(async () => {
+    setFactorLoading(true);
+    setFactorError(null);
+    setFactorResult(null);
+    try {
+      const params = new URLSearchParams({
+        symbols: factorSymbols,
+        factors: factorFactors,
+      });
+      const res = await fetch(resolveApiUrl(`${TERMINAL_API_ENDPOINTS.quantFactorRank}?${params}`), {
+        method: "POST",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFactorError((json as { detail?: string }).detail ?? `HTTP ${res.status}`);
+        return;
+      }
+      setFactorResult(json);
+    } catch (err) {
+      setFactorError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setFactorLoading(false);
     }
-  }, [lastBacktestSymbol, models.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [factorSymbols, factorFactors]);
 
-  const metrics = backtest?.metrics ?? {};
+  const runPairs = useCallback(async () => {
+    setPairsLoading(true);
+    setPairsError(null);
+    setPairsResult(null);
+    try {
+      const res = await fetch(resolveApiUrl(`${TERMINAL_API_ENDPOINTS.quantPairs}?symbol1=${encodeURIComponent(pairsSym1)}&symbol2=${encodeURIComponent(pairsSym2)}&period_days=252`));
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPairsError((json as { detail?: string }).detail ?? `HTTP ${res.status}`);
+        return;
+      }
+      setPairsResult(json);
+    } catch (err) {
+      setPairsError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setPairsLoading(false);
+    }
+  }, [pairsSym1, pairsSym2]);
+
+  const runOptionsChain = useCallback(async () => {
+    setOptionsLoading(true);
+    setOptionsError(null);
+    setOptionsResult(null);
+    try {
+      const res = await fetch(resolveApiUrl(`${TERMINAL_API_ENDPOINTS.quantOptionsChain}/${encodeURIComponent(optionsTicker.toUpperCase())}`));
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setOptionsError((json as { detail?: string }).detail ?? json.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      if (json.error && !json.calls?.length && !json.puts?.length) {
+        setOptionsError(json.error);
+        return;
+      }
+      setOptionsResult(json);
+    } catch (err) {
+      setOptionsError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setOptionsLoading(false);
+    }
+  }, [optionsTicker]);
+
   const techMetrics = techBacktest?.metrics ?? {};
-  const sharpe = metrics.sharpe_ratio ?? metrics.sharpe ?? null;
-  const maxDd = metrics.max_drawdown_pct ?? metrics.max_drawdown ?? null;
-  const totalReturn = metrics.total_return_pct ?? metrics.total_return ?? metrics.cumulative_return ?? null;
 
   return (
     <section className="panel panel-main">
@@ -402,69 +448,104 @@ export const QuantPanel: React.FC = () => {
           )}
         </div>
 
-        <div style={{ marginBottom: 8 }}>
-          <span style={{ color: "var(--text-soft)" }}>Models: </span>
-          {modelsError ? (
-            <>
-              {modelsError}
-              <button type="button" className="ai-button" style={{ marginLeft: 8 }} onClick={modelsRetry}>Retry</button>
-            </>
-          ) : modelsLoading && models.length === 0 ? (
-            "Loading…"
-          ) : models.length === 0 ? (
-            "None loaded. Train or load via API."
-          ) : (
-            models.map((m) => m.name).join(", ")
+        {/* Factor model */}
+        <div style={{ marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
+          <div style={{ color: "var(--text-soft)", marginBottom: 8, fontWeight: 600 }}>Factor model (real data)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
+            <input type="text" className="ai-input" placeholder="Symbols" value={factorSymbols} onChange={(e) => setFactorSymbols(e.target.value)} style={{ width: 200 }} />
+            <input type="text" className="ai-input" placeholder="Factors" value={factorFactors} onChange={(e) => setFactorFactors(e.target.value)} style={{ width: 180 }} />
+            <button type="button" className="ai-button" disabled={factorLoading} onClick={runFactorRank}>{factorLoading ? "Running…" : "Rank"}</button>
+          </div>
+          {factorError && <div style={{ color: "var(--accent-red)", fontSize: 11, marginBottom: 4 }}>{factorError}</div>}
+          {factorResult?.ranked && factorResult.ranked.length > 0 && (
+            <div style={{ overflowX: "auto", maxHeight: 160, overflowY: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                <thead><tr><th style={{ textAlign: "left", color: "var(--text-soft)" }}>Symbol</th><th style={{ textAlign: "right", color: "var(--text-soft)" }}>Composite</th></tr></thead>
+                <tbody>
+                  {factorResult.ranked.slice(0, 15).map((r) => (
+                    <tr key={r.symbol}><td style={{ color: "var(--accent)" }}>{r.symbol}</td><td className="num-mono" style={{ textAlign: "right" }}>{(r.composite ?? 0).toFixed(3)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-        <button
-          type="button"
-          className="ai-button"
-          disabled={loading || models.length === 0}
-          onClick={runBacktest}
-          style={{ marginBottom: 12 }}
-        >
-          {loading ? "Running…" : `Run backtest (${symbol})`}
-        </button>
-        {error && (
-          <div style={{ color: "var(--accent-red)", marginBottom: 8 }}>{error}</div>
-        )}
-        {backtest && backtest.equity_curve && backtest.equity_curve.length >= 2 && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ color: "var(--accent)", marginBottom: 4, fontSize: 11 }}>Equity curve</div>
-            <AreaChart
-              data={backtest.equity_curve.map((p) => ({ date: new Date(p.date), value: p.equity })) as TimeSeriesPoint[]}
-              height={160}
-              marginPreset="compact"
-              title=""
-              className="chart-root"
-            />
+
+        {/* Pairs trading */}
+        <div style={{ marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
+          <div style={{ color: "var(--text-soft)", marginBottom: 8, fontWeight: 600 }}>Pairs trading (spread & z-score)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
+            <input type="text" className="ai-input" placeholder="Symbol 1" value={pairsSym1} onChange={(e) => setPairsSym1(e.target.value.toUpperCase())} style={{ width: 72 }} />
+            <input type="text" className="ai-input" placeholder="Symbol 2" value={pairsSym2} onChange={(e) => setPairsSym2(e.target.value.toUpperCase())} style={{ width: 72 }} />
+            <button type="button" className="ai-button" disabled={pairsLoading} onClick={runPairs}>{pairsLoading ? "Loading…" : "Analyze"}</button>
           </div>
-        )}
-        {backtest && (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-            <tbody>
-              <tr>
-                <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Sharpe ratio</td>
-                <td className="num-mono" style={{ textAlign: "right" }}>
-                  {sharpe != null ? Number(sharpe).toFixed(3) : "—"}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Max drawdown %</td>
-                <td className="num-mono" style={{ textAlign: "right" }}>
-                  {maxDd != null ? `${Number(maxDd).toFixed(2)}%` : "—"}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Total return %</td>
-                <td className="num-mono" style={{ textAlign: "right" }}>
-                  {totalReturn != null ? `${Number(totalReturn).toFixed(2)}%` : "—"}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        )}
+          {pairsError && <div style={{ color: "var(--accent-red)", fontSize: 11, marginBottom: 4 }}>{pairsError}</div>}
+          {pairsResult && (
+            <>
+              <div style={{ fontSize: 11, marginBottom: 6 }}>
+                <span className="num-mono" style={{ marginRight: 12 }}>Z-score: {(pairsResult.zscore_current ?? 0).toFixed(2)}</span>
+                <span style={{ marginRight: 12 }}>Cointegrated: {pairsResult.cointegrated ? "Yes" : "No"}</span>
+                <span className="num-mono">Sharpe: {(pairsResult.backtest_sharpe ?? 0).toFixed(2)}</span>
+              </div>
+              {pairsResult.zscore_series && pairsResult.zscore_series.length >= 2 && (
+                <div style={{ marginBottom: 8 }}>
+                  <TimeSeriesLine data={pairsResult.zscore_series.map((p) => ({ date: new Date(p.date), value: p.zscore }))} height={140} marginPreset="compact" title="Z-score" className="chart-root" stroke="var(--accent)" valueFormat={(v) => v.toFixed(2)} xAxisLabel="Date" yAxisLabel="Z-score" />
+                </div>
+              )}
+              {pairsResult.spread_series && pairsResult.spread_series.length >= 2 && (
+                <TimeSeriesLine data={pairsResult.spread_series.map((p) => ({ date: new Date(p.date), value: p.spread }))} height={120} marginPreset="compact" title="Spread" className="chart-root" stroke="var(--accent-green)" valueFormat={(v) => v.toFixed(4)} xAxisLabel="Date" yAxisLabel="Spread" />
+              )}
+              {pairsResult.signals && pairsResult.signals.length > 0 && (
+                <div style={{ fontSize: 10, color: "var(--text-soft)", marginTop: 4 }}>Signals: {pairsResult.signals.filter((s) => s.signal !== "hold").slice(-5).map((s) => `${s.date} ${s.signal}`).join(", ")}</div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Options chain */}
+        <div style={{ marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
+          <div style={{ color: "var(--text-soft)", marginBottom: 8, fontWeight: 600 }}>Options chain (yfinance)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
+            <input type="text" className="ai-input" placeholder="Ticker" value={optionsTicker} onChange={(e) => setOptionsTicker(e.target.value.toUpperCase())} style={{ width: 72 }} />
+            <button type="button" className="ai-button" disabled={optionsLoading} onClick={runOptionsChain}>{optionsLoading ? "Loading…" : "Load chain"}</button>
+          </div>
+          {optionsError && <div style={{ color: "var(--accent-red)", fontSize: 11, marginBottom: 4 }}>{optionsError}</div>}
+          {optionsResult && (optionsResult.calls?.length || optionsResult.puts?.length) ? (
+            <div style={{ overflowX: "auto", maxHeight: 240, overflowY: "auto", fontSize: 10 }}>
+              <div style={{ color: "var(--accent)", marginBottom: 4 }}>Spot: ${(optionsResult.spot_price ?? 0).toFixed(2)}</div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left", color: "var(--text-soft)" }}>Type</th>
+                    <th style={{ textAlign: "right", color: "var(--text-soft)" }}>Strike</th>
+                    <th style={{ textAlign: "right", color: "var(--text-soft)" }}>Market</th>
+                    <th style={{ textAlign: "right", color: "var(--text-soft)" }}>Model</th>
+                    <th style={{ textAlign: "right", color: "var(--text-soft)" }}>IV</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(optionsResult.calls ?? []).slice(0, 12).map((c, i) => (
+                    <tr key={`c-${i}`}><td style={{ color: "var(--accent-green)" }}>Call</td><td className="num-mono" style={{ textAlign: "right" }}>{c.strike}</td><td className="num-mono" style={{ textAlign: "right" }}>{c.market_price}</td><td className="num-mono" style={{ textAlign: "right" }}>{c.model_price}</td><td className="num-mono" style={{ textAlign: "right" }}>{(c.iv * 100).toFixed(1)}%</td></tr>
+                  ))}
+                  {(optionsResult.puts ?? []).slice(0, 12).map((p, i) => (
+                    <tr key={`p-${i}`}><td style={{ color: "var(--accent-red)" }}>Put</td><td className="num-mono" style={{ textAlign: "right" }}>{p.strike}</td><td className="num-mono" style={{ textAlign: "right" }}>{p.market_price}</td><td className="num-mono" style={{ textAlign: "right" }}>{p.model_price}</td><td className="num-mono" style={{ textAlign: "right" }}>{(p.iv * 100).toFixed(1)}%</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </div>
+
+        <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "var(--text-soft)" }}>Use the dedicated Backtest module for strategy runs.</span>
+          <button
+            type="button"
+            className="ai-button"
+            onClick={() => setActiveModule("backtest")}
+          >
+            Open Backtest
+          </button>
+        </div>
 
         {/* Compare strategies */}
         <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--border)" }}>

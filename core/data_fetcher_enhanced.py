@@ -238,6 +238,413 @@ class DataSourceHealthChecker:
                 "message": str(e),
                 "operational": False
             }
+
+    @staticmethod
+    def check_alpha_vantage() -> Dict[str, Any]:
+        """Check Alpha Vantage API (daily data endpoint)."""
+        import os
+        import requests
+
+        api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+        if not api_key or not api_key.strip():
+            return {
+                "status": "not_configured",
+                "message": "ALPHA_VANTAGE_API_KEY not set",
+                "operational": False
+            }
+
+        try:
+            url = "https://www.alphavantage.co/query"
+            params = {
+                "function": "TIME_SERIES_DAILY",
+                "symbol": "AAPL",
+                "apikey": api_key.strip(),
+            }
+            resp = requests.get(url, params=params, timeout=10)
+            if resp.status_code != 200:
+                return {
+                    "status": "error",
+                    "message": f"HTTP {resp.status_code}",
+                    "operational": False
+                }
+            data = resp.json()
+            if "Time Series (Daily)" in data:
+                return {
+                    "status": "operational",
+                    "message": "Alpha Vantage daily endpoint OK",
+                    "operational": True
+                }
+            if "Note" in data:
+                return {
+                    "status": "degraded",
+                    "message": "Rate limit reached",
+                    "operational": False
+                }
+            if "Information" in data:
+                return {
+                    "status": "degraded",
+                    "message": data.get("Information", "Premium endpoint or limited access"),
+                    "operational": False
+                }
+            return {
+                "status": "degraded",
+                "message": "Unexpected response structure",
+                "operational": False
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": str(e),
+                "operational": False
+            }
+
+    @staticmethod
+    def check_finnhub() -> Dict[str, Any]:
+        """Check Finnhub API (news endpoint)."""
+        import os
+        import requests
+
+        api_key = os.getenv("FINNHUB_API_KEY")
+        if not api_key or not api_key.strip():
+            return {
+                "status": "not_configured",
+                "message": "FINNHUB_API_KEY not set",
+                "operational": False
+            }
+
+        try:
+            from_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+            to_date = datetime.now().strftime("%Y-%m-%d")
+            url = "https://finnhub.io/api/v1/company-news"
+            params = {
+                "symbol": "AAPL",
+                "from": from_date,
+                "to": to_date,
+                "token": api_key.strip(),
+            }
+            resp = requests.get(url, params=params, timeout=10)
+            if resp.status_code == 401:
+                return {
+                    "status": "error",
+                    "message": "Invalid API key",
+                    "operational": False
+                }
+            if resp.status_code == 429:
+                return {
+                    "status": "degraded",
+                    "message": "Rate limit exceeded",
+                    "operational": False
+                }
+            if resp.status_code != 200:
+                return {
+                    "status": "error",
+                    "message": f"HTTP {resp.status_code}",
+                    "operational": False
+                }
+            data = resp.json()
+            if isinstance(data, list):
+                return {
+                    "status": "operational",
+                    "message": "Finnhub news endpoint OK",
+                    "operational": True,
+                    "items": len(data)
+                }
+            return {
+                "status": "degraded",
+                "message": "Unexpected response format",
+                "operational": False
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": str(e),
+                "operational": False
+            }
+
+    @staticmethod
+    def check_polygon() -> Dict[str, Any]:
+        """Check Polygon.io API (aggregates endpoint)."""
+        import os
+        import requests
+
+        api_key = os.getenv("POLYGON_API_KEY")
+        if not api_key or not api_key.strip():
+            return {
+                "status": "not_configured",
+                "message": "POLYGON_API_KEY not set",
+                "operational": False
+            }
+
+        try:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+            start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+            url = f"https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/{start_date}/{end_date}"
+            resp = requests.get(url, params={"apikey": api_key.strip()}, timeout=10)
+            if resp.status_code in (401, 403):
+                return {
+                    "status": "error",
+                    "message": "Invalid API key",
+                    "operational": False
+                }
+            if resp.status_code == 429:
+                return {
+                    "status": "degraded",
+                    "message": "Rate limit exceeded",
+                    "operational": False
+                }
+            if resp.status_code != 200:
+                return {
+                    "status": "error",
+                    "message": f"HTTP {resp.status_code}",
+                    "operational": False
+                }
+            data = resp.json()
+            if data.get("results"):
+                return {
+                    "status": "operational",
+                    "message": "Polygon aggregates endpoint OK",
+                    "operational": True,
+                    "bars": len(data.get("results", []))
+                }
+            return {
+                "status": "degraded",
+                "message": data.get("error", "No data returned"),
+                "operational": False
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": str(e),
+                "operational": False
+            }
+
+    @staticmethod
+    def check_iex() -> Dict[str, Any]:
+        """Check IEX Cloud API (chart endpoint)."""
+        import os
+        import requests
+
+        api_key = os.getenv("IEX_API_KEY")
+        if not api_key or not api_key.strip():
+            return {
+                "status": "not_configured",
+                "message": "IEX_API_KEY not set",
+                "operational": False
+            }
+
+        try:
+            url = "https://cloud.iexapis.com/stable/stock/AAPL/chart/1m"
+            resp = requests.get(url, params={"token": api_key.strip()}, timeout=10)
+            if resp.status_code in (401, 403):
+                return {
+                    "status": "error",
+                    "message": "Invalid API key",
+                    "operational": False
+                }
+            if resp.status_code == 429:
+                return {
+                    "status": "degraded",
+                    "message": "Rate limit exceeded",
+                    "operational": False
+                }
+            if resp.status_code != 200:
+                return {
+                    "status": "error",
+                    "message": f"HTTP {resp.status_code}",
+                    "operational": False
+                }
+            data = resp.json()
+            if isinstance(data, list):
+                return {
+                    "status": "operational",
+                    "message": "IEX chart endpoint OK",
+                    "operational": True,
+                    "bars": len(data)
+                }
+            return {
+                "status": "degraded",
+                "message": "Unexpected response format",
+                "operational": False
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": str(e),
+                "operational": False
+            }
+
+    @staticmethod
+    def check_newsapi() -> Dict[str, Any]:
+        """Check NewsAPI.org (everything endpoint)."""
+        import os
+        import requests
+
+        api_key = os.getenv("NEWSAPI_KEY")
+        if not api_key or not api_key.strip():
+            return {
+                "status": "not_configured",
+                "message": "NEWSAPI_KEY not set",
+                "operational": False
+            }
+
+        try:
+            url = "https://newsapi.org/v2/everything"
+            resp = requests.get(
+                url,
+                params={"q": "stock market", "pageSize": 5, "apiKey": api_key.strip()},
+                timeout=10,
+            )
+            if resp.status_code == 401:
+                return {
+                    "status": "error",
+                    "message": "Invalid API key",
+                    "operational": False
+                }
+            if resp.status_code == 429:
+                return {
+                    "status": "degraded",
+                    "message": "Rate limit exceeded",
+                    "operational": False
+                }
+            if resp.status_code != 200:
+                return {
+                    "status": "error",
+                    "message": f"HTTP {resp.status_code}",
+                    "operational": False
+                }
+            data = resp.json()
+            if data.get("status") == "ok":
+                return {
+                    "status": "operational",
+                    "message": "NewsAPI endpoint OK",
+                    "operational": True,
+                    "articles": len(data.get("articles", []))
+                }
+            return {
+                "status": "degraded",
+                "message": data.get("message", "Unexpected response"),
+                "operational": False
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": str(e),
+                "operational": False
+            }
+
+    @staticmethod
+    def check_coingecko() -> Dict[str, Any]:
+        """Check CoinGecko (simple price endpoint)."""
+        import requests
+
+        try:
+            url = "https://api.coingecko.com/api/v3/simple/price"
+            resp = requests.get(url, params={"ids": "bitcoin", "vs_currencies": "usd"}, timeout=10)
+            if resp.status_code == 429:
+                return {
+                    "status": "degraded",
+                    "message": "Rate limit exceeded",
+                    "operational": False
+                }
+            if resp.status_code != 200:
+                return {
+                    "status": "error",
+                    "message": f"HTTP {resp.status_code}",
+                    "operational": False
+                }
+            data = resp.json()
+            if data.get("bitcoin", {}).get("usd") is not None:
+                return {
+                    "status": "operational",
+                    "message": "CoinGecko endpoint OK",
+                    "operational": True
+                }
+            return {
+                "status": "degraded",
+                "message": "Unexpected response format",
+                "operational": False
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": str(e),
+                "operational": False
+            }
+
+    @staticmethod
+    def check_alpaca() -> Dict[str, Any]:
+        """Check Alpaca account endpoint."""
+        import os
+        import requests
+
+        key = os.getenv("ALPACA_API_KEY")
+        secret = os.getenv("ALPACA_API_SECRET")
+        if not key or not secret:
+            return {
+                "status": "not_configured",
+                "message": "ALPACA_API_KEY/ALPACA_API_SECRET not set",
+                "operational": False
+            }
+
+        try:
+            base_url = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+            url = f"{base_url}/v2/account"
+            headers = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret}
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 401:
+                return {
+                    "status": "error",
+                    "message": "Invalid Alpaca credentials",
+                    "operational": False
+                }
+            if resp.status_code != 200:
+                return {
+                    "status": "error",
+                    "message": f"HTTP {resp.status_code}",
+                    "operational": False
+                }
+            return {
+                "status": "operational",
+                "message": "Alpaca account endpoint OK",
+                "operational": True
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": str(e),
+                "operational": False
+            }
+
+    @staticmethod
+    def check_sec_edgar() -> Dict[str, Any]:
+        """Check SEC EDGAR endpoint."""
+        import os
+        import requests
+
+        try:
+            url = "https://www.sec.gov/cgi-bin/browse-edgar"
+            headers = {
+                "User-Agent": os.getenv("SEC_USER_AGENT", "financial-terminal/1.0 (contact: support@example.com)"),
+                "Accept-Encoding": "gzip, deflate",
+            }
+            resp = requests.get(url, params={"action": "getcompany", "CIK": "AAPL", "count": 1, "output": "json"}, timeout=10, headers=headers)
+            if resp.status_code == 200:
+                return {
+                    "status": "operational",
+                    "message": "SEC EDGAR endpoint OK",
+                    "operational": True
+                }
+            return {
+                "status": "error",
+                "message": f"HTTP {resp.status_code}",
+                "operational": False
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": str(e),
+                "operational": False
+            }
     
     @staticmethod
     def check_all_sources() -> Dict[str, Any]:
@@ -246,7 +653,15 @@ class DataSourceHealthChecker:
             "timestamp": datetime.now().isoformat(),
             "sources": {
                 "yfinance": DataSourceHealthChecker.check_yfinance(),
-                "fred": DataSourceHealthChecker.check_fred()
+                "fred": DataSourceHealthChecker.check_fred(),
+                "alpha_vantage": DataSourceHealthChecker.check_alpha_vantage(),
+                "finnhub": DataSourceHealthChecker.check_finnhub(),
+                "polygon": DataSourceHealthChecker.check_polygon(),
+                "iex": DataSourceHealthChecker.check_iex(),
+                "newsapi": DataSourceHealthChecker.check_newsapi(),
+                "coingecko": DataSourceHealthChecker.check_coingecko(),
+                "alpaca": DataSourceHealthChecker.check_alpaca(),
+                "sec_edgar": DataSourceHealthChecker.check_sec_edgar(),
             }
         }
 
@@ -269,6 +684,42 @@ def get_data_source_recommendations() -> Dict[str, str]:
             "Get a free API key at https://fred.stlouisfed.org/docs/api/api_key.html "
             "and set FRED_API_KEY in your .env file."
         )
+
+    if not os.getenv('ALPHA_VANTAGE_API_KEY'):
+        recommendations['alpha_vantage'] = (
+            "Alpha Vantage API key not configured. Some stock data and fundamentals will be unavailable. "
+            "Get a free API key at https://www.alphavantage.co/support/#api-key and set ALPHA_VANTAGE_API_KEY."
+        )
+
+    if not os.getenv('POLYGON_API_KEY'):
+        recommendations['polygon'] = (
+            "Polygon API key not configured. Premium equities data will be unavailable. "
+            "Get a key at https://polygon.io and set POLYGON_API_KEY."
+        )
+
+    if not os.getenv('IEX_API_KEY'):
+        recommendations['iex'] = (
+            "IEX Cloud API key not configured. IEX fallback data will be unavailable. "
+            "Get a key at https://iexcloud.io and set IEX_API_KEY."
+        )
+
+    if not os.getenv('FINNHUB_API_KEY'):
+        recommendations['finnhub'] = (
+            "Finnhub API key not configured. Real-time news headlines will be unavailable. "
+            "Get a key at https://finnhub.io and set FINNHUB_API_KEY."
+        )
+
+    if not os.getenv('NEWSAPI_KEY'):
+        recommendations['newsapi'] = (
+            "NewsAPI key not configured. NewsAPI fallback will be unavailable. "
+            "Get a key at https://newsapi.org and set NEWSAPI_KEY."
+        )
+
+    if not os.getenv('SEC_USER_AGENT'):
+        recommendations['sec_edgar'] = (
+            "SEC EDGAR requires a User-Agent header. Set SEC_USER_AGENT with contact info "
+            "(e.g., 'financial-terminal/1.0 (contact: you@example.com)')."
+        )
     
     # yfinance recommendations
     recommendations['yfinance'] = (
@@ -283,7 +734,7 @@ def get_data_source_recommendations() -> Dict[str, str]:
         recommendations['alpaca'] = (
             "Alpaca credentials not configured. Paper trading will be unavailable. "
             "Sign up at https://alpaca.markets for free paper trading. "
-            "Set ALPACA_API_KEY, ALPACA_API_SECRET, and ALPACA_API_BASE in .env file. "
+            "Set ALPACA_API_KEY, ALPACA_API_SECRET, and ALPACA_BASE_URL in .env file. "
             "Note: Alpaca is for trading execution, not historical data."
         )
     

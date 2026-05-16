@@ -9,7 +9,6 @@ Free tier: No API key required, 10 calls/sec
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 import logging
-import requests
 
 from .base import DataProvider, OHLCV, FundamentalsData, AssetType
 
@@ -85,7 +84,7 @@ class CoinGeckoProvider(DataProvider):
         ohlcv_list = []
         
         try:
-            resp = requests.get(url, params=params, timeout=self.timeout)
+            resp = self._request("get", url, params=params)
             
             if resp.status_code == 404:
                 raise ValueError(f"Coin {symbol} not found")
@@ -130,7 +129,7 @@ class CoinGeckoProvider(DataProvider):
         }
         
         try:
-            resp = requests.get(url, params=params, timeout=self.timeout)
+            resp = self._request("get", url, params=params)
             resp.raise_for_status()
             data = resp.json()
             
@@ -152,7 +151,7 @@ class CoinGeckoProvider(DataProvider):
             coin_id = self._get_coin_id(symbol)
             
             url = f"{self.BASE_URL}/coins/{coin_id}"
-            resp = requests.get(url, params={"localization": "false"}, timeout=self.timeout)
+            resp = self._request("get", url, params={"localization": "false"})
             
             if resp.status_code != 200:
                 return None

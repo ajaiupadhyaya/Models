@@ -1,33 +1,40 @@
 version: '3.8'
 
 services:
-  # Trading ML API
-  api:
+  backend:
     build: .
-    container_name: trading-ml-api
+    container_name: financial-platform-api
     ports:
       - "8000:8000"
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://trader:trading123@postgres:5432/trading_metrics
+      - REDIS_URL=redis://redis:6379/0
+      - SKIP_SEED_IF_POPULATED=1
     volumes:
       - ./data:/app/data
       - ./notebooks:/app/notebooks
     networks:
       - trading-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
+    command: ["sh", "-c", "python -m core.startup_validation --require-db-url --require-redis-url --check-db && alembic -c db/alembic.ini upgrade head && (python -m db.seed_db || echo 'seed skipped') && exec python -m uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
-  # Redis for caching (optional but recommended)
   redis:
     image: redis:7-alpine
-    container_name: trading-ml-redis
+    container_name: financial-platform-redis
     ports:
       - "6379:6379"
     volumes:
@@ -41,10 +48,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # PostgreSQL for metrics storage (optional)
   postgres:
-    image: postgres:15-alpine
-    container_name: trading-ml-postgres
+    image: timescale/timescaledb:latest-pg15
+    container_name: financial-platform-postgres
     environment:
       - POSTGRES_DB=trading_metrics
       - POSTGRES_USER=trader
@@ -62,10 +68,41 @@ services:
       timeout: 5s
       retries: 5
 
-  # Monitoring with Prometheus (optional)
+  celery_worker:
+    build: .
+    container_name: financial-platform-celery-worker
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://trader:trading123@postgres:5432/trading_metrics
+      - REDIS_URL=redis://redis:6379/0
+    networks:
+      - trading-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: ["sh", "-c", "python -m core.startup_validation --require-db-url --require-redis-url --check-db && exec celery -A workers.celery_app worker --loglevel=info"]
+
+  celery_beat:
+    build: .
+    container_name: financial-platform-celery-beat
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://trader:trading123@postgres:5432/trading_metrics
+      - REDIS_URL=redis://redis:6379/0
+    networks:
+      - trading-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: ["sh", "-c", "python -m core.startup_validation --require-db-url --require-redis-url --check-db && exec celery -A workers.celery_app beat --loglevel=info"]
+
   prometheus:
     image: prom/prometheus:latest
-    container_name: trading-ml-prometheus
+    container_name: financial-platform-prometheus
     ports:
       - "9090:9090"
     volumes:

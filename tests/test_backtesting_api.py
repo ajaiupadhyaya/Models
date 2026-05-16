@@ -66,11 +66,17 @@ def test_sample_data_no_data_returns_empty_candles(client):
 
 
 def test_run_backtest_returns_200_with_mocked_engine(client, sample_ohlcv_df):
-    """POST run with mocked data path returns 200 and response shape."""
-    # Backtest run endpoint loads data via yf or DataFetcher and runs engine.
-    # We mock at the point where data is fetched and engine runs.
-    with patch("api.backtesting_api.yf") as mock_yf:
-        mock_yf.download.return_value = sample_ohlcv_df
+    """POST /backtest/run returns legacy response from unified service path."""
+    with patch("core.backtest_service.run_backtest") as mock_run_backtest:
+        mock_run_backtest.return_value = {
+            "symbol": "AAPL",
+            "strategy": "sma_cross",
+            "start_date": "2024-01-01",
+            "end_date": "2024-02-01",
+            "equity_curve": [{"date": "2024-01-01", "equity": 100000.0}],
+            "trades": [],
+            "metrics": {"sharpe_ratio": 1.0, "total_return_pct": 2.5},
+        }
         response = client.post(
             "/api/v1/backtest/run",
             json={
@@ -83,13 +89,45 @@ def test_run_backtest_returns_200_with_mocked_engine(client, sample_ohlcv_df):
                 "position_size": 0.2,
             },
         )
-    # May be 200 or 500 if engine/signal path fails; we assert shape when 200
-    if response.status_code == 200:
-        data = response.json()
-        assert "model_name" in data
-        assert "symbol" in data
-        assert "period" in data
-        assert "metrics" in data
-        assert "equity_curve" in data
-        assert "trades" in data
-        assert "status" in data
+    assert response.status_code == 200
+    data = response.json()
+    assert data["model_name"] == "default"
+    assert data["symbol"] == "AAPL"
+    assert "period" in data
+    assert "metrics" in data
+    assert "equity_curve" in data
+    assert "trades" in data
+    assert data["status"] == "success"
+
+
+def test_technical_backtest_uses_unified_service_contract(client):
+    with patch("core.backtest_api_adapter.run_backtest_contract") as mock_contract:
+        mock_contract.return_value = {
+            "model_name": "sma_cross_20_50",
+            "symbol": "AAPL",
+            "period": {"start": "2024-01-01", "end": "2024-03-01"},
+            "metrics": {"sharpe_ratio": 0.9},
+            "equity_curve": [{"date": "2024-01-01", "equity": 100000}],
+            "trades": [],
+            "status": "success",
+        }
+        response = client.post(
+            "/api/v1/backtest/technical",
+            json={
+                "symbol": "AAPL",
+                "start_date": "2024-01-01",
+                "end_date": "2024-03-01",
+                "strategy": "sma_cross",
+                "fast_period": 20,
+                "slow_period": 50,
+                "initial_capital": 100000,
+                "commission": 0.001,
+            },
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["model_name"] == "sma_cross_20_50"
+    assert data["symbol"] == "AAPL"
+    assert data["status"] == "success"
+    assert "metrics" in data

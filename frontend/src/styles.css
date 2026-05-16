@@ -372,6 +372,25 @@ body {
   font-size: 10px;
 }
 
+.chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  z-index: 100;
+  box-shadow: var(--shadow-elevated);
+}
+
+.chart-overlay {
+  fill: transparent;
+  cursor: crosshair;
+}
+
 /* Panel loading skeleton */
 .panel-skeleton {
   display: flex;
