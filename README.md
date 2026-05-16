@@ -1,4 +1,79 @@
-# Financial Models Workspace
+# Financial Research & Trading Platform
+
+A professional-grade financial research and trading platform with **zero hardcoded data**: all prices, fundamentals, and macro data come from live or cached real sources (yfinance, Polygon, FMP, FRED, NewsAPI, SEC EDGAR). Built with React, FastAPI, PostgreSQL (TimescaleDB), Celery, and Redis.
+
+## Run with Docker Compose
+
+1. **Copy environment and set API keys**
+   ```bash
+   cp .env.example .env
+   # Edit .env: set at least FRED_API_KEY and FMP_API_KEY for full functionality.
+   # Optional: POLYGON_API_KEY, NEWSAPI_KEY, ANTHROPIC_API_KEY, etc.
+   ```
+
+2. **Start all services**
+   ```bash
+   docker compose up --build
+   ```
+   This starts: **backend** (API + optional SPA on port 8000), **postgres** (TimescaleDB, 5432), **redis** (6379), **celery_worker**, **celery_beat**, and **prometheus** (9090). On first run, the backend seeds the DB with 20 large-cap tickers (AAPL, MSFT, GOOGL, etc.) and 5 years of OHLCV plus latest fundamentals. Backend waits for postgres to be healthy before starting.
+
+3. **Open the app**
+   - API: http://localhost:8000  
+   - Docs: http://localhost:8000/docs  
+   - For local frontend dev: `cd frontend && npm install && npm run dev` (Vite on 5173, proxies /api to backend).
+
+4. **Database migrations** (run once; also run automatically on backend startup)
+   ```bash
+   alembic -c db/alembic.ini upgrade head
+   ```
+
+## Required API keys (see .env.example)
+
+| Key | Purpose |
+|-----|---------|
+| `FRED_API_KEY` | Macro indicators, yield curve |
+| `FMP_API_KEY` | Fundamentals, DCF inputs, comps |
+| `DATABASE_URL` | PostgreSQL (default: trader@localhost/trading_metrics) |
+| `REDIS_URL` | Celery broker (default: redis://localhost:6379/0) |
+| `SEC_USER_AGENT` | Required by SEC EDGAR |
+| `ANTHROPIC_API_KEY` | AI Research Assistant (Claude) |
+| `FINNHUB_API_KEY` | News & sentiment (per-ticker news feed) |
+| `NEWSAPI_KEY` | News ingestion (optional; alternative to Finnhub) |
+| `POLYGON_API_KEY` | OHLCV/options (optional; yfinance used as fallback) |
+
+## Folder structure
+
+- **frontend/** — React + Tailwind + D3/Recharts; Bloomberg-style terminal UI  
+- **backend/** — FastAPI entrypoint (`backend/main.py`); app logic in **api/**, **core/**, **models/**  
+- **workers/** — Celery app and ingestion tasks (OHLCV, macro, news, fundamentals)  
+- **db/** — Alembic migrations for PostgreSQL + TimescaleDB  
+- **docker-compose.yml** — backend, postgres, redis, celery_worker, celery_beat  
+
+## Modules
+
+- **Data pipeline** — Celery jobs refresh OHLCV (daily), macro (weekly), news (hourly), fundamentals (quarterly); data status dashboard in UI. DB seed script pre-loads 20 tickers (5y OHLCV + fundamentals) on first run.
+- **Equity research** — Ticker search, company overview, financial statements, DCF, comparable comps, LBO.
+- **Quant lab** — Factor ranker (momentum, value, quality, low-vol, size from real DB data), strategy backtester (MA cross, RSI, factor momentum), pairs trading (spread chart, z-score, signals), options chain (yfinance live). **POST /api/v1/quant/backtest** — equity curve, Sharpe, Sortino, CAGR, max drawdown, win rate, alpha/beta vs SPY.
+- **Portfolio & risk** — Portfolio valuation, VaR/CVaR, correlation matrix. **POST /api/v1/risk/optimize** — mean-variance optimization, efficient frontier, optimal weights. **POST /api/v1/risk/stress-test** — historical crisis scenarios (2008, COVID, Dot-com, 2022) using real OHLCV.
+- **News & sentiment** — **GET /api/v1/news/{symbol}** — per-ticker news (Finnhub/NewsAPI) with VADER sentiment, 7-day aggregate gauge.
+- **Macro dashboard** — Yield curve (FRED), bond pricer, key indicators.
+- **AI Research Assistant** — Claude-powered chat (**POST /api/v1/ai/chat**) with tool-use: run_dcf, screen_stocks, get_company_overview, run_backtest, get_macro_snapshot. Multi-turn with history.
+- **Screener** — Fundamental + price filters (P/E, P/B, sector, market cap), sparklines, sortable table.
+
+### New Phase 2 Panels
+
+| Panel | Description |
+|-------|-------------|
+| **Backtest** | Strategy config (sma_cross, rsi_mean_reversion, factor_momentum), equity curve, trade log, metrics |
+| **Optimizer** | Mean-variance optimization, optimal weights chart, efficient frontier chart with tooltips |
+| **Stress Test** | Historical crisis scenarios with drawdown bars; real historical data |
+| **News & Sentiment** | Per-ticker news feed with VADER sentiment score and 7-day gauge (no key required) |
+| **AI Assistant** | Chat with Claude; tools: DCF, screener, company overview, backtest, macro snapshot |
+| **Data Status** | Per-source timestamps; "Refresh Now" triggers Celery tasks for ohlcv/macro/news/fundamentals |  
+
+---
+
+# Financial Models Workspace (Legacy)
 
 A comprehensive, institutional-grade financial modeling framework for quantitative analysis, machine learning, and investment research. This project combines sophisticated models with publication-quality visualizations and a production-ready API.
 

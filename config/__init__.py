@@ -11,6 +11,7 @@ from config.settings import (
     DataSettings,
     BacktestSettings,
     AISettings,
+    InfraSettings,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "DataSettings",
     "BacktestSettings",
     "AISettings",
+    "InfraSettings",
 ]

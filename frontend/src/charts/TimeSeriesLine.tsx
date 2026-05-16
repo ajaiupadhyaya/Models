@@ -1,7 +1,8 @@
 /**
  * D3 time-series line chart. Shared by macro, price trend, and sparklines.
+ * Includes tooltip, axis labels, and value formatting.
  */
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import {
   createTimeScale,
@@ -23,7 +24,12 @@ export interface TimeSeriesLineProps {
   showAxis?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  valueFormat?: (v: number) => string;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
 }
+
+const formatDate = (d: Date) => d3.timeFormat("%Y-%m-%d")(d);
 
 export const TimeSeriesLine: React.FC<TimeSeriesLineProps> = ({
   data,
@@ -36,8 +42,14 @@ export const TimeSeriesLine: React.FC<TimeSeriesLineProps> = ({
   showAxis = true,
   className = "chart-root",
   style,
+  valueFormat = (v) => v.toFixed(2),
+  xAxisLabel,
+  yAxisLabel,
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const setTooltipRef = useRef(setTooltip);
+  setTooltipRef.current = setTooltip;
 
   useEffect(() => {
     if (!ref.current || data.length < 2) return;
@@ -74,9 +86,29 @@ export const TimeSeriesLine: React.FC<TimeSeriesLineProps> = ({
       const bottomG = g.append("g").attr("transform", `translate(0,${innerHeight})`);
       drawAxisBottom(bottomG as d3.Selection<SVGGElement, unknown, null, undefined>, xScale, 5);
       const leftG = g.append("g");
-      drawAxisLeft(leftG as d3.Selection<SVGGElement, unknown, null, undefined>, yScale, 5);
+      drawAxisLeft(leftG as d3.Selection<SVGGElement, unknown, null, undefined>, yScale, 5, (d) => valueFormat(Number(d)));
     }
-
+    if (xAxisLabel) {
+      g.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + margin.bottom - 4)
+        .attr("text-anchor", "middle")
+        .attr("fill", "var(--text-soft)")
+        .attr("font-size", 9)
+        .attr("font-family", "var(--font-mono)")
+        .text(xAxisLabel);
+    }
+    if (yAxisLabel) {
+      g.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -innerHeight / 2)
+        .attr("y", -margin.left + 12)
+        .attr("text-anchor", "middle")
+        .attr("fill", "var(--text-soft)")
+        .attr("font-size", 9)
+        .attr("font-family", "var(--font-mono)")
+        .text(yAxisLabel);
+    }
     if (title) {
       g.append("text")
         .attr("x", 2)
@@ -86,10 +118,38 @@ export const TimeSeriesLine: React.FC<TimeSeriesLineProps> = ({
         .attr("font-family", "var(--font-mono)")
         .text(title);
     }
-  }, [data, widthProp, height, marginPreset, title, stroke, strokeWidth, showAxis]);
+
+    const bisect = d3.bisector((d: TimeSeriesPoint) => d.date).left;
+    const overlay = g
+      .append("rect")
+      .attr("class", "chart-overlay")
+      .attr("width", innerWidth)
+      .attr("height", innerHeight);
+    overlay.on("mousemove", function (evt) {
+      const [mx] = d3.pointer(evt, this);
+      const x0 = xScale.invert(mx);
+      const i = Math.min(bisect(data, x0), data.length - 1);
+      const d = data[i]!;
+      setTooltipRef.current({
+        x: mx + margin.left,
+        y: margin.top + 12,
+        text: `${formatDate(d.date)}: ${valueFormat(d.value)}`,
+      });
+    });
+    overlay.on("mouseleave", () => setTooltipRef.current(null));
+
+    return () => setTooltipRef.current(null);
+  }, [data, widthProp, height, marginPreset, title, stroke, strokeWidth, showAxis, valueFormat, xAxisLabel, yAxisLabel]);
 
   if (data.length < 2) return null;
   return (
-    <div ref={ref} className={className} style={{ minHeight: height, ...style }} />
+    <div className={className} style={{ position: "relative", minHeight: height, ...style }}>
+      <div ref={ref} style={{ width: "100%", minHeight: height }} />
+      {tooltip && (
+        <div className="chart-tooltip" style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, 0)" }}>
+          {tooltip.text}
+        </div>
+      )}
+    </div>
   );
 };

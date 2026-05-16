@@ -10,6 +10,8 @@ export { Heatmap } from "./Heatmap";
 export type { HeatmapProps } from "./Heatmap";
 export { YieldCurve } from "./YieldCurve";
 export type { YieldCurveProps } from "./YieldCurve";
+export { XyLineChart } from "./XyLineChart";
+export type { XyLineChartProps, XyPoint } from "./XyLineChart";
 export { AreaChart } from "./AreaChart";
 export type { AreaChartProps } from "./AreaChart";
 export { CandlestickVolume } from "./CandlestickVolume";

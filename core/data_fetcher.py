@@ -37,6 +37,29 @@ import time
 load_dotenv()
 
 
+def _normalize_ticker(ticker: str) -> str:
+    """Normalize and validate ticker symbol."""
+    if not isinstance(ticker, str):
+        raise ValueError("Ticker must be a string")
+    norm = ticker.strip().upper()
+    if not norm:
+        raise ValueError("Ticker cannot be empty")
+    if not norm.replace("-", "").replace(".", "").isalnum():
+        raise ValueError(f"Invalid ticker format: {ticker}")
+    return norm
+
+
+def _validate_date_str(date_str: Optional[str], label: str) -> Optional[str]:
+    """Validate YYYY-MM-DD date strings."""
+    if date_str is None:
+        return None
+    try:
+        datetime.strptime(date_str, "%Y-%m-%d")
+        return date_str
+    except ValueError:
+        raise ValueError(f"Invalid {label} date format: {date_str}. Expected YYYY-MM-DD")
+
+
 def _get_data_config() -> "tuple[object, object]":
     """API keys from config if available, else env."""
     try:
@@ -96,6 +119,9 @@ class DataFetcher:
         Returns:
             DataFrame with OHLCV data
         """
+        ticker = _normalize_ticker(ticker)
+        start_date = _validate_date_str(start_date, "start")
+        end_date = _validate_date_str(end_date, "end")
         max_retries = 3
         session = get_yfinance_session()
         ticker_kwargs = {"session": session} if session is not None else {}
@@ -143,6 +169,9 @@ class DataFetcher:
         """
         if not tickers:
             return pd.DataFrame()
+        start_date = _validate_date_str(start_date, "start")
+        end_date = _validate_date_str(end_date, "end")
+        tickers = [_normalize_ticker(t) for t in tickers]
         
         session = get_yfinance_session()
         max_retries = 3
@@ -190,6 +219,7 @@ class DataFetcher:
         Returns:
             Dictionary with stock information
         """
+        ticker = _normalize_ticker(ticker)
         session = get_yfinance_session()
         ticker_kwargs = {"session": session} if session is not None else {}
         max_retries = 3
@@ -329,6 +359,9 @@ class DataFetcher:
         """
         if not self.alpha_vantage_ts:
             raise ValueError("Alpha Vantage API key not configured.")
+        symbol = symbol.strip().upper()
+        if not symbol:
+            raise ValueError("Symbol cannot be empty")
         
         try:
             if function == 'TIME_SERIES_DAILY':
@@ -338,7 +371,17 @@ class DataFetcher:
             else:
                 raise ValueError(f"Unsupported function: {function}")
             
-            return data
+            # Handle premium-only or rate-limit responses
+            meta_info = meta if isinstance(meta, dict) else {}
+            info_msg = meta_info.get("Information") or meta_info.get("Note")
+            if info_msg:
+                if function == 'TIME_SERIES_INTRADAY':
+                    # Free tier often returns premium notice for intraday
+                    data, meta = self.alpha_vantage_ts.get_daily(symbol=symbol, outputsize='compact')
+                else:
+                    return pd.DataFrame()
+            
+            return data if data is not None else pd.DataFrame()
         except Exception as e:
             print(f"Error fetching Alpha Vantage data: {e}")
             return pd.DataFrame()
@@ -367,6 +410,7 @@ class DataFetcher:
         Get company information and fundamentals.
         Alias for get_stock_info with raw yfinance info.
         """
+        ticker = _normalize_ticker(ticker)
         session = get_yfinance_session()
         ticker_kwargs = {"session": session} if session is not None else {}
         

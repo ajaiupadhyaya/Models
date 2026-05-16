@@ -1,7 +1,8 @@
 /**
  * D3 yield curve (maturity vs yield). Used in Economic panel.
+ * Includes tooltips on data points and axis labels.
  */
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { CHART_MARGIN_PRESETS, getChartMargin } from "./theme";
 
@@ -29,6 +30,9 @@ export const YieldCurve: React.FC<YieldCurveProps> = ({
   style,
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const setTooltipRef = useRef(setTooltip);
+  setTooltipRef.current = setTooltip;
 
   useEffect(() => {
     if (!ref.current || maturities.length < 2 || yields.length < 2) return;
@@ -60,14 +64,24 @@ export const YieldCurve: React.FC<YieldCurveProps> = ({
       .attr("stroke", "var(--accent)")
       .attr("stroke-width", 2)
       .attr("d", line);
-    g.selectAll("circle")
+    const circles = g
+      .selectAll("circle")
       .data(lineData)
       .enter()
       .append("circle")
       .attr("cx", (d) => xScale(d.m))
       .attr("cy", (d) => yScale(d.y))
-      .attr("r", 4)
-      .attr("fill", "var(--accent)");
+      .attr("r", 5)
+      .attr("fill", "var(--accent)")
+      .style("cursor", "pointer");
+    circles.on("mouseover", function (evt, d) {
+      setTooltipRef.current({
+        x: xScale(d.m) + margin.left,
+        y: yScale(d.y) + margin.top,
+        text: `${d.m}Y: ${d.y.toFixed(2)}%`,
+      });
+    });
+    circles.on("mouseleave", () => setTooltipRef.current(null));
     g.append("g")
       .attr("transform", `translate(0,${innerHeight})`)
       .attr("class", "axis axis-x")
@@ -76,16 +90,42 @@ export const YieldCurve: React.FC<YieldCurveProps> = ({
       .attr("class", "axis axis-y")
       .call(d3.axisLeft(yScale).ticks(5).tickFormat((d) => d + "%"));
     g.append("text")
+      .attr("x", innerWidth / 2)
+      .attr("y", innerHeight + margin.bottom - 4)
+      .attr("text-anchor", "middle")
+      .attr("fill", "var(--text-soft)")
+      .attr("font-size", 9)
+      .attr("font-family", "var(--font-mono)")
+      .text("Maturity");
+    g.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x", -innerHeight / 2)
+      .attr("y", -margin.left + 12)
+      .attr("text-anchor", "middle")
+      .attr("fill", "var(--text-soft)")
+      .attr("font-size", 9)
+      .attr("font-family", "var(--font-mono)")
+      .text("Yield (%)");
+    g.append("text")
       .attr("x", 2)
       .attr("y", 8)
       .attr("fill", "var(--text-soft)")
       .attr("font-size", 10)
       .attr("font-family", "var(--font-mono)")
       .text(date ? `${title} (${date})` : title);
+
+    return () => setTooltipRef.current(null);
   }, [maturities, yields, date, widthProp, height, marginPreset, title]);
 
   if (maturities.length < 2 || yields.length < 2) return null;
   return (
-    <div ref={ref} className={className} style={{ minHeight: height, ...style }} />
+    <div className={className} style={{ position: "relative", minHeight: height, ...style }}>
+      <div ref={ref} style={{ width: "100%", minHeight: height }} />
+      {tooltip && (
+        <div className="chart-tooltip" style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)" }}>
+          {tooltip.text}
+        </div>
+      )}
+    </div>
   );
 };

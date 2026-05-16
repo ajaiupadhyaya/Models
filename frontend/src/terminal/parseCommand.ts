@@ -3,18 +3,7 @@
  * Used by CommandBar and testable in isolation.
  */
 
-export type ActiveModule =
-  | "primary"
-  | "fundamental"
-  | "technical"
-  | "quant"
-  | "economic"
-  | "news"
-  | "portfolio"
-  | "paper"
-  | "automation"
-  | "screening"
-  | "ai";
+import type { ActiveModule } from "./TerminalContext";
 
 export interface ParsedCommand {
   type: "help" | "module" | "ai" | "backtest" | "workspace";
@@ -35,15 +24,23 @@ export function parseCommand(raw: string): ParsedCommand | null {
   const ticker = parts[1]?.toUpperCase() ?? "";
 
   // Single-word: could be a command (ECO, PORT, FLD) or a ticker (AAPL)
-  const singleWordNoArgCodes = ["ECO", "PORT", "PAPER", "AUTO", "ORCH", "TRAIN", "FLD", "FLDS"];
+  const singleWordNoArgCodes = [
+    "DATA", "STATUS", "ECO", "PORT", "PAPER", "AUTO", "ORCH", "TRAIN", "FLD", "FLDS", "BACKTEST", "BT",
+    "OPT", "OPTIMIZER", "STRESS", "NEWSSENT", "SENT", "NS"
+  ];
   if (parts.length === 1) {
     if (singleWordNoArgCodes.includes(code)) {
+      if (code === "DATA" || code === "STATUS") return { type: "module", module: "dataStatus" };
       if (code === "ECO") return { type: "module", module: "economic" };
       if (code === "PORT") return { type: "module", module: "portfolio" };
       if (code === "PAPER") return { type: "module", module: "paper" };
       if (code === "AUTO" || code === "ORCH") return { type: "module", module: "automation" };
       if (code === "TRAIN") return { type: "module", module: "quant" };
       if (code === "FLD" || code === "FLDS") return { type: "module", module: "technical" };
+      if (code === "BACKTEST" || code === "BT") return { type: "module", module: "backtest" };
+      if (code === "OPT" || code === "OPTIMIZER") return { type: "module", module: "optimizer" };
+      if (code === "STRESS") return { type: "module", module: "stressTest" };
+      if (code === "NEWSSENT" || code === "SENT" || code === "NS") return { type: "module", module: "newsSentiment" };
     }
     if (/^[A-Z]{1,5}$/.test(parts[0]!)) {
       return { type: "module", module: "primary", symbol: parts[0]! };
@@ -51,6 +48,9 @@ export function parseCommand(raw: string): ParsedCommand | null {
   }
 
   switch (code) {
+    case "DATA":
+    case "STATUS":
+      return { type: "module", module: "dataStatus" };
     case "GP":
       return { type: "module", module: "primary", symbol: ticker || undefined };
     case "FA":
@@ -62,6 +62,10 @@ export function parseCommand(raw: string): ParsedCommand | null {
       return { type: "module", module: "economic" };
     case "N":
       return { type: "module", module: "news", symbol: ticker || undefined };
+    case "NEWSSENT":
+    case "SENT":
+    case "NS":
+      return { type: "module", module: "newsSentiment", symbol: ticker || undefined };
     case "PORT":
       return { type: "module", module: "portfolio" };
     case "PAPER":
@@ -74,9 +78,15 @@ export function parseCommand(raw: string): ParsedCommand | null {
     case "AI":
       return { type: "ai", module: "ai", query: parts.slice(1).join(" ") || undefined };
     case "BACKTEST":
-      return { type: "backtest", module: "quant", symbol: ticker || undefined };
+    case "BT":
+      return { type: "backtest", module: "backtest", symbol: ticker || undefined };
     case "TRAIN":
       return { type: "module", module: "quant", symbol: ticker || undefined };
+    case "OPT":
+    case "OPTIMIZER":
+      return { type: "module", module: "optimizer", symbol: ticker || undefined };
+    case "STRESS":
+      return { type: "module", module: "stressTest", symbol: ticker || undefined };
     case "WORKSPACE":
       return { type: "workspace", symbol: ticker || undefined };
     default:

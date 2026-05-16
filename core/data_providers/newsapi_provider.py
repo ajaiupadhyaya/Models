@@ -9,7 +9,6 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 import logging
-import requests
 
 from .base import DataProvider, OHLCV, FundamentalsData, AssetType
 
@@ -76,10 +75,13 @@ class NewsAPIProvider(DataProvider):
         articles = []
         
         try:
-            resp = requests.get(url, params=params, timeout=self.timeout)
+            resp = self._request("get", url, params=params)
             
             if resp.status_code == 401:
                 logger.error("Invalid NewsAPI key")
+                return []
+            if resp.status_code == 429:
+                logger.warning("NewsAPI rate limit exceeded")
                 return []
             
             resp.raise_for_status()
@@ -116,7 +118,8 @@ class NewsAPIProvider(DataProvider):
         
         try:
             url = f"{self.BASE_URL}/top-headlines"
-            resp = requests.get(
+            resp = self._request(
+                "get",
                 url,
                 params={"country": "us", "apiKey": self.api_key},
                 timeout=5

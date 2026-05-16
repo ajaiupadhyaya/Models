@@ -11,6 +11,9 @@ interface ScreenRow {
   sector?: string;
   market_cap?: number;
   industry?: string;
+  pe_ratio?: number;
+  pb_ratio?: number;
+  sparkline?: number[];
 }
 
 interface SectorsResponse {
@@ -37,7 +40,22 @@ function parseScreener(json: unknown): ScreenRow[] | null {
   return Array.isArray(r?.results) ? r.results : [];
 }
 
-type SortKey = "symbol" | "name" | "sector" | "market_cap";
+type SortKey = "symbol" | "name" | "sector" | "market_cap" | "pe_ratio" | "pb_ratio";
+
+function MiniSparkline({ data }: { data: number[] }) {
+  if (!data || data.length < 2) return <span style={{ color: "var(--text-soft)" }}>—</span>;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const w = 60;
+  const h = 20;
+  const points = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * h}`).join(" ");
+  return (
+    <svg width={w} height={h} style={{ display: "block", overflow: "visible" }}>
+      <polyline fill="none" stroke="var(--accent)" strokeWidth="1" points={points} />
+    </svg>
+  );
+}
 type SortDir = "asc" | "desc";
 
 export const ScreeningPanel: React.FC = () => {
@@ -112,11 +130,12 @@ export const ScreeningPanel: React.FC = () => {
     return Object.entries(m).map(([label, value]) => ({ label: label.slice(0, 14), value }));
   }, [rawRows]);
   const rows = [...rawRows].sort((a, b) => {
+    if (sortKey === "sparkline") return 0;
     let va: string | number = a[sortKey] ?? "";
     let vb: string | number = b[sortKey] ?? "";
-    if (sortKey === "market_cap") {
-      va = a.market_cap ?? 0;
-      vb = b.market_cap ?? 0;
+    if (sortKey === "market_cap" || sortKey === "pe_ratio" || sortKey === "pb_ratio") {
+      va = Number((sortKey === "market_cap" ? a.market_cap : sortKey === "pe_ratio" ? a.pe_ratio : a.pb_ratio)) || 0;
+      vb = Number((sortKey === "market_cap" ? b.market_cap : sortKey === "pe_ratio" ? b.pe_ratio : b.pb_ratio)) || 0;
       return sortDir === "asc" ? (va as number) - (vb as number) : (vb as number) - (va as number);
     }
     const sa = String(va).toLowerCase();
@@ -219,20 +238,20 @@ export const ScreeningPanel: React.FC = () => {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <thead>
                 <tr>
-                  {(["symbol", "name", "sector", "market_cap"] as SortKey[]).map((key) => (
+                  {(["symbol", "name", "sector", "market_cap", "pe_ratio", "pb_ratio", "sparkline"] as SortKey[]).map((key) => (
                     <th
                       key={key}
                       style={{
-                        textAlign: key === "market_cap" ? "right" : "left",
+                        textAlign: key === "market_cap" || key === "pe_ratio" || key === "pb_ratio" ? "right" : "left",
                         color: "var(--text-soft)",
                         fontWeight: 500,
-                        cursor: "pointer",
+                        cursor: key !== "sparkline" ? "pointer" : "default",
                         userSelect: "none",
                       }}
-                      onClick={() => toggleSort(key)}
+                      onClick={() => key !== "sparkline" && toggleSort(key)}
                     >
-                      {key === "market_cap" ? "Market cap" : key.charAt(0).toUpperCase() + key.slice(1)}
-                      {sortKey === key && (sortDir === "asc" ? " ↑" : " ↓")}
+                      {key === "market_cap" ? "Market cap" : key === "pe_ratio" ? "P/E" : key === "pb_ratio" ? "P/B" : key === "sparkline" ? "30d" : key.charAt(0).toUpperCase() + key.slice(1)}
+                      {sortKey === key && key !== "sparkline" && (sortDir === "asc" ? " ↑" : " ↓")}
                     </th>
                   ))}
                 </tr>
@@ -264,6 +283,9 @@ export const ScreeningPanel: React.FC = () => {
                   <td className="num-mono" style={{ textAlign: "right" }}>
                     {row.market_cap != null ? `${(row.market_cap / 1e9).toFixed(2)}B` : "—"}
                   </td>
+                  <td className="num-mono" style={{ textAlign: "right" }}>{row.pe_ratio != null ? row.pe_ratio.toFixed(1) : "—"}</td>
+                  <td className="num-mono" style={{ textAlign: "right" }}>{row.pb_ratio != null ? row.pb_ratio.toFixed(1) : "—"}</td>
+                  <td><MiniSparkline data={row.sparkline ?? []} /></td>
                 </tr>
                 ))}
               </tbody>

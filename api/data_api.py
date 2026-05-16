@@ -53,6 +53,50 @@ async def data_sources_health_check() -> Dict[str, Any]:
         }
 
 
+@router.post("/refresh/{data_type}")
+async def trigger_data_refresh(data_type: str) -> Dict[str, Any]:
+    """
+    Manually trigger a data refresh. data_type: ohlcv, macro, news, fundamentals.
+    Triggers the corresponding Celery task immediately.
+    """
+    from workers.tasks.ingestion import (
+        refresh_ohlcv_daily,
+        refresh_macro_weekly,
+        refresh_news_hourly,
+        refresh_fundamentals_quarterly,
+    )
+    mapping = {
+        "ohlcv": refresh_ohlcv_daily,
+        "macro": refresh_macro_weekly,
+        "news": refresh_news_hourly,
+        "fundamentals": refresh_fundamentals_quarterly,
+    }
+    task = mapping.get(data_type.lower())
+    if not task:
+        raise HTTPException(status_code=400, detail=f"Unknown data_type: {data_type}. Use: ohlcv, macro, news, fundamentals")
+    try:
+        result = task.delay()
+        return {"status": "triggered", "task_id": str(result.id), "data_type": data_type}
+    except Exception as e:
+        logger.warning("Refresh trigger failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/status")
+async def get_data_status_dashboard() -> Dict[str, Any]:
+    """
+    Data ingestion status for dashboard: last_updated and last_error per source/entity.
+    Reads from data_status table (written by Celery ingestion tasks).
+    """
+    try:
+        from core.db import get_data_status
+        rows = get_data_status()
+        return {"items": rows, "count": len(rows)}
+    except Exception as e:
+        logger.warning("Data status endpoint failed (DB may not be migrated): %s", e)
+        return {"items": [], "count": 0, "error": str(e)}
+
+
 def _series_to_list(series) -> List[Dict[str, Any]]:
     """Convert pandas Series to list of {date, value} for JSON."""
     if series is None or series.empty:
@@ -120,14 +164,27 @@ async def get_macro() -> Dict[str, Any]:
 @router.get("/yield-curve")
 async def get_yield_curve() -> Dict[str, Any]:
     """
-    Get US Treasury yield curve (2Y, 5Y, 10Y, 30Y) for Economic tab visualization.
-    Requires FRED_API_KEY. Cached 1 hour.
+    Get US Treasury yield curve. Reads from DB (macro_series) when available, else FRED.
     """
     from api.cache import get_cached, set_cached, cache_key
     key = cache_key("data", "yield-curve")
     cached = get_cached(key)
     if cached is not None:
         return cached
+    try:
+        from core.db import get_macro_latest
+        series_ids = ["DGS1MO", "DGS3MO", "DGS1", "DGS2", "DGS5", "DGS10", "DGS30"]
+        mat_map = {"DGS1MO": 1/12, "DGS3MO": 0.25, "DGS1": 1, "DGS2": 2, "DGS5": 5, "DGS10": 10, "DGS30": 30}
+        db_vals = get_macro_latest(series_ids)
+        if any(v is not None for v in db_vals.values()):
+            maturities = [mat_map[sid] for sid in series_ids if db_vals.get(sid) is not None]
+            yields_list = [db_vals[sid] for sid in series_ids if db_vals.get(sid) is not None]
+            result = {"maturities": maturities, "yields": yields_list, "date": datetime.now().strftime("%Y-%m-%d"), "source": "db"}
+            if maturities:
+                set_cached(key, result, 3600)
+            return result
+    except Exception as e:
+        logger.debug("Yield curve from DB failed: %s", e)
     try:
         from core.data_fetcher import DataFetcher
         try:
@@ -164,6 +221,44 @@ async def get_yield_curve() -> Dict[str, Any]:
     except Exception as e:
         logger.warning("Yield curve failed: %s", e)
         return {"error": str(e), "maturities": [2, 5, 10, 30], "yields": []}
+
+
+@router.get("/bond-price")
+async def bond_price(
+    coupon: float = Query(..., description="Annual coupon rate (e.g. 0.04 for 4%)"),
+    maturity_years: float = Query(..., gt=0, le=50),
+    face_value: float = Query(100, description="Face value"),
+    yield_to_maturity: float = Query(..., description="YTM (e.g. 0.05 for 5%)"),
+) -> Dict[str, Any]:
+    """
+    Bond pricer: price, duration, convexity, DV01 from coupon, maturity, face, YTM.
+    No external data; formula-based.
+    """
+    c = coupon * face_value  # annual coupon payment
+    n = max(1, int(maturity_years * 2))  # semiannual periods
+    r = yield_to_maturity / 2
+    if r <= -1:
+        return {"error": "YTM must be > -100%"}
+    pv_coupons = sum(c/2 / ((1 + r) ** t) for t in range(1, n + 1))
+    pv_face = face_value / ((1 + r) ** n)
+    price = pv_coupons + pv_face
+    # Macaulay duration (years): sum(t * cf_t / (1+r)^t) / price, then / 2 for semiannual
+    dur_sum = sum((t/2) * (c/2) / ((1+r)**t) for t in range(1, n+1)) + (n/2) * face_value / ((1+r)**n)
+    mac_duration = dur_sum / price if price > 0 else 0
+    mod_duration = mac_duration / (1 + yield_to_maturity/2) if (1 + yield_to_maturity/2) != 0 else 0
+    # Convexity (simplified)
+    conv_sum = sum((t/2)*((t/2)+1) * (c/2) / ((1+r)**(t+2)) for t in range(1, n+1)) + (n/2)*((n/2)+1) * face_value / ((1+r)**(n+2))
+    convexity = conv_sum / price if price > 0 else 0
+    dv01 = mod_duration * price * 0.0001 if price > 0 else 0
+    return {
+        "price": round(price, 4),
+        "macaulay_duration": round(mac_duration, 4),
+        "modified_duration": round(mod_duration, 4),
+        "convexity": round(convexity, 4),
+        "dv01": round(dv01, 4),
+    }
+
+
 @router.get("/economic-calendar")
 async def get_economic_calendar(
     days_ahead: int = 30,

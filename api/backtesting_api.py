@@ -56,18 +56,13 @@ import numpy as np
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+from api.backtest_contracts import LegacyModelBacktestRequest, strategy_from_model_name
+
 
 # Request/Response Models
-class BacktestRequest(BaseModel):
+class BacktestRequest(LegacyModelBacktestRequest):
     """Request for backtesting."""
-    model_name: str = Field(description="Name of the model to backtest")
-    symbol: str = Field(description="Stock symbol", example="SPY")
-    start_date: str = Field(description="Start date YYYY-MM-DD")
-    end_date: Optional[str] = Field(None, description="End date YYYY-MM-DD")
-    initial_capital: float = Field(default=100000.0, description="Starting capital")
-    commission: float = Field(default=0.001, description="Commission rate")
-    position_size: float = Field(default=1.0, description="Position size (0-1)")
-    use_institutional: Optional[bool] = Field(default=None, description="Use institutional engine (default from BACKTEST_USE_INSTITUTIONAL_DEFAULT)")
+    pass
 
 
 class CompareStrategiesRequest(BaseModel):
@@ -187,65 +182,30 @@ async def run_technical_backtest(request: TechnicalBacktestRequest) -> BacktestR
     No ML model required; used by Technical/Quant tab for strategy validation.
     """
     try:
-        data = yf.download(
-            request.symbol,
-            start=request.start_date,
-            end=request.end_date or datetime.now().strftime("%Y-%m-%d"),
-            progress=False,
-            auto_adjust=True,
-        )
-        if data.empty or len(data) < max(request.fast_period, request.slow_period):
-            raise HTTPException(status_code=400, detail="Insufficient price data for period")
-        if isinstance(data.columns, pd.MultiIndex):
-            data = data.copy()
-            data.columns = data.columns.get_level_values(0)
-        close = data["Close"] if "Close" in data.columns else data.iloc[:, 3]
-        fast = close.rolling(request.fast_period, min_periods=request.fast_period).mean()
-        slow = close.rolling(request.slow_period, min_periods=request.slow_period).mean()
-        signals_array = np.where(fast > slow, 1.0, -1.0)
-        signals_array = np.nan_to_num(signals_array, nan=0.0)
-        use_inst = get_settings().backtest.use_institutional_default if get_settings() else False
-        if use_inst and InstitutionalBacktestEngine is not None:
-            engine = InstitutionalBacktestEngine(
-                initial_capital=request.initial_capital,
-                commission=request.commission,
-                slippage=0.0005,
-                market_impact_alpha=0.5,
-            )
-        else:
-            engine = BacktestEngine(
-                initial_capital=request.initial_capital,
-                commission=request.commission,
-            )
-        results = engine.run_backtest(data, signals_array, signal_threshold=0.0, position_size=0.2)
-        eq_curve = getattr(engine, "equity_curve", [])
-        eq_dates = data.index[: len(eq_curve)] if len(eq_curve) <= len(data) else data.index
-        equity_curve = [
-            {"date": (eq_dates[i] if i < len(eq_dates) else data.index[-1]).strftime("%Y-%m-%d"), "equity": float(eq)}
-            for i, eq in enumerate(eq_curve)
-        ]
-        trades_list = getattr(engine, "trades", [])
-        trades = [
-            {
-                "entry_date": getattr(t, "entry_date", None).strftime("%Y-%m-%d") if getattr(t, "entry_date", None) is not None else "",
-                "exit_date": getattr(t, "exit_date", None).strftime("%Y-%m-%d") if getattr(t, "exit_date", None) is not None else None,
-                "entry_price": float(getattr(t, "entry_price", 0)),
-                "exit_price": float(getattr(t, "exit_price", 0)) if getattr(t, "exit_price", None) is not None else None,
-                "quantity": float(getattr(t, "quantity", 0)),
-                "pnl": float(getattr(t, "pnl", 0)) if getattr(t, "pnl", None) is not None else None,
-            }
-            for t in trades_list
-        ]
-        metrics = {k: float(v) for k, v in results.items() if isinstance(v, (int, float))}
-        return BacktestResponse(
-            model_name=f"sma_cross_{request.fast_period}_{request.slow_period}",
+        from core.backtest_api_adapter import run_backtest_contract
+
+        result = run_backtest_contract(
             symbol=request.symbol,
-            period={"start": request.start_date, "end": request.end_date or "now"},
-            metrics=metrics,
-            equity_curve=equity_curve[-100:],
-            trades=trades,
-            status="success",
+            strategy="sma_cross",
+            start_date=request.start_date,
+            end_date=request.end_date,
+            initial_capital=request.initial_capital,
+            commission=request.commission,
+            model_name=f"sma_cross_{request.fast_period}_{request.slow_period}",
+            strategy_params={"fast_period": request.fast_period, "slow_period": request.slow_period},
+            equity_points_limit=100,
         )
+        return BacktestResponse(
+            model_name=result["model_name"],
+            symbol=result["symbol"],
+            period=result["period"],
+            metrics=result["metrics"],
+            equity_curve=result["equity_curve"],
+            trades=result["trades"],
+            status=result["status"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -267,174 +227,33 @@ async def run_backtest(request: BacktestRequest) -> BacktestResponse:
         BacktestResponse: Backtest results and metrics
     """
     try:
-        app_state = get_app_state()
-        models = app_state.get("models", {})
-        
-        # Get model
-        if request.model_name not in models:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Model {request.model_name} not found"
-            )
-        
-        model_data = models[request.model_name]
-        model = model_data["model"]
-        metadata = model_data["metadata"]
-        
-        # Download data
-        logger.info(f"Downloading data for {request.symbol}")
-        data = yf.download(
-            request.symbol,
-            start=request.start_date,
-            end=request.end_date,
-            progress=False,
-        )
-        
-        if data.empty:
-            raise HTTPException(
-                status_code=400,
-                detail=f"No data found for {request.symbol}"
-            )
-        
-        # Generate signals
-        model_type = metadata.get("type", "unknown")
-        signals = []
-        
-        logger.info(f"Generating signals using {model_type} model")
-        
-        if model_type == "simple":
-            # Simple predictor
-            signal_obj = model.predict(data)
-            # Expand to all dates
-            for date in data.index:
-                signals.append(BacktestSignal(
-                    date=date,
-                    signal=signal_obj.signal,
-                    confidence=signal_obj.confidence
-                ))
-        
-        elif model_type == "ensemble":
-            # Ensemble predictor
-            features = model.calculate_features(data)
-            features = features.dropna()
-            
-            for idx in features.index:
-                signal_val = model.predict(features.loc[[idx]])
-                signals.append(BacktestSignal(
-                    date=idx,
-                    signal=float(signal_val),
-                    confidence=0.7
-                ))
-        
-        elif model_type == "lstm":
-            # LSTM predictor
-            X, _ = model.prepare_data(data)
-            predictions = model.predict(X)
-            
-            # Match predictions to dates (account for lookback window)
-            lookback = model.lookback_window
-            for i, pred in enumerate(predictions):
-                if i + lookback < len(data):
-                    signals.append(BacktestSignal(
-                        date=data.index[i + lookback],
-                        signal=float(pred),
-                        confidence=0.8
-                    ))
-        
-        # Align signals to data index (array of signal values per date)
-        signals_array = np.zeros(len(data))
-        if len(signals) == len(data):
-            for i in range(len(data)):
-                s = signals[i]
-                signals_array[i] = getattr(s, "signal", 0) if hasattr(s, "signal") else float(s)
-        else:
-            for i, date in enumerate(data.index):
-                for s in signals:
-                    if getattr(s, "date", None) == date:
-                        signals_array[i] = getattr(s, "signal", 0)
-                        break
+        from core.backtest_api_adapter import run_backtest_contract
 
-        # Run backtest
-        logger.info("Running backtest...")
-        use_inst_default = get_settings().backtest.use_institutional_default if get_settings else True
-        use_inst = (request.use_institutional if request.use_institutional is not None else use_inst_default) and InstitutionalBacktestEngine is not None
-        if use_inst:
-            engine = InstitutionalBacktestEngine(
-                initial_capital=request.initial_capital,
-                commission=request.commission,
-                slippage=0.0005,
-                market_impact_alpha=0.5
-            )
-        else:
-            engine = BacktestEngine(
-                initial_capital=request.initial_capital,
-                commission=request.commission
-            )
-
-        results = engine.run_backtest(
-            data,
-            signals_array,
-            signal_threshold=0.3,
-            position_size=min(0.2, float(request.position_size))
-        )
-
-        # Format response from engine state (equity_curve and trades live on engine)
-        eq_curve = getattr(engine, "equity_curve", [])
-        eq_dates = data.index[: len(eq_curve)] if len(eq_curve) <= len(data) else data.index
-        equity_curve = [
-            {"date": (eq_dates[i] if i < len(eq_dates) else data.index[-1]).strftime("%Y-%m-%d"), "equity": float(eq)}
-            for i, eq in enumerate(eq_curve)
-        ]
-
-        trades_list = getattr(engine, "trades", [])
-        trades = [
-            {
-                "entry_date": trade.entry_date.strftime("%Y-%m-%d"),
-                "exit_date": trade.exit_date.strftime("%Y-%m-%d") if trade.exit_date else None,
-                "entry_price": float(trade.entry_price),
-                "exit_price": float(trade.exit_price) if trade.exit_price else None,
-                "quantity": float(trade.quantity),
-                "pnl": float(getattr(trade, "pnl", 0)) if getattr(trade, "pnl", None) is not None else None,
-                "return_pct": float(getattr(trade, "pnl_pct", getattr(trade, "return_pct", 0))) if getattr(trade, "pnl_pct", None) is not None else None
-            }
-            for trade in trades_list
-        ]
-
-        metrics = {}
-        for key, value in results.items():
-            if key in ("normality_test", "max_drawdown_details"):
-                continue
-            if value is None:
-                metrics[key] = None
-            elif isinstance(value, (int, float)):
-                metrics[key] = float(value)
-            elif isinstance(value, (list, dict)):
-                continue
-            else:
-                try:
-                    metrics[key] = float(value)
-                except (TypeError, ValueError):
-                    pass
-        if "normality_test" in results and isinstance(results["normality_test"], dict):
-            metrics["normality_test_passed"] = results["normality_test"].get("passed")
-        
-        return BacktestResponse(
+        result = run_backtest_contract(
+            symbol=request.symbol.upper(),
+            strategy=strategy_from_model_name(request.model_name),
+            start_date=request.start_date,
+            end_date=request.end_date,
+            initial_capital=request.initial_capital,
+            commission=request.commission,
             model_name=request.model_name,
-            symbol=request.symbol,
-            period={
-                "start": request.start_date,
-                "end": request.end_date or "now"
-            },
-            metrics=metrics,
-            equity_curve=equity_curve[-100:],  # Last 100 points
-            trades=trades,
-            status="success"
+            equity_points_limit=100,
         )
-    
+        return BacktestResponse(
+            model_name=result["model_name"],
+            symbol=result["symbol"],
+            period=result["period"],
+            metrics=result["metrics"],
+            equity_curve=result["equity_curve"],
+            trades=result["trades"],
+            status=result["status"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Backtest failed: {e}", exc_info=True)
+        logger.error("Backtest failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -490,7 +309,7 @@ async def compare_strategies(request: CompareStrategiesRequest) -> CompareStrate
             best_strategy = {
                 "model_name": best["model_name"],
                 "sharpe_ratio": best["metrics"].get("sharpe_ratio"),
-                "total_return": best["metrics"].get("total_return")
+                "total_return": best["metrics"].get("total_return_pct", best["metrics"].get("total_return"))
             }
         else:
             best_strategy = {"model_name": "none", "reason": "all strategies failed"}

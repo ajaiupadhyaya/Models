@@ -11,6 +11,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Dict, Any, List
 import logging
+import time
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +95,10 @@ class DataProvider(ABC):
         self.api_key = api_key
         self.rate_limit = None  # Set by subclass
         self.timeout = 30  # Default timeout in seconds
+        self.max_retries = 3
+        self.retry_backoff = 1.0
+        self.retry_statuses = {429, 500, 502, 503, 504}
+        self.session = requests.Session()
     
     @abstractmethod
     def supports_asset_type(self, asset_type: AssetType) -> bool:
@@ -163,6 +169,29 @@ class DataProvider(ABC):
     def get_rate_limit_info(self) -> Dict[str, Any]:
         """Get rate limit info (calls remaining, reset time, etc)."""
         return {"rate_limit": self.rate_limit}
+
+    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
+        """Make an HTTP request with simple retries and backoff."""
+        timeout = kwargs.pop("timeout", self.timeout)
+        last_exc: Optional[Exception] = None
+
+        for attempt in range(self.max_retries):
+            try:
+                resp = self.session.request(method, url, timeout=timeout, **kwargs)
+                if resp.status_code in self.retry_statuses and attempt < self.max_retries - 1:
+                    time.sleep(self.retry_backoff * (2 ** attempt))
+                    continue
+                return resp
+            except requests.RequestException as exc:
+                last_exc = exc
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_backoff * (2 ** attempt))
+                    continue
+                raise
+
+        if last_exc:
+            raise last_exc
+        raise requests.RequestException("Request failed with unknown error")
 
 
 class DataProviderRegistry:

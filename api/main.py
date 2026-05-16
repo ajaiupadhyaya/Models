@@ -123,6 +123,9 @@ def get_routers():
     _add("company", lambda: __import__("api.company_analysis_api", fromlist=["router"]).router)
     _add("ai", lambda: __import__("api.ai_analysis_api", fromlist=["router"]).router)
     _add("data", lambda: __import__("api.data_api", fromlist=["router"]).router)
+    _add("equity", lambda: __import__("api.equity_api", fromlist=["router"]).router)
+    _add("quant", lambda: __import__("api.quant_api", fromlist=["router"]).router)
+    _add("news_sentiment", lambda: __import__("api.news_sentiment_api", fromlist=["router"]).router)
     _add("risk", lambda: __import__("api.risk_api", fromlist=["router"]).router)
 
     # Optional routers
@@ -395,12 +398,18 @@ try:
         app.include_router(routers["ai"], prefix="/api/v1/ai", tags=["AI"])
     if "data" in routers:
         app.include_router(routers["data"], prefix="/api/v1/data", tags=["Data"])
+    if "equity" in routers:
+        app.include_router(routers["equity"], prefix="/api/v1/equity", tags=["Equity"])
+    if "quant" in routers:
+        app.include_router(routers["quant"], prefix="/api/v1/quant", tags=["Quant"])
     try:
         from api.news_api import router as news_router
         app.include_router(news_router, prefix="/api/v1/data", tags=["News"])
         app_state["routers_loaded"].append("news")
     except Exception as e:
         logger.info("News router not available: %s", e)
+    if "news_sentiment" in routers:
+        app.include_router(routers["news_sentiment"], prefix="/api/v1/news", tags=["News Sentiment"])
     if "risk" in routers:
         app.include_router(routers["risk"], prefix="/api/v1/risk", tags=["Risk"])
 

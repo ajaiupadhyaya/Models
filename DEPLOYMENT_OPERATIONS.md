@@ -59,12 +59,16 @@ AUTH_SECRET=your_secret_key_at_least_32_chars
 ```env
 FRED_API_KEY=your_fred_key
 ALPHA_VANTAGE_API_KEY=your_alphavantage_key
+POLYGON_API_KEY=your_polygon_key
+NEWSAPI_KEY=your_newsapi_key
+SEC_USER_AGENT=financial-terminal/1.0 (contact: you@example.com)
 ```
 
 **Optional (for enhanced features):**
 ```env
 OPENAI_API_KEY=your_openai_key
 FINNHUB_API_KEY=your_finnhub_key
+IEX_API_KEY=your_iex_key
 ENABLE_PAPER_TRADING=true
 ALPACA_API_KEY=your_alpaca_key
 ALPACA_API_SECRET=your_alpaca_secret

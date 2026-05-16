@@ -55,6 +55,7 @@ class DataSettings:
     """Data layer configuration."""
     fred_api_key: Optional[str] = field(default_factory=lambda: _env("FRED_API_KEY"))
     alpha_vantage_api_key: Optional[str] = field(default_factory=lambda: _env("ALPHA_VANTAGE_API_KEY"))
+    newsapi_key: Optional[str] = field(default_factory=lambda: _env("NEWSAPI_KEY"))
     sample_data_source_default: str = field(default_factory=lambda: _env("SAMPLE_DATA_SOURCE") or "yfinance")
 
     @property
@@ -81,6 +82,21 @@ class AISettings:
 
 
 @dataclass(frozen=True)
+class InfraSettings:
+    """Infrastructure/runtime connectivity settings."""
+    database_url: Optional[str] = field(default_factory=lambda: _env("DATABASE_URL"))
+    redis_url: Optional[str] = field(default_factory=lambda: _env("REDIS_URL"))
+
+    @property
+    def database_configured(self) -> bool:
+        return bool(self.database_url and self.database_url.strip())
+
+    @property
+    def redis_configured(self) -> bool:
+        return bool(self.redis_url and self.redis_url.strip())
+
+
+@dataclass(frozen=True)
 class AuthSettings:
     """Terminal sign-in configuration (env-based, no DB for MVP)."""
     terminal_user: Optional[str] = field(default_factory=lambda: _env("TERMINAL_USER") or "demo")
@@ -103,6 +119,7 @@ class TerminalSettings:
     data: DataSettings = field(default_factory=DataSettings)
     backtest: BacktestSettings = field(default_factory=BacktestSettings)
     ai: AISettings = field(default_factory=AISettings)
+    infra: InfraSettings = field(default_factory=InfraSettings)
     auth: AuthSettings = field(default_factory=AuthSettings)
 
     @classmethod
@@ -111,6 +128,7 @@ class TerminalSettings:
             data=DataSettings(),
             backtest=BacktestSettings(),
             ai=AISettings(),
+            infra=InfraSettings(),
             auth=AuthSettings(),
         )
 

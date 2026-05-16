@@ -9,7 +9,6 @@ import os
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import logging
-import requests
 
 from .base import DataProvider, OHLCV, FundamentalsData, AssetType
 
@@ -81,12 +80,14 @@ class PolygonProvider(DataProvider):
             while True:
                 # Use next_url if provided (pagination)
                 if next_url:
-                    resp = requests.get(next_url, timeout=self.timeout)
+                    resp = self._request("get", next_url)
                 else:
-                    resp = requests.get(url, params=params, timeout=self.timeout)
+                    resp = self._request("get", url, params=params)
                 
                 if resp.status_code == 401:
                     raise ValueError("Invalid Polygon API key")
+                if resp.status_code == 429:
+                    raise ValueError("Polygon rate limit exceeded")
                 resp.raise_for_status()
                 
                 data = resp.json()
