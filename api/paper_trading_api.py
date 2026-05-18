@@ -8,7 +8,7 @@ Handles paper trading operations:
 - Trade execution based on signals
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, Dict, List
 from datetime import datetime
@@ -16,7 +16,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Paper Trading"])
+try:
+    from api.auth_api import get_current_user
+    _auth_deps = [Depends(get_current_user)]
+except Exception:
+    _auth_deps = []
+
+router = APIRouter(tags=["Paper Trading"], dependencies=_auth_deps)
 
 
 # Request/Response Models

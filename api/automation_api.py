@@ -14,7 +14,7 @@ import os
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 import pandas as pd
 
 from core.data_fetcher import DataFetcher
@@ -24,7 +24,13 @@ from core.paper_trading import AlpacaAdapter
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Automation"])
+try:
+    from api.auth_api import get_current_user
+    _auth_deps = [Depends(get_current_user)]
+except Exception:
+    _auth_deps = []
+
+router = APIRouter(tags=["Automation"], dependencies=_auth_deps)
 
 data_fetcher = DataFetcher()
 ai_service = get_ai_service()

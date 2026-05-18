@@ -146,11 +146,9 @@ def get_managers():
 ConnectionManager = None
 MetricsCollector = None
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Configure structured JSON logging (level via LOG_LEVEL env).
+from api.logging_config import configure_logging, request_id_ctx
+configure_logging()
 logger = logging.getLogger(__name__)
 
 # Global state
@@ -193,12 +191,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Could not load models: %s", e)
 
+    # Optional in-process scheduler (replaces Celery for free-tier deploys).
+    try:
+        from api.scheduler import start_scheduler
+        start_scheduler()
+    except Exception as e:
+        logger.warning("scheduler start failed: %s", e)
+
     logger.info("API server ready!")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down API server...")
+    try:
+        from api.scheduler import stop_scheduler
+        stop_scheduler()
+    except Exception as e:
+        logger.warning("scheduler stop failed: %s", e)
     
     # Close WebSocket connections
     if app_state["connection_manager"]:
@@ -229,20 +239,33 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Request logging middleware: log method, path, status, duration
+# Request logging middleware: mint request ID, log JSON line per request,
+# return X-Request-ID header so clients can correlate.
 import time
+import uuid
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Mint UUID per request, expose via contextvar + X-Request-ID header."""
+
     async def dispatch(self, request: Request, call_next):
+        rid = request.headers.get("x-request-id") or uuid.uuid4().hex
+        token = request_id_ctx.set(rid)
         start = time.perf_counter()
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        finally:
+            request_id_ctx.reset(token)
         duration_ms = (time.perf_counter() - start) * 1000
+        response.headers["X-Request-ID"] = rid
         logger.info(
-            "request method=%s path=%s status=%s duration_ms=%.2f",
-            request.method,
-            request.url.path,
-            response.status_code,
-            duration_ms,
+            "request",
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+                "status": response.status_code,
+                "duration_ms": round(duration_ms, 2),
+            },
         )
         return response
 
@@ -266,15 +289,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(RequestIDMiddleware)
 
-# CORS middleware
+# CORS — driven by CORS_ORIGINS env (comma-separated). Default "*" for dev.
+import os as _os
+_cors_raw = _os.getenv("CORS_ORIGINS", "*").strip()
+_cors_origins = ["*"] if _cors_raw == "*" else [o.strip() for o in _cors_raw.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
 
 # Rate limit (runs first on request; skip /health, /docs, etc.)

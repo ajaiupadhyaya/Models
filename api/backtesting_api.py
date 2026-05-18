@@ -8,7 +8,7 @@ Endpoints for running backtests through the API:
 - Parameter optimization
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 import logging
@@ -54,7 +54,14 @@ import pandas as pd
 import numpy as np
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+
+try:
+    from api.auth_api import get_current_user
+    _auth_deps = [Depends(get_current_user)]
+except Exception:
+    _auth_deps = []
+
+router = APIRouter(dependencies=_auth_deps)
 
 from api.backtest_contracts import LegacyModelBacktestRequest, strategy_from_model_name
 

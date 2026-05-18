@@ -12,7 +12,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 import pandas as pd
 
 from core.ai_analysis import get_ai_service
@@ -21,7 +21,13 @@ from models.ml.advanced_trading import EnsemblePredictor, LSTMPredictor
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["AI Analysis"])
+try:
+    from api.auth_api import get_current_user
+    _auth_deps = [Depends(get_current_user)]
+except Exception:
+    _auth_deps = []
+
+router = APIRouter(tags=["AI Analysis"], dependencies=_auth_deps)
 
 data_fetcher = DataFetcher()
 ai_service = get_ai_service()
