@@ -15,7 +15,17 @@ def client():
     from fastapi.testclient import TestClient
     from api.main import app
 
-    return TestClient(app)
+    try:
+        from api.auth_api import get_current_user
+        app.dependency_overrides[get_current_user] = lambda: {"sub": "test"}
+    except Exception:
+        get_current_user = None
+
+    try:
+        yield TestClient(app)
+    finally:
+        if get_current_user is not None:
+            app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_quant_backtest_route_is_mounted(client):
