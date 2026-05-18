@@ -51,8 +51,9 @@ class PolygonProvider(DataProvider):
         - 1min → timespan=minute, multiplier=1
         """
         if not self.api_key:
-            raise ValueError("Polygon API key not configured")
-        
+            logger.info("Polygon disabled (no key); returning empty OHLCV for %s", symbol)
+            return []
+
         # Parse interval
         if interval == "1day":
             timespan = "day"
@@ -124,9 +125,10 @@ class PolygonProvider(DataProvider):
             raise
     
     def fetch_latest_price(self, symbol: str) -> float:
-        """Fetch latest price."""
+        """Fetch latest price. Returns 0.0 when key missing (provider disabled)."""
         if not self.api_key:
-            raise ValueError("Polygon API key not configured")
+            logger.info("Polygon disabled (no key); skipping latest_price for %s", symbol)
+            return 0.0
         
         # Use /v3/snapshot/locale/us/markets/stocks/tickers/{ticker}
         url = f"{self.BASE_URL}/v3/snapshot/locale/us/markets/stocks/tickers/{symbol}"

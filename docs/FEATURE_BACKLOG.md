@@ -1,507 +1,219 @@
-# Feature Backlog - Production Completion
+# Models — v1.0 Scope + v2 Roadmap
 
-**Generated:** February 9, 2026  
-**Roadmap:** See PRODUCTION_ROADMAP.md  
-**Status:** Phase 0 (Gap Lock)
+**Goal:** Ship a tagged, demoable `v1.0.0` that's "finished" — a polished slice users can actually use — then keep the wider vision alive as a documented v2 roadmap.
 
----
+**Why this exists:** The previous backlog (Feb 2026) scoped ~16 weeks of work across 27 critical stories. For a solo project, that's a treadmill. This document trades breadth for a real stopping point: 4 of 8 terminal modules, 3 of 6 D3 charts, equity-only backtesting, no MLflow, no LLM agent — with everything cut explicitly preserved below as v2.
 
-## Backlog Organization
+**Status as of 2026-05-18:** Phase A complete (deploy unblocked, JWT + JSON logs + SECURITY landed, .env.example completed). Phase B is ~95% delivered per audit (4 modules + 11 bonus panels, 3 charts working, command bar with 18 commands, workspace persistence). Phase C in progress (README rewritten, DEPLOYMENT_GUIDE, TROUBLESHOOTING, SECURITY committed). Next: ARCHITECTURE.md audit, screenshot grid, tag `v1.0.0`.
 
-Epics and stories are organized by:
-1. **Priority:** CRITICAL → HIGH → MEDIUM
-2. **Phase:** 0-6 (as per PRODUCTION_ROADMAP.md)
-3. **Effort:** S (small, 1-3 days), M (medium, 3-7 days), L (large, 1-2 weeks), XL (extra large, 2+ weeks)
-4. **Status:** not-started, in-progress, blocked, ready-for-review, done
+**Related docs:** [`../SECURITY.md`](../SECURITY.md) · [`../DEPLOYMENT_GUIDE.md`](../DEPLOYMENT_GUIDE.md) · [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md)
 
 ---
 
-## Epic 1: DATA FOUNDATION
+## v1.0 — Stopping Point (~3–5 weeks)
 
-### CRITICAL Priority
+### Phase A — Deploy, secure, observable (1 week) ✅ COMPLETE
 
-**Story 1.1: Multi-Provider Connectors (Phase 1)**
-- **Effort:** XL (2-3 weeks)
-- **Status:** not-started
-- **Description:** Implement data providers for equities, options, futures, FX, crypto, fundamentals, news.
-- **Tasks:**
-  - [ ] Create `core/data_providers/base.py` abstract class
-  - [ ] Implement `core/data_providers/polygon_provider.py` (Polygon.io)
-  - [ ] Implement `core/data_providers/iex_provider.py` (IEX Cloud)
-  - [ ] Implement `core/data_providers/oanda_provider.py` (OANDA FX)
-  - [ ] Implement `core/data_providers/coingecko_provider.py` (CoinGecko)
-  - [ ] Implement `core/data_providers/sec_edgar.py` (SEC fundamentals)
-  - [ ] Implement `core/data_providers/newsapi_provider.py` (News feed)
-  - [ ] Unit tests for each provider (edge cases, rate limiting, fallback)
-  - [ ] API key management (env vars, secrets)
-- **Acceptance:** Each provider fetches OHLCV with correct schema; tests pass 100%
-- **Owner:** You
-- **Blocks:** 1.2, 1.3
+**A1. Deploy verified end-to-end** ✅
+- Fixed Dockerfile (`api.main:app` entrypoint, removed broken alembic + `--require-db-url` flags)
+- Three free-tier deploy paths documented in `DEPLOYMENT_GUIDE.md`: Fly+Vercel+Supabase (recommended), Render single-service, Render+Supabase
 
-**Story 1.2: Unified Data Fetcher V2 (Phase 1)**
-- **Effort:** L (1 week)
-- **Status:** not-started
-- **Description:** Refactor `core/data_fetcher.py` to route to best provider; add caching, fallback, audit trail.
-- **Tasks:**
-  - [ ] Update DataFetcher to use provider registry
-  - [ ] Implement provider selection logic (primary → fallback)
-  - [ ] Add caching layer (hot/cold TTLs)
-  - [ ] Add audit logging for all fetches
-  - [ ] Rate limiting per provider
-  - [ ] Integration tests (multiple symbols, fallback)
-- **Acceptance:** Fetch any asset type; cache working; 1000 requests < 5s
-- **Owner:** You
-- **Depends on:** 1.1
-- **Blocks:** 1.3, 1.4
+**A1 (original Render-only criteria)**
+- Render service deploys cleanly from `main` (no curl_cffi/import regressions)
+- `/health` returns 200, `/docs` loads, `/api/auth/login` issues a token, one data endpoint returns real data using the token
+- Document the exact env-var set in `render.yaml` matches `.env.example`
+- **Acceptance:** Cold deploy from clean Render account → working terminal in <15 min following `DEPLOYMENT_GUIDE.md`
 
-**Story 1.3: Point-in-Time Dataset Layer (Phase 1)**
-- **Effort:** L (1 week)
-- **Status:** not-started
-- **Description:** Implement DatasetSnapshot + DatasetManager for reproducibility.
-- **Tasks:**
-  - [ ] Create `core/datasets.py` with DatasetSnapshot dataclass
-  - [ ] Implement save_snapshot (parquet + JSON metadata)
-  - [ ] Implement load_snapshot (reconstruct historical exact data)
-  - [ ] Hash-based verification (sha256 of CSV for reproducibility)
-  - [ ] Tests: save → load → verify identical OHLCV
-- **Acceptance:** Snapshot ID → exact same data; hash verification passes
-- **Owner:** You
-- **Depends on:** 1.2
-- **Blocks:** 1.5
+**A2. JWT protection on expensive routes** ✅
+- `Depends(get_current_user)` wired as router-level dep on backtesting, ai, paper_trading, automation, predictions
+- Read-only routes (data, quant, news, risk) remain open — documented in `SECURITY.md`
 
-**Story 1.4: Cold Storage + Audit Trail (Phase 1)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** Archive historical data in cold storage (SQLite/Parquet); track all fetches.
-- **Tasks:**
-  - [ ] Design cold storage schema (symbol/year/month partitioning)
-  - [ ] Implement ColdStorageManager (write parquet, metadata JSON)
-  - [ ] Implement retrieve (reconstruct from multiple files)
-  - [ ] Audit logging: all fetches logged to JSONL
-  - [ ] Tests: archive → query → verify integrity
-- **Acceptance:** 10 years of data for 500 symbols stored & queryable; no gaps > 1 day
-- **Owner:** You
-- **Depends on:** 1.3
-- **Blocks:** 1.5
+**A2 (original criteria)**
+- `get_current_user` already exists in `api/auth_api.py:73` — wire it as a router-level dependency on:
+  - `backtesting_api` (cpu-heavy)
+  - `ai_analysis_api` (paid OpenAI)
+  - `paper_trading_api` (state-mutating)
+  - `automation_api` (state-mutating)
+  - `predictions_api` (cpu-heavy)
+- Read-only data/quant/news/risk routes stay open (or behind same dep — decide once, document)
+- **Acceptance:** Unauthenticated POST to `/api/backtest/run` returns 401; with valid token returns 200
 
-**Story 1.5: 10-Year Backfill Script (Phase 1)**
-- **Effort:** M (3-5 days)
-- **Status:** not-started
-- **Description:** Batch download script for top-500 symbols + macro; run once/quarter.
-- **Tasks:**
-  - [ ] Create `scripts/backfill_historical_data.py`
-  - [ ] Fetch top-500 by market cap
-  - [ ] For each: download 2015-01-01 to 2025-01-01 via UnifiedDataFetcher
-  - [ ] Store in cold storage
-  - [ ] Log progress + errors
-  - [ ] Tests: 10 symbols backfill successfully
-- **Acceptance:** 500 symbols archived; backfill completes in < 1 hour
-- **Owner:** You
-- **Depends on:** 1.2, 1.4
+**A3. Structured JSON logging + request IDs** ✅
+- `api/logging_config.py` ships a JSON formatter driven by `LOG_LEVEL`
+- `RequestIDMiddleware` in `api/main.py` mints a UUID per request, attaches to `request_id_ctx` contextvar, returns `X-Request-ID` header
+- CORS also tightened in the same pass: env-driven `CORS_ORIGINS`, credentialed mode auto-disabled when set to `*`
 
-### HIGH Priority
+**A3 (original criteria)**
+- Create `api/logging_config.py` — JSON formatter, level via env (`LOG_LEVEL`)
+- Middleware in `api/main.py` that mints a UUID per request, attaches to logging context, returns it as `X-Request-ID` header
+- Replace `logging.basicConfig` calls; keep `logger = logging.getLogger(__name__)` pattern unchanged
+- **Acceptance:** `curl /health` produces a single JSON log line with `request_id`, `path`, `status`, `latency_ms`
 
-**Story 1.6: World Bank + IMF Data Integration (Phase 1)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** Add macro data from World Bank and IMF to complement FRED.
-- **Tasks:**
-  - [ ] Implement `core/data_providers/world_bank_provider.py`
-  - [ ] Implement `core/data_providers/imf_provider.py`
-  - [ ] Map common indicators (world GDP, EM growth, inflation)
-  - [ ] Tests: data fetches correctly aligned with FRED timeline
-- **Acceptance:** World Bank + IMF data available alongside FRED; aligned by date
-- **Owner:** You
-- **Depends on:** 1.1, 1.2
+**A4. `.env.example` covers all required vars** ✅
+- Grouped into auth / logging / data providers / paper trading / infra / scheduler / frontend build-time
+- Includes generator command for `AUTH_SECRET`
 
-**Story 1.7: Alternative Data + Sentiment (Phase 1)**
-- **Effort:** L (1+ weeks)
-- **Status:** not-started
-- **Description:** Integrate Reddit sentiment, Google Trends, social media feeds.
-- **Tasks:**
-  - [ ] Implement `core/data_providers/reddit_sentiment.py`
-  - [ ] Implement `core/data_providers/google_trends.py`
-  - [ ] Aggregate sentiment scores (positive/negative/neutral)
-  - [ ] Tests: sentiment scores 0-1 range; trends align with events
-- **Acceptance:** Sentiment data fetched; scores normalized 0-1
-- **Owner:** You
+**A4 (original criteria)**
+- Add `TERMINAL_USER`, `TERMINAL_PASSWORD`, `AUTH_SECRET`, `LOG_LEVEL`
+- Group: API keys, auth, runtime infra, optional features
+- Cross-check against `render.yaml` and `config/settings.py`
+- **Acceptance:** Fresh clone + `cp .env.example .env` + fill values → `make dev` works
+
+**A5. `SECURITY.md`** ✅
+- Threat model, auth, protected vs open routes, secret rotation, transport, rate limiting, v2 deferred items, disclosure email
+
+**A5 (original criteria)**
+- How auth works (JWT, single-user MVP, env-based creds)
+- Secret rotation (`AUTH_SECRET` change invalidates all tokens)
+- What's not in v1 (RBAC, OAuth, secret scanning) — link to v2 roadmap
+- Responsible disclosure email
+- **Acceptance:** Reviewed and committed; linked from README
 
 ---
 
-## Epic 2: QUANT ENGINE
-
-### CRITICAL Priority
-
-**Story 2.1: Factor Modeling Framework (Phase 2)**
-- **Effort:** L (1-2 weeks)
-- **Status:** not-started
-- **Description:** Implement factor model base class + Fama-French 3/5 factors.
-- **Tasks:**
-  - [ ] Create `models/factor_models.py`
-  - [ ] Define FactorModel base class + methods
-  - [ ] Implement FamaFrenchModel (download FF data)
-  - [ ] compute_factor_returns() via regression
-  - [ ] analyze_factor_exposure() for portfolios
-  - [ ] Tests: factor exposures match benchmarks
-- **Acceptance:** Factor regression R² > 0.7 for SPY; custom portfolio exposures computed
-- **Owner:** You
-- **Blocks:** 2.3, 2.4
-
-**Story 2.2: Regime Detection (Phase 2)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** HMM-based market regimes + regime-specific performance analysis.
-- **Tasks:**
-  - [ ] Create `models/regime_detection.py`
-  - [ ] Implement RegimeDetector (HMM, volatility-based)
-  - [ ] Implement RegimeAnalyzer (Sharpe/drawdown per regime)
-  - [ ] Tests: 3-regime HMM identifies bull/bear/sideways
-- **Acceptance:** Regimes detected; performance by regime calculated; Sharpe varies by regime
-- **Owner:** You
-- **Blocks:** 2.4
-
-**Story 2.3: Options Pricing + Greeks (Phase 2)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** Black-Scholes + Greeks; volatility surface modeling.
-- **Tasks:**
-  - [ ] Enhance/create `models/options_pricing.py`
-  - [ ] Implement Black-Scholes call/put + Greeks (delta, gamma, theta, vega, rho)
-  - [ ] Volatility surface modeling (smiles, skew)
-  - [ ] Tests: compare against Haug 2007, known benchmarks
-- **Acceptance:** Greeks match Black-Scholes reference implementations; tests pass
-- **Owner:** You
-- **Blocks:** 2.5
-
-**Story 2.4: Risk Models: VaR, CVaR, Stress, Scenario (Phase 2)**
-- **Effort:** L (1-2 weeks)
-- **Status:** not-started
-- **Description:** Enhanced risk analytics: stress testing, scenario analysis, correlation regimes.
-- **Tasks:**
-  - [ ] Enhance `models/risk/var_cvar.py` (already exists; add more scenarios)
-  - [ ] Create `models/risk/stress_testing.py`
-  - [ ] Implement shock_scenario() for market shocks
-  - [ ] Implement correlation_regime_shift() for risk-off
-  - [ ] Tests: stress scenarios produce predicted losses
-- **Acceptance:** Stress test results match Monte Carlo baseline; scenario losses deterministic
-- **Owner:** You
-- **Blocks:** API integration
-
-**Story 2.5: Backtesting: Cross-Asset Support (Phase 2)**
-- **Effort:** L (1-2 weeks)
-- **Status:** not-started
-- **Description:** Extend backtesting to equities, options, futures, crypto.
-- **Tasks:**
-  - [ ] Enhance `core/backtesting.py` (already supports equity; extend)
-  - [ ] Add option contract handling (exercise, assignment)
-  - [ ] Add futures handling (margin, daily settlement)
-  - [ ] Add crypto handling (24/7 trading, no settlement)
-  - [ ] Tests: Options backtest; futures margin; crypto overnight
-- **Acceptance:** Cross-asset backtest runs; PnL accounts for asset-specific mechanics
-- **Owner:** You
-- **Depends on:** 2.3, 2.4
+### Phase A bonus (free-tier hosting unblockers) ✅
+- Data providers (Polygon, IEX) degrade gracefully when key missing (no more ValueError)
+- DB layer no-ops when `DATABASE_URL` unset; read helpers return `[]` / `None`
+- `db/init.sql` ships the schema for Supabase / Neon / Render PG
+- Celery+Redis replaced by APScheduler in-process (`api/scheduler.py`, gated by `SCHEDULER_ENABLED`); legacy `workers/` kept for v2
+- `fly.toml`, `frontend/vercel.json`, updated `render.yaml` (plan: free)
 
 ---
 
-## Epic 3: AI/ML/RL PIPELINE
+### Phase B — Frontend MVP (2 weeks) ⚠️ ~95% delivered (per 2026-05-18 audit)
 
-### CRITICAL Priority
+Audit found: 4 scope modules + 11 bonus modules already working, all 3 D3 charts (candlestick, correlation matrix, factor heatmap) built, command bar with 18 commands, localStorage workspace persistence. Remaining v1 work is polish (loading/error states, acceptance-criteria smoke tests, AI panel integration in Backtest module).
 
-**Story 3.1: MLflow Integration + Model Registry (Phase 3)**
-- **Effort:** L (1-2 weeks)
-- **Status:** not-started
-- **Description:** Set up MLflow tracking; model versioning; promotion workflow.
-- **Tasks:**
-  - [ ] Create `ml/mlflow_setup.py` (initialize tracking, artifact storage)
-  - [ ] Create `ml/model_registry.py` (promotion, rollback)
-  - [ ] Wire model training to MLflow logging (metrics, params, artifacts)
-  - [ ] Implement auto-rollback on metric degradation
-  - [ ] Tests: model logged → fetched → served
-- **Acceptance:** Models logged with metrics; promoted dev → staging → production; rollback works
-- **Owner:** You
-- **Blocks:** 3.2, 3.3
+**Goal:** 4 polished terminal modules, not 8 half-finished ones.
 
-**Story 3.2: Feature Store (Phase 3)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** Centralized feature engineering with versioning.
-- **Tasks:**
-  - [ ] Create `ml/feature_store.py`
-  - [ ] Implement compute_features() (SMA, RSI, volatility, volume, etc.)
-  - [ ] Implement get_features() (from store or compute)
-  - [ ] Versioning: track feature definitions
-  - [ ] Tests: features reproducible; aligned with train/test dates
-- **Acceptance:** 50+ technical features computed; versioned; E2E reproducibility
-- **Owner:** You
-- **Depends on:** 3.1
+**B1. Module: Primary Instrument (polish existing)**
+- Candlestick + volume chart works smoothly for any symbol via command bar `GP AAPL`
+- Loading states, error states, timeframe selector (1D/1W/1M/3M/1Y/5Y)
+- **Acceptance:** Symbol switching <500ms; no flicker; charts handle 5Y daily without lag
 
-**Story 3.3: LLM-Powered Research Agent (Phase 3)**
-- **Effort:** L (1-2 weeks)
-- **Status:** not-started
-- **Description:** LangChain agent with 5+ tools; query interface.
-- **Tasks:**
-  - [ ] Create `ai/llm_agent.py`
-  - [ ] Define tools: fetch_price, fetch_fundamentals, backtest, analyze_risk, fetch_news
-  - [ ] Initialize agent_executor (zero-shot-react)
-  - [ ] Hook to OpenAI GPT-4
-  - [ ] Tests: agent runs queries; calls correct tools
-- **Acceptance:** Query "should I buy AAPL?" → agent fetches data, backtests, returns analysis
-- **Owner:** You
-- **Depends on:** 1.2 (data), 2.4 (risk)
+**B2. Module: Quant**
+- Two charts: **factor exposure bar chart** + **regime timeline**
+- Wire to existing `api/quant_api.py` endpoints
+- Show factor exposures (FF3/FF5) for a symbol/portfolio + regime classification
+- **Acceptance:** `QUANT AAPL` shows factor breakdown + current regime; data refreshes on symbol change
 
-**Story 3.4: RL Training: PPO Agent (Phase 3)**
-- **Effort:** L (1+ weeks)
-- **Status:** not-started
-- **Description:** Gymnasium environment + Stable Baselines3 PPO.
-- **Tasks:**
-  - [ ] Create `models/rl/trading_env.py` (Gymnasium environment)
-  - [ ] Create `models/rl/ppo_trainer.py` (train PPO on OHLCV)
-  - [ ] Implement reward function (trading P&L)
-  - [ ] Tests: agent improves over episodes; policy converges
-- **Acceptance:** Agent trains for 100k steps; equity curve improves; policy saved
-- **Owner:** You
-- **Depends on:** 1.2 (data), 3.1 (MLflow)
+**B3. Module: Portfolio**
+- One chart: **allocation treemap** (D3) + risk metrics table (Sharpe, max DD, vol, VaR)
+- Wire to existing `api/risk_api.py` and portfolio endpoints
+- **Acceptance:** `PORT AAPL MSFT GOOGL` shows treemap + risk table; weights editable
+
+**B4. Module: Backtest/AI**
+- Strategy selector (SMA crossover, momentum, mean-reversion — pick 3 from existing `core/backtesting.py`)
+- Equity curve + Sharpe + max DD displayed
+- AI panel: ask a question, get a natural-language answer (use existing `api/ai_analysis_api.py`)
+- **Acceptance:** `BACKTEST AAPL 50sma.200sma` runs in <10s and shows results; `AI why is AAPL down today?` returns answer
+
+**B5. D3 chart library (3 charts only)**
+- Candlestick (exists; polish for shared use)
+- **Correlation matrix** (new) — shared by Portfolio + Quant
+- **Factor heatmap** (new) — Quant module
+- All charts: typed props, loading/error/empty states, zoom/pan where appropriate, no inline data fetching (props only)
+- **Acceptance:** Each chart has a storybook-style demo page or test rendering with mock data
+
+**B6. Command bar — 6 commands**
+- `GP <SYMBOL>` (primary instrument), `QUANT <SYMBOL>`, `PORT <SYMBOL...>`, `BACKTEST <SYMBOL> <STRATEGY>`, `AI <free text>`, `HELP`
+- Symbol completion from recent history (localStorage)
+- Unknown command → show HELP
+- **Acceptance:** All 6 commands parse correctly; bad input shows useful error, never crashes
+
+**B7. Workspace persistence (basic)**
+- Current symbol + active module + recent symbols saved to localStorage on every change
+- Restore on page reload
+- No per-module settings tracking yet (v2)
+- **Acceptance:** Reload browser → land back exactly where you were
 
 ---
 
-## Epic 4: TERMINAL UI + D3
+### Phase C — Demo polish + docs (3–5 days)
 
-### CRITICAL Priority
+**C1. README rewrite**
+- Hero section: 1-sentence value prop, demo GIF, screenshot grid (4 modules)
+- "Try it" — Render deploy button + local quickstart (3 commands)
+- Architecture diagram (link to `ARCHITECTURE.md`)
+- v1.0 scope + link to v2 roadmap (this doc)
+- Badges: CI, license, last commit
 
-**Story 4.1: D3 Chart Library (Phase 4)**
-- **Effort:** L (2 weeks)
-- **Status:** not-started
-- **Description:** Implement 6 D3 chart types (candlestick, heatmap, vol surface, correlation, factor, regime).
-- **Tasks:**
-  - [ ] Create `frontend/src/components/charts/VolatilitySurfaceChart.tsx`
-  - [ ] Create `frontend/src/components/charts/HeatmapChart.tsx`
-  - [ ] Create `frontend/src/components/charts/CorrelationMatrix.tsx`
-  - [ ] Create `frontend/src/components/charts/FactorExposureChart.tsx`
-  - [ ] Create `frontend/src/components/charts/RegimeShiftChart.tsx`
-  - [ ] Polish existing CandlestickChart
-  - [ ] Tests: charts render; data binds; zoom/pan works
-- **Acceptance:** All 6 charts render smoothly; no lag with 10 years data
-- **Owner:** You
-- **Blocks:** 4.2
+**C2. `DEPLOYMENT_GUIDE.md`**
+- Render path (recommended): blueprint, env vars, common failures
+- Local Docker path: `docker compose up`, expected output
+- Troubleshooting checklist (port conflicts, env-var typos, build cache)
 
-**Story 4.2: Terminal Panels Integration (Phase 4)**
-- **Effort:** L (1-2 weeks)
-- **Status:** not-started
-- **Description:** Wire D3 charts into 8 terminal modules.
-- **Tasks:**
-  - [ ] Update Primary Instrument module (candlestick + volume) ✅ exists; polish
-  - [ ] Update Fundamental module (add waterfall chart via D3)
-  - [ ] Update Technical module (indicators on candlestick)
-  - [ ] Update Quant module (factor heatmap, regime timeline)
-  - [ ] Update Economic module (macro time-series via D3)
-  - [ ] Update News module (sentiment timeline)
-  - [ ] Update Portfolio module (pie/treemap allocation)
-  - [ ] Update Screening module (scatter plot multi-factor)
-- **Acceptance:** All 8 modules render D3 charts; no crashes; smooth transitions
-- **Owner:** You
-- **Depends on:** 4.1
+**C3. `TROUBLESHOOTING.md`**
+- Top 5 issues from your own commit history (curl_cffi blocks, yfinance imports, cold-start timeouts, missing env vars, CORS)
+- For each: symptom → diagnosis → fix
 
-**Story 4.3: Command Bar Enhancements (Phase 4)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** Support 15+ commands; parse parameters; route to modules.
-- **Tasks:**
-  - [ ] Enhance `frontend/src/components/CommandBar.tsx`
-  - [ ] Support: GP, FA, FLDS, QUANT, ECO, NEWS, PORT, SCREEN, BACKTEST, AI, WORKSPACE, ?
-  - [ ] Parse secondary symbols (e.g., PORT AAPL MSFT GOOGL)
-  - [ ] Parse parameters (e.g., BACKTEST 50SMA.200EMA)
-  - [ ] Tests: parse various command formats; emit correct module + context
-- **Acceptance:** All 15+ commands parse correctly; module switches; parameters passed
-- **Owner:** You
+**C4. `ARCHITECTURE.md` audit**
+- Update to reflect current code (not Feb baseline)
+- Layer diagram: frontend ↔ FastAPI ↔ models/core ↔ data providers
+- Module-by-module description
 
-**Story 4.4: Workspace Persistence (Phase 4)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** Save/load terminal layouts + settings per workspace.
-- **Tasks:**
-  - [ ] Enhance `frontend/src/context/WorkspaceContext.tsx`
-  - [ ] Implement saveWorkspace (state → localStorage)
-  - [ ] Implement loadWorkspace (localStorage → state)
-  - [ ] Track module-specific settings (indicators, timeframes, etc.)
-  - [ ] Tests: save workspace → reload browser → restore state
-- **Acceptance:** Workspaces persist; user-created layouts restored
-- **Owner:** You
-- **Depends on:** 4.3
+**C5. Tag `v1.0.0`**
+- Release notes summarizing what's in v1
+- Link to v2 roadmap section below
+- GitHub release with screenshots/GIF
 
 ---
 
-## Epic 5: SECURITY & HARDENING
+## v2 Roadmap — Upgrade Paths (post-v1)
 
-### CRITICAL Priority
+Explicitly cut from v1.0 to make the stopping point reachable. Each is a coherent next chunk of work.
 
-**Story 5.1: OAuth2 + JWT Authentication (Phase 5)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** JWT tokens; protected endpoints; role-based access.
-- **Tasks:**
-  - [ ] Create `api/auth.py` (TokenManager, login endpoint)
-  - [ ] Implement JWT creation + verification
-  - [ ] Add `get_current_user` dependency (verify token)
-  - [ ] Protect critical endpoints (backtest, AI, admin)
-  - [ ] Tests: login → token; protected endpoint without token → 401
-- **Acceptance:** Login works; token-protected endpoints reject unauthenticated; token expires
-- **Owner:** You
-- **Blocks:** 5.2, 5.3
+### Data & Storage
+- **Provider rotation v2** — primary→fallback logic, per-provider rate limits, audit trail in JSONL
+- **World Bank + IMF + Reddit + Google Trends** providers
+- **10-year backfill** of top-500 symbols into Parquet cold storage (script exists, needs run + validation)
+- **Point-in-time dataset snapshots** with hash verification (partial — needs audit)
 
-**Story 5.2: Rate Limiting + Quota (Phase 5)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** Per-endpoint rate limits; track usage; enforce quotas.
-- **Tasks:**
-  - [ ] Enhance `api/rate_limit.py` (configure limits per route)
-  - [ ] Apply to expensive endpoints (backtest 10/hour, AI 20/hour)
-  - [ ] Tests: exceed rate limit → 429 Too Many Requests
-- **Acceptance:** Rate limiting enforced; users see limits in error response
-- **Owner:** You
-- **Depends on:** 5.1
+### Quant & ML
+- **Cross-asset backtesting** — options (exercise/assignment), futures (margin/settlement), crypto (24/7)
+- **MLflow + model registry** — tracking, promotion dev→staging→prod, auto-rollback on metric degradation
+- **Feature store** with versioning
+- **RL training pipeline** — PPO on Gymnasium env, 100k+ step training runs
+- **Vol surface modeling** (smiles, skew)
 
-**Story 5.3: Structured Logging + Tracing (Phase 5)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** JSON structured logs; request ID tracing; observability.
-- **Tasks:**
-  - [ ] Create `api/logging_config.py` (StructuredLogger with JSON output)
-  - [ ] Create `api/instrumentation.py` (middleware for tracing)
-  - [ ] Log all requests: method, path, user, request_id, status, latency
-  - [ ] Tests: logs are valid JSON; request IDs trace end-to-end
-- **Acceptance:** All logs JSON; request tracing visible; latency tracked
-- **Owner:** You
-- **Depends on:** 5.1
+### AI / LLM
+- **LLM research agent** (Epic 3.3 flagship) — LangChain with tools: fetch_price, fundamentals, backtest, risk, news. This is its own project really.
 
-**Story 5.4: Prometheus Metrics + Alerts (Phase 5)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** Export metrics; Prometheus scraping; Grafana dashboards; alert rules.
-- **Tasks:**
-  - [ ] Create `api/metrics.py` (Counter, Histogram, Gauge)
-  - [ ] Add `/metrics` endpoint
-  - [ ] Wire metrics into critical endpoints
-  - [ ] Create `prometheus.yml` (scrape config)
-  - [ ] Create `grafana/` dashboard (API latency, requests, errors)
-  - [ ] Define alert rules (high latency, error rate, CPU)
-- **Acceptance:** Metrics exported; Prometheus scrapes; Grafana dashboard visible
-- **Owner:** You
-- **Depends on:** 5.3
+### Frontend
+- **Remaining 4 modules**: Fundamental (waterfall), Technical (indicators-on-candlestick), Economic (macro time-series), News (sentiment timeline), Screening (multi-factor scatter)
+- **Remaining 3 charts**: vol surface, heatmap (generic), regime shift
+- **Command bar expansion** — 15+ commands, secondary symbols (`PORT AAPL MSFT GOOGL`), parameter parsing (`BACKTEST 50sma.200ema`)
+- **Per-module workspace settings** — indicators, timeframes, color scales persist per layout
 
-**Story 5.5: Security Scanning + Dependency Audit (Phase 5)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** SAST, dependency audit, secrets scanning in CI/CD.
-- **Tasks:**
-  - [ ] Add Bandit (SAST) to CI
-  - [ ] Add `pip audit` (dependency vulnerabilities)
-  - [ ] Add `safety check` (CVE check)
-  - [ ] Add `truffleHog` (secrets scanning)
-  - [ ] Create `.github/workflows/security.yml`
-  - [ ] Tests: no high/critical findings; pass all scans
-- **Acceptance:** CI pipeline runs security checks; no CVEs; no secrets in repo
-- **Owner:** You
+### Security & Ops
+- **OAuth2** (replace single-user JWT)
+- **Per-route rate limits + quotas** (current limiter is global per-IP)
+- **Prometheus `/metrics`** + Grafana dashboards + alert rules (high latency, error rate, CPU)
+- **Security scanning in CI** — Bandit, pip-audit, safety, truffleHog
+- **Redis-backed rate limiter** (current is in-memory, single-process only)
+
+### Testing & Docs
+- **Playwright E2E** — 5 critical user workflows
+- **Coverage gate** — ≥75% overall, ≥85% on critical paths
+- **OpenAPI examples** — curl/Python/TypeScript snippets per endpoint
+- **User guides** — `WORKFLOWS.md` with 5+ example tasks
 
 ---
 
-## Epic 6: TESTING & DOCUMENTATION
+## Out of scope (forever, or until requirements change)
 
-### CRITICAL Priority
-
-**Story 6.1: Test Infrastructure + Coverage (Phase 6)**
-- **Effort:** L (1-2 weeks)
-- **Status:** not-started
-- **Description:** pytest setup; fixture library; coverage targets; CI gates.
-- **Tasks:**
-  - [ ] Organize `tests/` by domain (data, quant, ml, api, e2e)
-  - [ ] Create `tests/conftest.py` (common fixtures: mock fetcher, test data)
-  - [ ] Write unit tests for each story (backtest, risk, models, endpoints)
-  - [ ] Calculate coverage: `pytest --cov=config --cov=api --cov=core`
-  - [ ] Set targets: ≥85% critical, ≥75% overall
-  - [ ] Create `.github/workflows/tests.yml` (run on push/PR)
-- **Acceptance:** 75%+ coverage; CI passes tests before merge
-- **Owner:** You
-
-**Story 6.2: E2E Workflows (Phase 6)**
-- **Effort:** L (1-2 weeks)
-- **Status:** not-started
-- **Description:** End-to-end tests via Playwright or similar.
-- **Tasks:**
-  - [ ] Create `tests/e2e/test_daily_macro.py` (load ECO panel → see macro data)
-  - [ ] Create `tests/e2e/test_backtest_workflow.py` (login → backtest → results)
-  - [ ] Create `tests/e2e/test_factor_analysis.py` (portfolio → factor exposures)
-  - [ ] Create `tests/e2e/test_llm_agent.py` (ask question → get analysis)
-  - [ ] Run E2E as final check before production deploy
-- **Acceptance:** 5+ critical workflows pass end-to-end
-- **Owner:** You
-- **Depends on:** 6.1
-
-**Story 6.3: API Documentation (Phase 6)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** OpenAPI schema; interactive docs; examples.
-- **Tasks:**
-  - [ ] Update all endpoint docstrings (description, params, responses)
-  - [ ] Ensure OpenAPI schema valid: `curl http://localhost:8000/openapi.json`
-  - [ ] Update `API_DOCUMENTATION.md` (map all endpoints by domain)
-  - [ ] Add examples (curl, Python, TypeScript) for key workflows
-  - [ ] Tests: OpenAPI schema validates; examples run
-- **Acceptance:** `/docs` and `/redoc` fully populated; 100% endpoint coverage
-- **Owner:** You
-- **Depends on:** All API stories
-
-**Story 6.4: User & Operator Guides (Phase 6)**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** User workflows, operator runbook, troubleshooting.
-- **Tasks:**
-  - [ ] Update `WORKFLOWS.md` (5+ example user tasks)
-  - [ ] Create `DEPLOYMENT_GUIDE.md` (how to deploy to prod)
-  - [ ] Create `TROUBLESHOOTING.md` (common issues, logs, debugging)
-  - [ ] Create `SECURITY.md` (auth, secrets, best practices)
-  - [ ] Create `.env.example` (all required env vars)
-- **Acceptance:** New dev can read docs and deploy system
-- **Owner:** You
-- **Depends on:** All phases
+- Multi-tenant / multi-user (single-user MVP is intentional)
+- Live trading (paper trading only; live requires regulatory work)
+- Mobile-native apps (web responsive is enough)
+- Real-time tick-level data (daily/intraday bars only)
 
 ---
 
-## HIGH Priority
+## How to use this doc
 
-**Story H1: CI/CD Pipeline Enhancement**
-- **Effort:** L (1 week)
-- **Status:** not-started
-- **Description:** GitHub Actions for lint, type check, test, build, push to registry.
-- **Tasks:**
-  - [ ] Create `.github/workflows/ci.yml` (lint, type, test, coverage)
-  - [ ] Create `.github/workflows/build.yml` (build Docker image, push to registry)
-  - [ ] Add badge to README
-  - [ ] Tests: CI passes on every push
-- **Acceptance:** CI pipeline passes; Docker image pushed on merge to main
+1. **Working on v1?** Phase A → B → C top to bottom, no skipping.
+2. **Tempted to scope-creep?** Check the v2 list first — if it's there, defer.
+3. **Found something not in either list?** Add to v2, not v1.
+4. **Hit a v1 acceptance criterion?** Check it off here, commit the doc update with the change.
 
-**Story H2: Performance Benchmarking**
-- **Effort:** M (1 week)
-- **Status:** not-started
-- **Description:** Establish performance baseline; track regressions.
-- **Tasks:**
-  - [ ] Measure page load time (< 2s target)
-  - [ ] Measure API latency (< 200ms p95 target)
-  - [ ] Measure backtest speed (1 year of data < 5s target)
-  - [ ] Create performance dashboard (track over time)
-- **Acceptance:** Benchmarks documented; targets met or planned improvements
-
----
-
-## Summary
-
-| Priority | Epic | Stories | Effort | Phase |
-|----------|------|---------|--------|-------|
-| CRITICAL | Data | 1.1-1.5 | 5 stories, XL total | 1 |
-| CRITICAL | Quant | 2.1-2.5 | 5 stories, L-XL total | 2 |
-| CRITICAL | AI/ML | 3.1-3.4 | 4 stories, L-XL total | 3 |
-| CRITICAL | Terminal | 4.1-4.4 | 4 stories, L total | 4 |
-| CRITICAL | Security | 5.1-5.5 | 5 stories, M-L total | 5 |
-| CRITICAL | Testing | 6.1-6.4 | 4 stories, L-M total | 6 |
-| HIGH | Infrastructure | H1-H2 | 2 stories | 5-6 |
-
-**Total CRITICAL: 27 stories | Total HIGH: 2 stories | Estimated: 16 weeks**
+Source-of-truth status lives in this file. Delete `PHASE_1_2_SUMMARY.md`, `CONTEXT_COMPLIANCE_MATRIX.md` after v1 ships if they're not maintained.

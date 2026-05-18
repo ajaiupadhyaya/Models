@@ -8,7 +8,7 @@ Endpoints for generating predictions from trained models:
 - Multi-model ensemble predictions
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional, Literal
 import logging
@@ -36,7 +36,14 @@ spec.loader.exec_module(backtesting_module)
 BacktestSignal = backtesting_module.BacktestSignal
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+
+try:
+    from api.auth_api import get_current_user
+    _auth_deps = [Depends(get_current_user)]
+except Exception:
+    _auth_deps = []
+
+router = APIRouter(dependencies=_auth_deps)
 
 
 # Request/Response Models

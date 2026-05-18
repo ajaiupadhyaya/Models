@@ -1,20 +1,47 @@
-# Render Blueprint: deploy the terminal as a web service
-# https://render.com/docs/blueprint-spec
+# Render Blueprint — single-service deploy (API + same-origin SPA).
+# Free tier compatible: no managed Postgres / Redis attached here.
+# Bring your own Supabase / Neon DATABASE_URL via the dashboard.
 #
-# Usage: connect this repo in Render; create a Web Service from this spec.
-# Environment: set in Render dashboard → your service → Environment.
-#   - Use exact Key names (case-sensitive); no trailing slashes on URLs.
-#   - Do NOT set PORT (Render sets it) or VITE_API_ORIGIN (single service = same origin for API/WebSocket).
-# Required: TERMINAL_USER, TERMINAL_PASSWORD, AUTH_SECRET, FRED_API_KEY, ALPHA_VANTAGE_API_KEY
-# Optional: OPENAI_API_KEY, FINNHUB_API_KEY, ENABLE_METRICS, WEBSOCKET_ENABLED, paper trading vars
-# See RENDER_DEPLOY.md for full list, formatting rules, and troubleshooting.
+# Required env vars (set in Render dashboard → Environment):
+#   TERMINAL_USER, TERMINAL_PASSWORD, AUTH_SECRET, CORS_ORIGINS
+# Optional:
+#   DATABASE_URL, FRED_API_KEY, ALPHA_VANTAGE_API_KEY, POLYGON_API_KEY,
+#   FMP_API_KEY, NEWSAPI_KEY, OPENAI_API_KEY, FINNHUB_API_KEY, SCHEDULER_ENABLED
 
 services:
   - type: web
     name: terminal-api
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    healthCheckPath: /health
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SCHEDULER_ENABLED
+        value: "false"
+      - key: TERMINAL_USER
+        sync: false
+      - key: TERMINAL_PASSWORD
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: FRED_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: POLYGON_API_KEY
+        sync: false
+      - key: FMP_API_KEY
+        sync: false
+      - key: NEWSAPI_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

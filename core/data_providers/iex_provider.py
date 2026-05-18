@@ -44,8 +44,9 @@ class IEXProvider(DataProvider):
         Ranges: 5y, 2y, 1y, ytd, 6m, 3m, 1m, 1d, etc.
         """
         if not self.api_key:
-            raise ValueError("IEX API key not configured")
-        
+            logger.info("IEX disabled (no key); returning empty OHLCV for %s", symbol)
+            return []
+
         if interval != "1day":
             raise ValueError(f"IEX only supports daily data")
         
@@ -111,9 +112,10 @@ class IEXProvider(DataProvider):
             raise
     
     def fetch_latest_price(self, symbol: str) -> float:
-        """Fetch latest price."""
+        """Fetch latest price. Returns 0.0 when key missing (provider disabled)."""
         if not self.api_key:
-            raise ValueError("IEX API key not configured")
+            logger.info("IEX disabled (no key); skipping latest_price for %s", symbol)
+            return 0.0
         
         url = f"{self.BASE_URL}/stock/{symbol}/quote"
         params = {"token": self.api_key}

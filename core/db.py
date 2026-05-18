@@ -11,23 +11,27 @@ from typing import Any, Dict, List, Optional, Generator
 
 logger = logging.getLogger(__name__)
 
-_DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://trader:trading123@localhost:5432/trading_metrics",
-)
+_DATABASE_URL = os.environ.get("DATABASE_URL") or None
 
 
-def get_database_url() -> str:
+def get_database_url() -> Optional[str]:
     return _DATABASE_URL
+
+
+def db_configured() -> bool:
+    """True if DATABASE_URL is set (does not test connectivity)."""
+    return bool(_DATABASE_URL)
 
 
 _engine = None
 
 
 def get_engine():
-    """Lazy-create SQLAlchemy engine (synchronous)."""
+    """Lazy-create SQLAlchemy engine. Returns None when DATABASE_URL unset."""
     global _engine
     if _engine is None:
+        if not _DATABASE_URL:
+            return None
         from sqlalchemy import create_engine
         _engine = create_engine(
             _DATABASE_URL,
@@ -40,8 +44,10 @@ def get_engine():
 
 @contextmanager
 def get_connection():
-    """Context manager for a DB connection (for workers and sync code)."""
+    """Context manager for a DB connection. Raises RuntimeError if no DB configured."""
     engine = get_engine()
+    if engine is None:
+        raise RuntimeError("DATABASE_URL not configured")
     conn = engine.connect()
     try:
         yield conn
@@ -53,8 +59,19 @@ def get_connection():
         conn.close()
 
 
+def _safe_engine():
+    """Return engine or None; never raises. Use in read helpers for graceful no-DB mode."""
+    try:
+        return get_engine()
+    except Exception as e:
+        logger.warning("DB engine unavailable: %s", e)
+        return None
+
+
 def update_data_status(source: str, entity: str, last_updated: Optional[datetime] = None, last_error: Optional[str] = None) -> None:
-    """Upsert one row into data_status."""
+    """Upsert one row into data_status. No-op when DB not configured."""
+    if not _DATABASE_URL:
+        return
     from sqlalchemy import text
     with get_connection() as conn:
         conn.execute(
@@ -76,7 +93,7 @@ def update_data_status(source: str, entity: str, last_updated: Optional[datetime
 
 def upsert_ohlcv(symbol: str, rows: List[Dict[str, Any]], source: str = "yfinance") -> int:
     """Insert OHLCV bars; on conflict (symbol, time) update. Returns count inserted/updated."""
-    if not rows:
+    if not rows or not _DATABASE_URL:
         return 0
     from sqlalchemy import text
     engine = get_engine()
@@ -113,7 +130,7 @@ def upsert_ohlcv(symbol: str, rows: List[Dict[str, Any]], source: str = "yfinanc
 
 def upsert_macro_series(series_id: str, rows: List[Dict[str, Any]]) -> int:
     """Insert macro_series rows. (series_id, time) unique."""
-    if not rows:
+    if not rows or not _DATABASE_URL:
         return 0
     from sqlalchemy import text
     engine = get_engine()
@@ -140,7 +157,7 @@ def upsert_macro_series(series_id: str, rows: List[Dict[str, Any]]) -> int:
 
 def insert_news(items: List[Dict[str, Any]]) -> int:
     """Insert news rows (no unique constraint; append-only for simplicity)."""
-    if not items:
+    if not items or not _DATABASE_URL:
         return 0
     from sqlalchemy import text
     engine = get_engine()
@@ -164,16 +181,20 @@ def insert_news(items: List[Dict[str, Any]]) -> int:
 
 
 def get_data_status() -> List[Dict[str, Any]]:
-    """Return all data_status rows for dashboard."""
+    """Return all data_status rows for dashboard. Empty when DB not configured."""
+    engine = _safe_engine()
+    if engine is None:
+        return []
     from sqlalchemy import text
-    engine = get_engine()
     with engine.connect() as conn:
         result = conn.execute(text("SELECT source, entity, last_updated, last_error FROM data_status ORDER BY source, entity"))
         return [{"source": r[0], "entity": r[1], "last_updated": r[2].isoformat() if r[2] else None, "last_error": r[3]} for r in result]
 
 
 def upsert_company_profile(symbol: str, data: Dict[str, Any]) -> None:
-    """Upsert company_profile row (symbol primary key)."""
+    """Upsert company_profile row (symbol primary key). No-op without DB."""
+    if not _DATABASE_URL:
+        return
     from sqlalchemy import text
     engine = get_engine()
     with engine.begin() as conn:
@@ -199,6 +220,8 @@ def upsert_company_profile(symbol: str, data: Dict[str, Any]) -> None:
 
 def upsert_income_statement(symbol: str, period_end: str, period_type: str, data: Dict[str, Any]) -> None:
     """Upsert one income statement row. period_end YYYY-MM-DD, period_type annual|quarterly."""
+    if not _DATABASE_URL:
+        return
     import json
     from sqlalchemy import text
     engine = get_engine()
@@ -220,6 +243,8 @@ def upsert_income_statement(symbol: str, period_end: str, period_type: str, data
 
 
 def upsert_balance_sheet(symbol: str, period_end: str, period_type: str, data: Dict[str, Any]) -> None:
+    if not _DATABASE_URL:
+        return
     import json
     from sqlalchemy import text
     engine = get_engine()
@@ -241,6 +266,8 @@ def upsert_balance_sheet(symbol: str, period_end: str, period_type: str, data: D
 
 
 def upsert_cash_flow(symbol: str, period_end: str, period_type: str, data: Dict[str, Any]) -> None:
+    if not _DATABASE_URL:
+        return
     import json
     from sqlalchemy import text
     engine = get_engine()
@@ -264,9 +291,11 @@ def upsert_cash_flow(symbol: str, period_end: str, period_type: str, data: Dict[
 # --- Read helpers for API ---
 
 def get_company_profile(symbol: str) -> Optional[Dict[str, Any]]:
-    """Return one company_profile row or None."""
+    """Return one company_profile row or None. None when DB unconfigured."""
+    engine = _safe_engine()
+    if engine is None:
+        return None
     from sqlalchemy import text
-    engine = get_engine()
     with engine.connect() as conn:
         r = conn.execute(
             text("SELECT symbol, name, sector, industry, market_cap, description FROM company_profile WHERE symbol = :sym"),
@@ -279,8 +308,10 @@ def get_company_profile(symbol: str) -> Optional[Dict[str, Any]]:
 
 def search_company_profiles(query: str, limit: int = 20) -> List[Dict[str, Any]]:
     """Search company_profile by symbol or name (ILIKE)."""
+    engine = _safe_engine()
+    if engine is None:
+        return []
     from sqlalchemy import text
-    engine = get_engine()
     q = f"%{query.strip()}%"
     with engine.connect() as conn:
         result = conn.execute(
@@ -292,8 +323,10 @@ def search_company_profiles(query: str, limit: int = 20) -> List[Dict[str, Any]]
 
 def get_ohlcv_range(symbol: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
     """Return OHLCV rows for symbol between start and end (YYYY-MM-DD)."""
+    engine = _safe_engine()
+    if engine is None:
+        return []
     from sqlalchemy import text
-    engine = get_engine()
     with engine.connect() as conn:
         result = conn.execute(
             text("SELECT time, open, high, low, close, volume, adjusted_close FROM ohlcv WHERE symbol = :sym AND time >= :start AND time <= :end ORDER BY time"),
@@ -315,9 +348,11 @@ def get_ohlcv_range(symbol: str, start_date: str, end_date: str) -> List[Dict[st
 
 def get_income_statements(symbol: str, period_type: str = "annual", limit: int = 10) -> List[Dict[str, Any]]:
     """Return income statement rows (data as dict)."""
+    engine = _safe_engine()
+    if engine is None:
+        return []
     import json
     from sqlalchemy import text
-    engine = get_engine()
     with engine.connect() as conn:
         result = conn.execute(
             text("SELECT period_end, data FROM income_statement WHERE symbol = :sym AND period_type = :pt ORDER BY period_end DESC LIMIT :lim"),
@@ -327,9 +362,11 @@ def get_income_statements(symbol: str, period_type: str = "annual", limit: int =
 
 
 def get_balance_sheets(symbol: str, period_type: str = "annual", limit: int = 10) -> List[Dict[str, Any]]:
+    engine = _safe_engine()
+    if engine is None:
+        return []
     import json
     from sqlalchemy import text
-    engine = get_engine()
     with engine.connect() as conn:
         result = conn.execute(
             text("SELECT period_end, data FROM balance_sheet WHERE symbol = :sym AND period_type = :pt ORDER BY period_end DESC LIMIT :lim"),
@@ -339,9 +376,11 @@ def get_balance_sheets(symbol: str, period_type: str = "annual", limit: int = 10
 
 
 def get_cash_flows(symbol: str, period_type: str = "annual", limit: int = 10) -> List[Dict[str, Any]]:
+    engine = _safe_engine()
+    if engine is None:
+        return []
     import json
     from sqlalchemy import text
-    engine = get_engine()
     with engine.connect() as conn:
         result = conn.execute(
             text("SELECT period_end, data FROM cash_flow WHERE symbol = :sym AND period_type = :pt ORDER BY period_end DESC LIMIT :lim"),
@@ -352,8 +391,10 @@ def get_cash_flows(symbol: str, period_type: str = "annual", limit: int = 10) ->
 
 def get_macro_latest(series_ids: List[str]) -> Dict[str, Optional[float]]:
     """Return latest value per series_id from macro_series (one row per series, max time)."""
+    engine = _safe_engine()
+    if engine is None:
+        return {sid: None for sid in series_ids}
     from sqlalchemy import text
-    engine = get_engine()
     out = {}
     with engine.connect() as conn:
         for sid in series_ids:

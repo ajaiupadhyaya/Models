@@ -4,10 +4,11 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci
 COPY frontend/ .
+# Frontend served same-origin when VITE_API_ORIGIN unset (single-service deploy)
 RUN npm run build
 
 # Stage 2: API + serve built SPA
-FROM python:3.12
+FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -24,12 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt requirements-api.txt ./
 
-# Install core API deps first (required for deployment)
+# Install slim API deps (required for serving). Optional heavy ML deps best-effort.
 RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements-api.txt
-
-# Install optional ML/quant deps (best effort - don't fail build if missing)
-# This makes cold start faster by skipping heavy deps if they time out
 RUN pip install -r requirements.txt || \
     echo "WARNING: Some optional dependencies could not be installed. ML features may be limited."
 
@@ -43,7 +41,9 @@ USER appuser
 ENV PORT=8000
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD sh -c 'curl -f http://127.0.0.1:${PORT:-8000}/health' || exit 1
 
-CMD ["sh", "-c", "python -m core.startup_validation --require-db-url --require-redis-url --check-db && alembic -c db/alembic.ini upgrade head && exec python -m uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Single-service deploy: serves API + built SPA from same origin.
+# DB/Redis are optional at boot — app degrades gracefully when unset.
+CMD ["sh", "-c", "exec python -m uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
