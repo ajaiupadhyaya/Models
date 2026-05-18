@@ -254,20 +254,20 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         start = time.perf_counter()
         try:
             response = await call_next(request)
+            duration_ms = (time.perf_counter() - start) * 1000
+            response.headers["X-Request-ID"] = rid
+            logger.info(
+                "request",
+                extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status": response.status_code,
+                    "duration_ms": round(duration_ms, 2),
+                },
+            )
+            return response
         finally:
             request_id_ctx.reset(token)
-        duration_ms = (time.perf_counter() - start) * 1000
-        response.headers["X-Request-ID"] = rid
-        logger.info(
-            "request",
-            extra={
-                "method": request.method,
-                "path": request.url.path,
-                "status": response.status_code,
-                "duration_ms": round(duration_ms, 2),
-            },
-        )
-        return response
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
