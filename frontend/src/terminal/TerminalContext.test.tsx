@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import React from "react";
 import { TerminalContext, useTerminal, MODULES_ORDER } from "./TerminalContext";
@@ -48,7 +48,12 @@ function createWrapper(initialSymbol = "AAPL", initialModule: ActiveModule = "pr
 
 describe("useTerminal", () => {
   it("throws outside provider", () => {
-    expect(() => renderHook(() => useTerminal())).toThrow("useTerminal must be used within");
+    const useContext = vi.spyOn(React, "useContext").mockReturnValue(null);
+    try {
+      expect(() => useTerminal()).toThrow("useTerminal must be used within");
+    } finally {
+      useContext.mockRestore();
+    }
   });
 
   it("returns initial primarySymbol and activeModule", () => {

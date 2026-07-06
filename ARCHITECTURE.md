@@ -104,7 +104,7 @@ flowchart LR
 
 - **Backtest**: Requires DataFrame with `Close` (and `Volume` for institutional engine). Missing or empty data yields 404/400 from sample-data and backtest run endpoints.
 - **Risk**: Requires `Close` column; at least 20 returns after `pct_change().dropna()`. Missing/invalid data yields 404 or 400 with a clear message from `GET /api/v1/risk/metrics/{ticker}`.
-- **Data contracts**: See `DATA_CONTRACTS.md` for required columns, behavior for missing/NaN/Inf data, and 404/400 semantics per endpoint.
+- **Data contracts**: See `API_DOCUMENTATION.md` for endpoint payload shapes and the contract tests in `tests/test_api_contract_routes.py` / `tests/test_db_schema_contract.py` for enforced route and schema expectations.
 
 ## Terminal UI
 

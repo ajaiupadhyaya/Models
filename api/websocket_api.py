@@ -21,6 +21,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import yfinance as yf
+from api.fallback_market_data import fallback_quote, live_market_data_disabled
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -156,12 +157,18 @@ async def stream_prices(
     """
     try:
         while True:
-            # Fetch latest price
-            ticker = yf.Ticker(symbol)
-            info = ticker.info
-            
-            # Get current price
-            current_price = info.get('currentPrice') or info.get('regularMarketPrice', 0)
+            source = "fallback" if live_market_data_disabled() else "live"
+            if source == "fallback":
+                quote = fallback_quote(symbol)
+                current_price = quote.get("price") or 0
+                info: Dict[str, Any] = {}
+            else:
+                # Fetch latest price
+                ticker = yf.Ticker(symbol)
+                info = ticker.info
+
+                # Get current price
+                current_price = info.get('currentPrice') or info.get('regularMarketPrice', 0)
             
             # Send update
             message = {
@@ -170,7 +177,8 @@ async def stream_prices(
                 "price": current_price,
                 "timestamp": datetime.now().isoformat(),
                 "volume": info.get('volume', 0),
-                "market_cap": info.get('marketCap', 0)
+                "market_cap": info.get('marketCap', 0),
+                "source": source,
             }
             
             await websocket.send_json(message)

@@ -154,12 +154,21 @@ interface ChartOverlay {
   high: number;
 }
 
+interface SampleDataResponse {
+  candles?: Array<{ date: string; open: number; high: number; low: number; close: number; volume?: number }>;
+  error?: string;
+  detail?: string;
+  source?: string;
+  warning?: string;
+}
+
 export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorOverlay = "none" }) => {
   const { primarySymbol } = useTerminal();
   const [timeframe, setTimeframe] = useState<typeof TIMEFRAMES[number]["period"]>("3mo");
   const [data, setData] = useState<Candle[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartError, setChartError] = useState<string | null>(null);
+  const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [showSma, setShowSma] = useState(false);
   const [chartOverlay, setChartOverlay] = useState<ChartOverlay | null>(null);
@@ -199,14 +208,18 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
     const fetchData = async () => {
       try {
         setChartError(null);
+        setDataWarning(null);
         const res = await fetch(resolveApiUrl(`/api/v1/backtest/sample-data?symbol=${primarySymbol}&period=${timeframe}`), { headers: getAuthHeaders() });
-        const json = await res.json().catch(() => ({}));
+        const json = await res.json().catch(() => ({})) as SampleDataResponse;
         if (!res.ok) {
           setChartError(json?.error ?? json?.detail ?? `HTTP ${res.status}`);
           setData([]);
           return;
         }
-        const candles: Candle[] = (json.candles ?? []).map((c: { date: string; open: number; high: number; low: number; close: number; volume?: number }) => ({
+        if (json.source === "fallback") {
+          setDataWarning(json.warning ?? "Live historical data unavailable; showing fallback demo candles.");
+        }
+        const candles: Candle[] = (json.candles ?? []).map((c) => ({
           date: new Date(c.date),
           open: Number(c.open),
           high: Number(c.high),
@@ -217,6 +230,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
         setData(candles);
       } catch (err) {
         setChartError(err instanceof Error ? err.message : "Failed to load");
+        setDataWarning(null);
         setData([]);
       } finally {
         setLoading(false);
@@ -677,6 +691,11 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
         <div className="panel-body-muted" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
           {chartError}. Try again or retry.
           <button type="button" className="ai-button" onClick={() => setRetryKey((k) => k + 1)}>Retry</button>
+        </div>
+      )}
+      {dataWarning && !chartError && (
+        <div className="panel-body-muted" style={{ marginBottom: 8 }}>
+          {dataWarning}
         </div>
       )}
       <div style={{ position: "relative" }}>

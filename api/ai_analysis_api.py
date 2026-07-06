@@ -11,12 +11,15 @@ AI Analysis API Endpoints
 import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from core.ai_analysis import get_ai_service
 from core.data_fetcher import DataFetcher
 from models.ml.advanced_trading import EnsemblePredictor
+from api.fallback_market_data import fallback_quote, live_market_data_disabled
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,8 @@ router = APIRouter(tags=["AI Analysis"], dependencies=_auth_deps)
 
 data_fetcher = DataFetcher()
 ai_service = get_ai_service()
+market_summary_executor = ThreadPoolExecutor(max_workers=2)
+MARKET_SUMMARY_SYMBOL_TIMEOUT_SECONDS = 6
 
 
 @router.get("/market-summary")
@@ -39,40 +44,71 @@ async def market_summary(symbols: str = Query("AAPL,MSFT,GOOGL", description="Co
     Cached 5 minutes per symbol set (see api/cache.py).
     """
     from api.cache import get_cached, set_cached, cache_key, CACHE_TTL_MARKET_SUMMARY
-    key = cache_key("ai", "market-summary", symbols)
-    cached = get_cached(key)
-    if cached is not None:
-        return cached
+    symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:20]
+    key = cache_key("ai", "market-summary", ",".join(symbol_list))
     try:
-        symbol_list = [s.strip().upper() for s in symbols.split(",")]
         analyses = {}
+
+        if live_market_data_disabled():
+            for symbol in symbol_list:
+                q = fallback_quote(symbol)
+                analyses[symbol] = {
+                    "price": q.get("price"),
+                    "analysis": "Live market data disabled in production; showing fallback demo price.",
+                    "source": "fallback",
+                }
+            result = {
+                "timestamp": datetime.now().isoformat(),
+                "analyses": analyses,
+                "market_tone": "Fallback demo data",
+            }
+            set_cached(key, result, CACHE_TTL_MARKET_SUMMARY)
+            return result
+
+        cached = get_cached(key)
+        if cached is not None:
+            return cached
         
         for symbol in symbol_list:
             try:
-                # Fetch recent data
-                df = data_fetcher.get_stock_data(symbol, period="1mo")
+                df = await asyncio.wait_for(
+                    asyncio.get_running_loop().run_in_executor(
+                        market_summary_executor,
+                        lambda s=symbol: data_fetcher.get_stock_data(s, period="1mo"),
+                    ),
+                    timeout=MARKET_SUMMARY_SYMBOL_TIMEOUT_SECONDS,
+                )
                 if df is None or df.empty:
-                    analyses[symbol] = {"error": "Data unavailable"}
+                    q = fallback_quote(symbol)
+                    analyses[symbol] = {
+                        "price": q.get("price"),
+                        "analysis": "Live data unavailable; showing fallback demo price.",
+                        "source": "fallback",
+                    }
                     continue
                 
-                # Prepare metrics
-                metrics = {
-                    "RSI": 50.0,  # Placeholder; would compute real RSI
-                    "MACD": 0.0,
-                    "SMA_50": df['Close'].tail(50).mean() if len(df) >= 50 else df['Close'].mean(),
-                    "Volume_Trend": "up" if df['Volume'].iloc[-1] > df['Volume'].mean() else "down"
-                }
-                
-                # AI analysis
-                analysis = ai_service.analyze_price_chart(symbol, df, metrics)
                 analyses[symbol] = {
-                    "price": df['Close'].iloc[-1],
-                    "analysis": analysis
+                    "price": float(df["Close"].iloc[-1]),
+                    "analysis": "Live market data available.",
+                    "source": "live",
                 }
-            
+            except asyncio.TimeoutError:
+                logger.warning("Market summary timed out for %s", symbol)
+                q = fallback_quote(symbol)
+                analyses[symbol] = {
+                    "price": q.get("price"),
+                    "analysis": "Live data timed out; showing fallback demo price.",
+                    "source": "fallback",
+                }
             except Exception as e:
                 logger.error(f"Error analyzing {symbol}: {e}")
-                analyses[symbol] = {"error": str(e)}
+                q = fallback_quote(symbol)
+                analyses[symbol] = {
+                    "price": q.get("price"),
+                    "analysis": "Live data unavailable; showing fallback demo price.",
+                    "source": "fallback",
+                    "error": str(e),
+                }
         
         result = {
             "timestamp": datetime.now().isoformat(),

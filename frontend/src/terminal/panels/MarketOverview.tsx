@@ -18,6 +18,12 @@ interface MarketSummaryResponse {
   analyses?: Record<string, { price?: number }>;
 }
 
+interface QuotesResponse {
+  quotes?: Array<{ symbol: string; price?: number | null; change_pct?: number | null }>;
+  source?: string;
+  warning?: string;
+}
+
 function parseWatchlist(json: unknown): MarketSymbol[] | null {
   const r = json as MarketSummaryResponse;
   if (r?.detail) return null;
@@ -57,8 +63,8 @@ export const MarketOverview: React.FC = () => {
   const sparklineData = useSparklineData(primarySymbol);
   const symbolsParam = watchlist.length > 0 ? watchlist.join(",") : "AAPL";
   const url = `/api/v1/data/quotes?symbols=${symbolsParam}`;
-  const { data: quotesData } = useFetchWithRetry<{ quotes?: Array<{ symbol: string; price?: number | null; change_pct?: number | null }> } | null>(url, {
-    parse: (json) => json as { quotes?: Array<{ symbol: string; price?: number | null; change_pct?: number | null }> } | null,
+  const { data: quotesData } = useFetchWithRetry<QuotesResponse | null>(url, {
+    parse: (json) => json as QuotesResponse | null,
     deps: [symbolsParam],
   });
   const fallbackUrl = `/api/v1/ai/market-summary?symbols=${symbolsParam}`;
@@ -66,14 +72,17 @@ export const MarketOverview: React.FC = () => {
     parse: parseWatchlist,
     deps: [symbolsParam],
   });
-  const hasQuotes = Array.isArray(quotesData?.quotes) && quotesData!.quotes!.length > 0;
+  const hasQuotes = Array.isArray(quotesData?.quotes) && quotesData!.quotes!.some((q) => q.price != null);
   const data = hasQuotes
-    ? quotesData!.quotes!.map((q) => ({
+    ? quotesData!.quotes!.filter((q) => q.price != null).map((q) => ({
         symbol: q.symbol,
         price: Number(q.price ?? 0),
         changePct: Number(q.change_pct ?? 0),
       }))
     : summaryData;
+  const fallbackWarning = quotesData?.source === "fallback"
+    ? quotesData.warning ?? "Live quotes unavailable; showing fallback demo prices."
+    : null;
   const { price: wsPrice } = useWebSocketPrice(primarySymbol);
 
   useEffect(() => {
@@ -101,6 +110,11 @@ export const MarketOverview: React.FC = () => {
   return (
     <div className="panel panel-left">
       <div className="panel-title">Watchlist</div>
+      {fallbackWarning && (
+        <div className="panel-body-muted" style={{ fontSize: 10, marginBottom: 8 }}>
+          {fallbackWarning}
+        </div>
+      )}
       <div style={{ marginBottom: 8, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
         <input
           type="text"

@@ -24,6 +24,9 @@ wheels/
 venv/
 env/
 ENV/
+.venv/
+.venv-ci/
+.venv*/
 
 # IDE
 .vscode/
@@ -53,6 +56,15 @@ api_server.log
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vercel/
+
+# Tool caches
+.ruff_cache/
+.mypy_cache/
 
 # Environment files
 .env

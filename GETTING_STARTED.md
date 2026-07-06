@@ -1,235 +1,120 @@
-# Getting Started Guide
+# Getting Started
 
-## 🎯 Welcome!
+This project is a Bloomberg-style quant terminal for personal research: FastAPI backend, React/Vite frontend, D3 charts, backtesting, risk analytics, AI commentary, paper trading, and optional data-provider integrations.
 
-This is your **one-stop shop for all things finance/economic models** - from basics to high-level quant analysis. Everything is designed to work together seamlessly.
+The old interactive launcher scripts were removed during the v1 cleanup. Use the direct commands below; they match the current CI and deployment docs.
 
-## 🚀 First Time Setup
+## Prerequisites
 
-### Step 1: Launch the Unified Launcher
+- Python 3.12
+- Node.js 20+
+- Optional: Postgres connection string for persisted data
+- Optional: provider keys for FRED, Polygon, IEX, Finnhub, NewsAPI, OpenAI, and Alpaca
 
-The easiest way to get started:
+## First-Time Setup
 
-```bash
-cd /Users/ajaiupadhyaya/Documents/Models
-python launch.py
-```
-
-The launcher will:
-- ✅ Automatically check if dependencies are installed
-- ✅ Offer to install missing packages
-- ✅ Validate your environment
-- ✅ Provide an interactive menu to explore everything
-
-### Step 2: Install Dependencies (if needed)
-
-If the launcher detects missing dependencies, it will offer to install them. You can also install manually:
+From the repo root:
 
 ```bash
-pip install -r requirements.txt
+cp .env.example .env
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-api.txt
+cd frontend
+npm ci
 ```
 
-### Step 3: Configure API Keys (Optional)
+For local experimentation, `.env.example` uses a placeholder `AUTH_SECRET`, which makes `/api/auth/status` return `configured: false` and lets the frontend skip login. For any deployed or shared environment, set `TERMINAL_USER`, `TERMINAL_PASSWORD`, and a real secret:
 
-Many features work without API keys, but for full functionality:
-
-1. Create a `.env` file in the project root
-2. Add your API keys:
-
-```env
-FRED_API_KEY=your_key_here
-ALPHA_VANTAGE_API_KEY=your_key_here
-```
-
-**Where to get keys:**
-- **FRED** (free): https://fred.stlouisfed.org/docs/api/api_key.html
-- **Alpha Vantage** (free): https://www.alphavantage.co/support/#api-key
-
-## 🎮 What Can You Do?
-
-### 1. Interactive Dashboard
-Launch a web-based dashboard to explore data and models visually:
 ```bash
-python launch.py
-# Select option 1
+python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-### 2. API Server
-Start a production-ready API server with all endpoints:
+## Run Locally
+
+Use two terminals.
+
+Backend:
+
 ```bash
-python launch.py
-# Select option 2
-# Then visit http://localhost:8000/docs
+source .venv/bin/activate
+python -m uvicorn api.main:app --reload --port 8000
 ```
 
-### 3. Jupyter Notebooks
-Explore interactive notebooks with examples:
+Frontend:
+
 ```bash
-python launch.py
-# Select option 3
+cd frontend
+npm run dev
 ```
 
-### 4. Run Tests
-Validate everything is working:
+Open `http://localhost:5173`. Vite proxies `/api/*` to `http://127.0.0.1:8000`.
+
+Useful backend URLs:
+
+- `http://localhost:8000/health`
+- `http://localhost:8000/info`
+- `http://localhost:8000/docs`
+- `http://localhost:8000/api/auth/status`
+
+## First Terminal Commands
+
+Try these in the command bar:
+
+- `GP AAPL` - primary instrument chart
+- `FA AAPL` - fundamentals
+- `FLDS AAPL` - technical indicators
+- `QUANT AAPL` - quant models and factor views
+- `PORT` - portfolio/risk panel
+- `BACKTEST AAPL` - strategy backtest
+- `AI why is AAPL moving?` - AI assistant flow
+- `HELP` or `?` - command list
+
+Most panels work without paid keys. Blank provider keys disable those integrations gracefully.
+
+## Test And Build
+
+Backend CI gate:
+
 ```bash
-python launch.py
-# Select option 4 (Quick Start Test)
-# Or option 5 (Comprehensive Audit)
+python -m pytest tests/test_api_contract_routes.py tests/test_db_schema_contract.py -v --tb=short
+python -m pytest tests/ -v --tb=short -x
+ruff check config/ api/ core/ --output-format=concise
 ```
 
-## 📚 Exploring the Project
+Frontend gate:
 
-### Core Modules (`core/`)
-- **data_fetcher.py**: Fetch data from FRED, Alpha Vantage, Yahoo Finance
-- **visualizations.py**: Create publication-quality charts
-- **dashboard.py**: Interactive web dashboard
-- **backtesting.py**: Test trading strategies
-- **paper_trading.py**: Simulate trading with real data
-
-### Financial Models (`models/`)
-- **valuation/**: DCF models, comparable analysis
-- **options/**: Black-Scholes, Greeks
-- **portfolio/**: Portfolio optimization
-- **risk/**: VaR, CVaR, stress testing
-- **macro/**: Economic indicators, yield curves
-- **trading/**: Trading strategies, backtesting
-- **ml/**: Machine learning forecasting
-
-### API (`api/`)
-- RESTful API endpoints for all functionality
-- WebSocket support for real-time data
-- Model training and prediction endpoints
-- Backtesting and paper trading APIs
-
-### Notebooks (`notebooks/`)
-- **01_getting_started.ipynb**: Introduction
-- **02_dcf_valuation.ipynb**: DCF examples
-- **03_fundamental_analysis.ipynb**: Company analysis
-- **04_macro_sentiment_analysis.ipynb**: Macro analysis
-- **05_advanced_visualizations.ipynb**: Charting examples
-- **06_ml_forecasting.ipynb**: ML models
-- And more...
-
-## 🔍 Quick Examples
-
-### Fetch Stock Data
-```python
-from core.data_fetcher import DataFetcher
-
-fetcher = DataFetcher()
-data = fetcher.get_stock_data('AAPL', period='1y')
-print(data.head())
-```
-
-### Calculate DCF Valuation
-```python
-from models.valuation.dcf_model import DCFModel
-
-dcf = DCFModel(
-    free_cash_flows=[100, 120, 140, 160, 180],
-    terminal_growth_rate=0.03,
-    wacc=0.10
-)
-enterprise_value = dcf.calculate_enterprise_value()
-print(f"Enterprise Value: ${enterprise_value:,.2f}")
-```
-
-### Price an Option
-```python
-from models.options.black_scholes import BlackScholes
-
-call_price = BlackScholes.call_price(
-    S=100,  # Stock price
-    K=100,  # Strike price
-    T=0.25, # Time to expiration (years)
-    r=0.05, # Risk-free rate
-    sigma=0.20  # Volatility
-)
-print(f"Call Option Price: ${call_price:.2f}")
-```
-
-### Optimize Portfolio
-```python
-from models.portfolio.optimization import MeanVarianceOptimizer
-import pandas as pd
-
-# Get stock data
-from core.data_fetcher import DataFetcher
-fetcher = DataFetcher()
-data = fetcher.get_multiple_stocks(['AAPL', 'MSFT', 'GOOGL'])
-
-# Optimize
-optimizer = MeanVarianceOptimizer(data['Close'])
-weights = optimizer.optimize(target_return=0.15)
-print(weights)
-```
-
-## 🛠️ Troubleshooting
-
-### Dependencies Not Installing
-If you encounter issues:
 ```bash
-# Try upgrading pip first
-pip install --upgrade pip
-
-# Then install requirements
-pip install -r requirements.txt
+cd frontend
+npm run test
+npm run build
 ```
 
-### Import Errors
-Run the validation script:
+Live provider checks are skipped by default so CI stays deterministic. To run them intentionally:
+
 ```bash
-python validate_all.py
+RUN_LIVE_PROVIDER_TESTS=1 POLYGON_API_KEY=... IEX_API_KEY=... NEWSAPI_KEY=... \
+  python -m pytest tests/test_data_providers.py -v
 ```
 
-This will show exactly what's missing.
+## Docker
 
-### API Keys Not Working
-- Check that your `.env` file is in the project root
-- Verify API keys are correct (no extra spaces)
-- Some features work without API keys (Yahoo Finance data)
-
-### Port Already in Use
-If port 8000 or 8050 is already in use:
 ```bash
-# Find and kill the process
-lsof -ti:8000 | xargs kill -9
-lsof -ti:8050 | xargs kill -9
+docker build -t models-terminal .
+docker run --rm -p 8000:8000 --env-file .env models-terminal
 ```
 
-## 📖 Next Steps
+The production image builds the frontend and serves the SPA from the FastAPI app.
 
-1. **Explore Notebooks**: Start with `notebooks/01_getting_started.ipynb`
-2. **Try the Dashboard**: Launch it and explore interactively
-3. **Read Documentation**: Check `PROJECT_OVERVIEW.md` for architecture details
-4. **API Documentation**: Visit http://localhost:8000/docs when API is running
+## Deploy
 
-## 🎯 Your End Goal: Automation
+Use `DEPLOYMENT_GUIDE.md`. The recommended daily-driver path is Fly.io for the backend, Vercel for the frontend, and Supabase for Postgres. Render single-service remains the no-credit-card option, with cold starts.
 
-This project is designed to be automated:
-- ✅ Train models via API
-- ✅ Run backtests programmatically
-- ✅ Generate reports automatically
-- ✅ Paper trade with real-time data
-- ✅ Monitor and alert on conditions
+## Troubleshooting
 
-Everything is API-accessible and can be scripted!
+- Auth problems: check `TERMINAL_USER`, `TERMINAL_PASSWORD`, and `AUTH_SECRET`.
+- CORS problems: set `CORS_ORIGINS` to the exact deployed frontend origin.
+- Empty DB-backed panels: set `DATABASE_URL`, run `db/init.sql`, and optionally enable `SCHEDULER_ENABLED=true`.
+- Provider failures: confirm the relevant API key is set, or leave it blank to disable that provider.
 
-## 💡 Tips
-
-- **Start Simple**: Begin with the dashboard or notebooks
-- **Use the Launcher**: `python launch.py` is your friend
-- **Read the Docs**: Each module has docstrings
-- **Experiment**: All models are designed to be tweaked
-- **API Keys Optional**: Many features work without them
-
-## 🆘 Need Help?
-
-1. Run `python validate_all.py` to diagnose issues
-2. Check `PROJECT_OVERVIEW.md` for architecture
-3. Review `API_DOCUMENTATION.md` for API details
-4. Look at notebook examples in `notebooks/`
-
----
-
-**You're all set! Start exploring with `python launch.py`** 🚀
+More detail lives in `TROUBLESHOOTING.md`, `API_DOCUMENTATION.md`, `ARCHITECTURE.md`, and `docs/FEATURE_BACKLOG.md`.

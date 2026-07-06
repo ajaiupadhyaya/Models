@@ -16,6 +16,8 @@ from datetime import datetime, timedelta
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
+from api.fallback_market_data import fallback_quotes, live_market_data_disabled
+
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -25,7 +27,7 @@ router = APIRouter()
 CACHE_TTL_CALENDAR = 3600  # 1 hour
 
 # Timeout configurations (seconds)
-TIMEOUT_YFINANCE_QUOTES = 10
+TIMEOUT_YFINANCE_QUOTES = 6
 TIMEOUT_YFINANCE_HISTORICAL = 20
 TIMEOUT_FRED_API = 10
 TIMEOUT_EXTERNAL_API = 15
@@ -320,19 +322,30 @@ async def get_quotes(symbols: str = Query("AAPL,MSFT,GOOGL,SPY,QQQ", description
     Used by the ticker strip for real quotes without depending on AI summary.
     """
     from api.cache import get_cached, set_cached, cache_key
+    sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:20]
+    if not sym_list:
+        return {"quotes": []}
+    if live_market_data_disabled():
+        return fallback_quotes(sym_list)
+
     key = cache_key("data", "quotes", symbols)
     cached = get_cached(key)
     if cached is not None:
         return cached
     try:
         import yfinance as yf
-        sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:20]
-        if not sym_list:
-            return {"quotes": []}
-        
+
         # Fetch with timeout to prevent hanging
         def _fetch():
-            return yf.download(sym_list, period="5d", progress=False, auto_adjust=True, group_by="ticker", threads=False)
+            return yf.download(
+                sym_list,
+                period="5d",
+                progress=False,
+                auto_adjust=True,
+                group_by="ticker",
+                threads=False,
+                timeout=TIMEOUT_YFINANCE_QUOTES,
+            )
         
         try:
             data = await asyncio.wait_for(
@@ -341,13 +354,10 @@ async def get_quotes(symbols: str = Query("AAPL,MSFT,GOOGL,SPY,QQQ", description
             )
         except asyncio.TimeoutError:
             logger.warning(f"Quotes fetch timed out for {symbols}")
-            return {
-                "quotes": [{"symbol": s, "price": None, "change_pct": None} for s in sym_list],
-                "error": "Data fetch timed out. Please try again."
-            }
+            return fallback_quotes(sym_list)
         
         if data.empty:
-            return {"quotes": [{"symbol": s, "price": None, "change_pct": None} for s in sym_list], "error": "No data from Yahoo Finance. Check Render logs."}
+            return fallback_quotes(sym_list)
         quotes = []
         if len(sym_list) == 1:
             # Single ticker with group_by='ticker' has multi-level columns: (ticker, OHLCV)
@@ -402,7 +412,10 @@ async def get_quotes(symbols: str = Query("AAPL,MSFT,GOOGL,SPY,QQQ", description
         return result
     except Exception as e:
         logger.warning("Quotes fetch failed: %s", e)
-        return {"quotes": [], "error": str(e)}
+        sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:20]
+        result = fallback_quotes(sym_list)
+        result["error"] = str(e)
+        return result
 
 
 @router.get("/correlation")

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { resolveApiUrl } from "../apiBase";
+import { getApiBase, resolveApiUrl } from "../apiBase";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { MarketOverview } from "./panels/MarketOverview";
 import { PrimaryInstrument } from "./panels/PrimaryInstrument";
@@ -54,6 +54,16 @@ const MODULE_LABELS: Record<ActiveModule, string> = {
 
 const LAYOUT_STORAGE_KEY = "bloomberg-terminal-layout";
 const DEFAULT_LAYOUT: [number, number, number] = [20, 50, 30];
+
+function getApiLabel(): string {
+  const base = getApiBase();
+  if (!base) return "/api";
+  try {
+    return new URL(base).host;
+  } catch {
+    return base;
+  }
+}
 
 function loadWorkspaces(): Record<string, WorkspaceState> {
   try {
@@ -172,6 +182,7 @@ export const TerminalShell: React.FC = () => {
   const [lastBacktestSymbol, setLastBacktestSymbol] = useState<string | null>(null);
   const [watchlist, setWatchlistState] = useState<string[]>(loadWatchlist);
   const [apiHealthy, setApiHealthy] = useState<boolean | null>(null);
+  const apiLabel = getApiLabel();
 
   const checkApiHealth = useCallback(() => {
     fetch(resolveApiUrl("/health"))
@@ -313,7 +324,7 @@ export const TerminalShell: React.FC = () => {
           <TickerSearchBar />
           <div className="terminal-status" style={{ marginLeft: "auto" }}>
             <span className={`terminal-status-dot ${wsConnected ? "live" : ""}`} aria-hidden />
-            {wsConnected ? "Live" : "Connecting…"} • /api
+            {wsConnected ? "Live" : "REST"} • {apiLabel}
           </div>
         </header>
         <div className="terminal-command-row" style={{ position: "relative" }}>
@@ -387,4 +398,3 @@ export const TerminalShell: React.FC = () => {
     </TerminalContext.Provider>
   );
 };
-

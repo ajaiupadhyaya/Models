@@ -2,6 +2,7 @@
 Unit tests for data providers.
 
 Tests can be run with API keys in environment:
+  export RUN_LIVE_PROVIDER_TESTS=1
   export POLYGON_API_KEY=pk_...
   export IEX_API_KEY=pk_...
   export NEWSAPI_KEY=sk_...
@@ -10,7 +11,7 @@ Tests can be run with API keys in environment:
 
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import os
 
 from core.data_providers.base import (
@@ -22,6 +23,9 @@ from core.data_providers.iex_provider import IEXProvider
 from core.data_providers.coingecko_provider import CoinGeckoProvider
 from core.data_providers.newsapi_provider import NewsAPIProvider
 from core.data_providers.sec_edgar_provider import SECEdgarProvider
+
+
+RUN_LIVE_PROVIDER_TESTS = os.getenv("RUN_LIVE_PROVIDER_TESTS", "").lower() in {"1", "true", "yes"}
 
 
 class TestOHLCV:
@@ -332,11 +336,11 @@ class TestSECEdgarProvider:
 
 
 class TestProviderIntegration:
-    """Integration tests (require API keys)."""
+    """Live provider checks. Opt in with RUN_LIVE_PROVIDER_TESTS=1."""
     
     @pytest.mark.skipif(
-        not os.getenv("POLYGON_API_KEY"),
-        reason="POLYGON_API_KEY not set"
+        not RUN_LIVE_PROVIDER_TESTS or not os.getenv("POLYGON_API_KEY"),
+        reason="RUN_LIVE_PROVIDER_TESTS=1 and POLYGON_API_KEY required"
     )
     def test_polygon_real_api(self):
         """Test Polygon with real API."""
@@ -351,8 +355,8 @@ class TestProviderIntegration:
         assert all(isinstance(o, OHLCV) for o in ohlcv)
     
     @pytest.mark.skipif(
-        not os.getenv("IEX_API_KEY"),
-        reason="IEX_API_KEY not set"
+        not RUN_LIVE_PROVIDER_TESTS or not os.getenv("IEX_API_KEY"),
+        reason="RUN_LIVE_PROVIDER_TESTS=1 and IEX_API_KEY required"
     )
     def test_iex_real_api(self):
         """Test IEX with real API."""
@@ -361,6 +365,10 @@ class TestProviderIntegration:
         price = provider.fetch_latest_price("AAPL")
         assert price > 0
     
+    @pytest.mark.skipif(
+        not RUN_LIVE_PROVIDER_TESTS,
+        reason="RUN_LIVE_PROVIDER_TESTS=1 required"
+    )
     def test_coingecko_real_api(self):
         """Test CoinGecko with real API (always available)."""
         provider = CoinGeckoProvider()
@@ -369,8 +377,8 @@ class TestProviderIntegration:
         assert price > 0  # Bitcoin should have a price
     
     @pytest.mark.skipif(
-        not os.getenv("NEWSAPI_KEY"),
-        reason="NEWSAPI_KEY not set"
+        not RUN_LIVE_PROVIDER_TESTS or not os.getenv("NEWSAPI_KEY"),
+        reason="RUN_LIVE_PROVIDER_TESTS=1 and NEWSAPI_KEY required"
     )
     def test_newsapi_real_api(self):
         """Test NewsAPI with real API."""

@@ -4,7 +4,7 @@
 
 **Why this exists:** The previous backlog (Feb 2026) scoped ~16 weeks of work across 27 critical stories. For a solo project, that's a treadmill. This document trades breadth for a real stopping point: 4 of 8 terminal modules, 3 of 6 D3 charts, equity-only backtesting, no MLflow, no LLM agent — with everything cut explicitly preserved below as v2.
 
-**Status as of 2026-05-18:** Phase A complete (deploy unblocked, JWT + JSON logs + SECURITY landed, .env.example completed). Phase B is ~95% delivered per audit (4 modules + 11 bonus panels, 3 charts working, command bar with 18 commands, workspace persistence). Phase C in progress (README rewritten, DEPLOYMENT_GUIDE, TROUBLESHOOTING, SECURITY committed). Next: ARCHITECTURE.md audit, screenshot grid, tag `v1.0.0`.
+**Status as of 2026-07-06:** v1.0 code, docs, and automated gates are release-ready locally. Verified: backend tests (`367 passed, 18 skipped`), backend contract/schema gates, ruff over `config/ api/ core/`, frontend Vitest (`24 passed`), and frontend production build. Live provider tests now require explicit opt-in via `RUN_LIVE_PROVIDER_TESTS=1`, keeping normal CI deterministic. Remaining publication tasks: capture screenshot/GIF assets, create the `v1.0.0` tag, and publish GitHub release notes.
 
 **Related docs:** [`../SECURITY.md`](../SECURITY.md) · [`../DEPLOYMENT_GUIDE.md`](../DEPLOYMENT_GUIDE.md) · [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md)
 
@@ -57,7 +57,7 @@
 - Add `TERMINAL_USER`, `TERMINAL_PASSWORD`, `AUTH_SECRET`, `LOG_LEVEL`
 - Group: API keys, auth, runtime infra, optional features
 - Cross-check against `render.yaml` and `config/settings.py`
-- **Acceptance:** Fresh clone + `cp .env.example .env` + fill values → `make dev` works
+- **Acceptance:** Fresh clone + `cp .env.example .env` + fill values → backend and frontend run with the commands in `GETTING_STARTED.md`
 
 **A5. `SECURITY.md`** ✅
 - Threat model, auth, protected vs open routes, secret rotation, transport, rate limiting, v2 deferred items, disclosure email
@@ -80,9 +80,9 @@
 
 ---
 
-### Phase B — Frontend MVP (2 weeks) ⚠️ ~95% delivered (per 2026-05-18 audit)
+### Phase B — Frontend MVP (2 weeks) ✅ DELIVERED
 
-Audit found: 4 scope modules + 11 bonus modules already working, all 3 D3 charts (candlestick, correlation matrix, factor heatmap) built, command bar with 18 commands, localStorage workspace persistence. Remaining v1 work is polish (loading/error states, acceptance-criteria smoke tests, AI panel integration in Backtest module).
+Audit found: 4 scope modules + 11 bonus modules working, all 3 D3 chart families represented, command bar with 18 commands, localStorage workspace persistence, and green frontend test/build gates. Ongoing expansion lives in the v2 roadmap below.
 
 **Goal:** 4 polished terminal modules, not 8 half-finished ones.
 
@@ -129,7 +129,7 @@ Audit found: 4 scope modules + 11 bonus modules already working, all 3 D3 charts
 
 ---
 
-### Phase C — Demo polish + docs (3–5 days)
+### Phase C — Demo polish + docs (3–5 days) ✅ RELEASE GATES COMPLETE
 
 **C1. README rewrite**
 - Hero section: 1-sentence value prop, demo GIF, screenshot grid (4 modules)
@@ -196,7 +196,7 @@ Explicitly cut from v1.0 to make the stopping point reachable. Each is a coheren
 - **Playwright E2E** — 5 critical user workflows
 - **Coverage gate** — ≥75% overall, ≥85% on critical paths
 - **OpenAPI examples** — curl/Python/TypeScript snippets per endpoint
-- **User guides** — `WORKFLOWS.md` with 5+ example tasks
+- **User guide expansion** — 5+ longer example workflows beyond the quick commands in `GETTING_STARTED.md`
 
 ---
 

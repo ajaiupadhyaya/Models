@@ -1,10 +1,10 @@
-# System Inventory - Current State
+# System Inventory - Archived Baseline
 
 **Generated:** February 9, 2026  
-**Status:** Phase 0 (Baseline)  
+**Status:** Historical Phase 0 baseline. Not the current source of truth.
 **Location:** /Users/ajaiupadhyaya/Documents/Models/
 
-This document inventories all components currently deployed and their maturity level.
+This document is retained as an audit snapshot from the pre-v1 cleanup. For current project status, use `README.md`, `GETTING_STARTED.md`, `ARCHITECTURE.md`, `API_DOCUMENTATION.md`, and `docs/FEATURE_BACKLOG.md`.
 
 ---
 
@@ -225,16 +225,15 @@ This document inventories all components currently deployed and their maturity l
 | Document | Status | Details |
 |----------|--------|---------|
 | `README.md` | ✅ Current | Project overview, quick start |
+| `GETTING_STARTED.md` | ✅ Current | Local setup, run, test, and build commands |
 | `API_DOCUMENTATION.md` | ✅ Current | All 99 endpoints documented |
 | `ARCHITECTURE.md` | ✅ Current | System design, modules, data flow |
-| `WORKFLOWS.md` | ✅ Current | 8+ example user workflows |
-| `DEPLOYMENT_READINESS_REPORT.md` | ✅ Current | Go/no-go checklist |
-| `PRODUCTION_ROADMAP.md` | ✅ Current | 16-week plan, 6 phases |
-| `CPP_QUANT_GUIDE.md` | ✅ Current | C++ acceleration notes |
+| `DEPLOYMENT_GUIDE.md` | ✅ Current | Free-tier deploy paths and verification checklist |
+| `TROUBLESHOOTING.md` | ✅ Current | Common deploy and runtime failure modes |
+| `SECURITY.md` | ✅ Current | Auth model, secret handling, and disclosure |
+| `docs/FEATURE_BACKLOG.md` | ✅ Current | v1 scope, release status, and v2 roadmap |
 | `BACKTEST_METHODOLOGY.md` | ✅ Current | Backtest engine details |
-| `METRICS.md` | ✅ Current | System metrics definitions |
 | `DOCKER.md` | ✅ Current | Docker build/run |
-| `RENDER_DEPLOY.md` | ✅ Current | Render deployment steps |
 
 ### Missing / TODO
 

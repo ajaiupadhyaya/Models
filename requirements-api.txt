@@ -50,6 +50,9 @@ xlsxwriter>=3.1.2
 # --- News sentiment (lightweight, no model download) ---
 vaderSentiment>=3.3.2
 
+# --- Plotting primitives used by mounted analysis routers ---
+plotly>=5.18.0
+
 # --- HTTP & misc ---
 requests>=2.33.0
 fuzzywuzzy>=0.18.0

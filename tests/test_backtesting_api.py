@@ -54,15 +54,27 @@ def test_sample_data_valid_returns_candles(client, sample_ohlcv_df):
         assert "volume" in c
 
 
-def test_sample_data_no_data_returns_empty_candles(client):
-    """When no data found, sample-data returns 200 with candles [] and error."""
+def test_sample_data_no_data_returns_fallback_for_supported_symbol(client):
+    """When no live data is found, sample-data returns labelled fallback candles."""
+    with patch("api.backtesting_api.yf.download") as mock_download:
+        mock_download.return_value = pd.DataFrame()
+        response = client.get("/api/v1/backtest/sample-data?symbol=AAPL&period=1d")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "fallback"
+    assert data["warning"]
+    assert len(data["candles"]) >= 1
+
+
+def test_sample_data_no_data_unknown_symbol_returns_empty_candles(client):
+    """Unknown symbols do not receive synthetic fallback prices."""
     with patch("api.backtesting_api.yf.download") as mock_download:
         mock_download.return_value = pd.DataFrame()
         response = client.get("/api/v1/backtest/sample-data?symbol=INVALID&period=1d")
     assert response.status_code == 200
     data = response.json()
     assert data["candles"] == []
-    assert "error" in data or data.get("symbol") == "INVALID"
+    assert "error" in data
 
 
 def test_run_backtest_returns_200_with_mocked_engine(client, sample_ohlcv_df):

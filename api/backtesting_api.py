@@ -14,6 +14,8 @@ from typing import Dict, Any, List, Optional
 import logging
 from pathlib import Path
 import sys
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -51,6 +53,8 @@ except Exception:
 import yfinance as yf
 import pandas as pd
 
+from api.fallback_market_data import fallback_candles, live_market_data_disabled
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -60,6 +64,9 @@ except Exception:
     _require_auth = []
 
 router = APIRouter()
+
+SAMPLE_DATA_TIMEOUT_SECONDS = 8
+sample_data_executor = ThreadPoolExecutor(max_workers=2)
 
 from api.backtest_contracts import LegacyModelBacktestRequest, strategy_from_model_name
 
@@ -139,14 +146,26 @@ async def get_sample_data(
     Uses a browser User-Agent so Yahoo Finance returns real data on cloud (Render).
     """
     try:
+        if live_market_data_disabled():
+            return fallback_candles(symbol, period)
+
         source_val = source or (get_settings().data.sample_data_source_default if get_settings else "yfinance")
         if source_val == "data_fetcher":
             try:
                 from core.data_fetcher import DataFetcher
                 fetcher = DataFetcher()
-                data = fetcher.get_stock_data(symbol, period=period)
+                data = await asyncio.wait_for(
+                    asyncio.get_running_loop().run_in_executor(
+                        sample_data_executor,
+                        lambda: fetcher.get_stock_data(symbol, period=period),
+                    ),
+                    timeout=SAMPLE_DATA_TIMEOUT_SECONDS,
+                )
                 if data is None or data.empty:
                     data = None
+            except asyncio.TimeoutError:
+                logger.info("DataFetcher timed out for %s, falling back to yfinance", symbol)
+                data = None
             except Exception as e:
                 logger.info("DataFetcher failed for %s: %s, falling back to yfinance", symbol, e)
                 data = None
@@ -154,10 +173,26 @@ async def get_sample_data(
             data = None
 
         if data is None or (isinstance(data, pd.DataFrame) and data.empty):
-            data = yf.download(symbol, period=period, progress=False, auto_adjust=True)
+            try:
+                data = await asyncio.wait_for(
+                    asyncio.get_running_loop().run_in_executor(
+                        sample_data_executor,
+                        lambda: yf.download(
+                            symbol,
+                            period=period,
+                            progress=False,
+                            auto_adjust=True,
+                            timeout=SAMPLE_DATA_TIMEOUT_SECONDS,
+                        ),
+                    ),
+                    timeout=SAMPLE_DATA_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                logger.warning("Sample data fetch timed out for %s", symbol)
+                return fallback_candles(symbol, period)
 
         if data.empty or len(data) == 0:
-            return {"candles": [], "symbol": symbol, "error": "No data found"}
+            return fallback_candles(symbol, period)
         if isinstance(data.columns, pd.MultiIndex):
             data = data.copy()
             data.columns = data.columns.get_level_values(0)
@@ -177,7 +212,10 @@ async def get_sample_data(
         return {"candles": candles, "symbol": symbol, "period": period}
     except Exception as e:
         logger.warning(f"Sample data fetch failed for {symbol}: {e}")
-        return {"candles": [], "symbol": symbol, "error": str(e)}
+        result = fallback_candles(symbol, period)
+        if not result["candles"]:
+            result["error"] = str(e)
+        return result
 
 
 @router.post("/technical", response_model=BacktestResponse, dependencies=_require_auth)

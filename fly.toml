@@ -1,17 +1,18 @@
-# Fly.io deployment config — Models terminal (backend + same-origin SPA).
+# Fly.io deployment config - Models terminal API + bundled SPA.
 #
-# Free-tier setup (as of 2026):
-#   - shared-cpu-1x with 256 MB → fits in Fly's free allowance
-#   - auto_stop_machines = "stop" → scales to zero when idle (free)
-#   - min_machines_running = 0    → no always-on cost
-#   - For daily-driver feel, raise min_machines_running to 1 (small monthly cost
-#     once you exceed Fly's free quota).
+# Production notes:
+#   - 512 MB is intentional. The FastAPI app imports pandas/sklearn/yfinance
+#     and OOM-killed on Fly's generated 256 MB default.
+#   - DISABLE_LIVE_MARKET_DATA keeps the public demo responsive on small
+#     machines. Market widgets use labelled deterministic fallback data; set
+#     this to false for a private deployment with live data-provider capacity.
+#   - CORS_ORIGINS is configured as a Fly secret because it varies by frontend
+#     deployment URL.
 #
 # First-time deploy:
-#   fly launch --no-deploy --copy-config --name models-terminal
-#   fly secrets set TERMINAL_USER=... TERMINAL_PASSWORD=... AUTH_SECRET=... \
-#                   DATABASE_URL=postgres://... FRED_API_KEY=... OPENAI_API_KEY=...
-#   fly deploy
+#   fly launch --copy-config --no-deploy --name models-terminal
+#   fly secrets set TERMINAL_USER=... TERMINAL_PASSWORD=... AUTH_SECRET=...
+#   fly secrets set CORS_ORIGINS=https://your-vercel-app.vercel.app
 
 app = "models-terminal"
 primary_region = "iad"
@@ -20,10 +21,10 @@ primary_region = "iad"
   dockerfile = "Dockerfile"
 
 [env]
+  LOG_LEVEL = "INFO"
   PORT = "8000"
   PYTHONUNBUFFERED = "1"
-  LOG_LEVEL = "INFO"
-  # CORS_ORIGINS handled via `fly secrets set` for split-host setups.
+  DISABLE_LIVE_MARKET_DATA = "true"
 
 [http_service]
   internal_port = 8000
@@ -42,5 +43,7 @@ primary_region = "iad"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "256mb"
+  memory = "512mb"
+  cpu_kind = "shared"
   cpus = 1
+  memory_mb = 512

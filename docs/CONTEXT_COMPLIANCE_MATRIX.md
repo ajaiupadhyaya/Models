@@ -2,7 +2,9 @@
 
 **Generated:** February 9, 2026  
 **Purpose:** Map every context.md requirement to features, acceptance criteria, and Phase  
-**Status:** Phase 0 (Gap Lock)
+**Status:** Historical Phase 0 gap-lock snapshot. Not the current source of truth.
+
+Current v1 status lives in `README.md`, `GETTING_STARTED.md`, `ARCHITECTURE.md`, `API_DOCUMENTATION.md`, and `docs/FEATURE_BACKLOG.md`. Some rows below intentionally preserve old gap analysis.
 
 ---
 
@@ -146,12 +148,12 @@ Each row represents a requirement from context.md. Columns show:
 |----|-------------|--------|-----------|--------------------|----|-------|
 | DOC1 | API documentation (all endpoints) | ✅ | API_DOCUMENTATION.md | Every endpoint → description, params, responses | - | Documented; completeness varies |
 | DOC2 | Architecture guide | ✅ | ARCHITECTURE.md | Data flow, modules, design patterns | - | Written |
-| DOC3 | User workflows (5+ examples) | ✅ | WORKFLOWS.md | Example: "Find undervalued stock", "Backtest strategy" | - | Written |
-| DOC4 | Deployment guide | ✅ | DEPLOY.md | How to deploy to production | - | Written |
-| DOC5 | Troubleshooting guide | ⚠️ | TROUBLESHOOTING.md (partial) | Common errors, logs, debugging | 6 | Needs completion |
-| DOC6 | Configuration reference | ⚠️ | config/settings.py (code) | All env vars documented | 6 | Code comments exist; guide needed |
-| DOC7 | Security best practices | ❌ | SECURITY.md | Auth, secrets, API security | 5 | Needed for compliance |
-| DOC8 | ML model governance | ⚠️ | CPP_QUANT_GUIDE.md (partial) | Model selection, retraining, monitoring | 3 | Needs formalization |
+| DOC3 | User workflows (5+ examples) | ✅ | GETTING_STARTED.md, README.md | Terminal command examples and local workflow | - | Current |
+| DOC4 | Deployment guide | ✅ | DEPLOYMENT_GUIDE.md | How to deploy to production | - | Current |
+| DOC5 | Troubleshooting guide | ✅ | TROUBLESHOOTING.md | Common errors, logs, debugging | - | Current |
+| DOC6 | Configuration reference | ✅ | .env.example, config/settings.py | All env vars documented | - | Current |
+| DOC7 | Security best practices | ✅ | SECURITY.md | Auth, secrets, API security | - | Current |
+| DOC8 | ML model governance | ⚠️ | docs/FEATURE_BACKLOG.md | Model registry/governance deferred to v2 | 3 | Deferred |
 
 ---
 

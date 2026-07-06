@@ -28,8 +28,13 @@ COPY requirements.txt requirements-api.txt ./
 # Install slim API deps (required for serving). Optional heavy ML deps best-effort.
 RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements-api.txt
-RUN pip install -r requirements.txt || \
-    echo "WARNING: Some optional dependencies could not be installed. ML features may be limited."
+ARG INSTALL_OPTIONAL_DEPS=false
+RUN if [ "$INSTALL_OPTIONAL_DEPS" = "true" ]; then \
+      pip install -r requirements.txt || \
+      echo "WARNING: Some optional dependencies could not be installed. ML features may be limited."; \
+    else \
+      echo "Skipping optional heavy dependencies. Set INSTALL_OPTIONAL_DEPS=true to include notebook/ML extras."; \
+    fi
 
 COPY . .
 COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
