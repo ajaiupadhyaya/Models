@@ -307,10 +307,10 @@ async def run_lbo(req: LBORequest) -> Dict[str, Any]:
     # Exit after hold_years: assume same EBITDA growth 0 for simplicity
     exit_ev = ebitda * req.exit_multiple
     # Debt paydown: simplified (no amortization schedule)
-    interest_paid = entry_debt * req.interest_rate * req.hold_years
+    entry_debt * req.interest_rate * req.hold_years
     exit_debt = max(0, entry_debt - (entry_ev * 0.1 * req.hold_years))  # assume 10% paydown per year
     exit_equity_value = exit_ev - exit_debt
-    equity_return = exit_equity_value - entry_equity
+    exit_equity_value - entry_equity
     irr = (exit_equity_value / entry_equity) ** (1 / req.hold_years) - 1 if entry_equity else 0
     moic = exit_equity_value / entry_equity if entry_equity else 0
     return {

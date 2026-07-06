@@ -4,8 +4,7 @@ Generate alerts based on market conditions and data rules
 """
 
 import pandas as pd
-import numpy as np
-from typing import Callable, List, Optional, Dict, Any
+from typing import Callable, List, Optional, Dict
 from datetime import datetime
 from enum import Enum
 import logging

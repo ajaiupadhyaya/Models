@@ -14,7 +14,7 @@ Features:
 import json
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Type
+from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime
 import logging

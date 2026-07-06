@@ -33,7 +33,7 @@ def run_screener_sync(
 ) -> Dict[str, Any]:
     """Sync screener logic for use by API route and AI tools."""
     try:
-        from core.db import get_company_profile, get_income_statements, get_balance_sheets
+        from core.db import get_income_statements, get_balance_sheets
         from sqlalchemy import text
         from core.db import get_engine
 

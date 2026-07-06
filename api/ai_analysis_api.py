@@ -10,20 +10,19 @@ AI Analysis API Endpoints
 
 import logging
 from typing import Any, Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-import pandas as pd
 
 from core.ai_analysis import get_ai_service
 from core.data_fetcher import DataFetcher
-from models.ml.advanced_trading import EnsemblePredictor, LSTMPredictor
+from models.ml.advanced_trading import EnsemblePredictor
 
 logger = logging.getLogger(__name__)
 
 try:
-    from api.auth_api import get_current_user
-    _auth_deps = [Depends(get_current_user)]
+    from api.auth_api import get_current_user_if_configured
+    _auth_deps = [Depends(get_current_user_if_configured)]
 except Exception:
     _auth_deps = []
 
@@ -131,7 +130,6 @@ async def stock_analysis(
                 model = EnsemblePredictor(lookback_window=20)
                 model.train(df)
                 next_price = model.predict(df).iloc[-1] if hasattr(model.predict(df), 'iloc') else model.predict(df)[-1]
-                confidence = 0.65  # Reasonable default confidence
                 
                 low = float(next_price * 0.97)
                 high = float(next_price * 1.03)

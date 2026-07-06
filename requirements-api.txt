@@ -22,6 +22,7 @@ alembic>=1.13.0
 # --- Background jobs ---
 # APScheduler is the v1 default (in-process, no broker). Celery+Redis remain for v2.
 apscheduler>=3.10.0
+schedule>=1.2.0
 celery[redis]>=5.3.0
 redis>=5.0.0
 

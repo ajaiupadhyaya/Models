@@ -2,8 +2,8 @@
 Core utilities for financial modeling framework.
 """
 
-# CRITICAL: Import yfinance_session FIRST to disable curl_cffi before yfinance loads
-from . import yfinance_session
+# yfinance_session is a no-op shim kept for import-order compatibility.
+from . import yfinance_session  # noqa: F401
 
 from .data_fetcher import DataFetcher
 from .visualizations import ChartBuilder

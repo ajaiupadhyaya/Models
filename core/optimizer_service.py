@@ -4,7 +4,6 @@ Mean-variance optimization, efficient frontier.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 import numpy as np
@@ -49,7 +48,7 @@ def run_optimization(
     opt = MeanVarianceOptimizer(exp_ret, cov, risk_free_rate)
 
     sharpe_result = opt.optimize_sharpe()
-    min_vol_result = opt.optimize_min_volatility()
+    opt.optimize_min_volatility()
 
     weights = {k: round(float(v), 4) for k, v in sharpe_result["weights"].items()}
     exp_ret_val = float(sharpe_result["expected_return"])

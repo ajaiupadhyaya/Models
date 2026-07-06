@@ -3,14 +3,10 @@ Data fetching module with API integrations for real-time financial and economic 
 Supports FRED, Alpha Vantage, Yahoo Finance, and more.
 """
 
-# CRITICAL: Import this FIRST to disable curl_cffi before yfinance loads
-from . import yfinance_session
-
 import os
 import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Union
+from typing import Optional, List, Dict
 import yfinance as yf
 from fredapi import Fred
 try:
@@ -20,13 +16,12 @@ try:
 except ImportError:
     # Alpha Vantage 3.0+ has different structure
     try:
-        from alpha_vantage import AlphaVantage
+        from alpha_vantage import AlphaVantage  # noqa: F401  # availability probe
         ALPHA_VANTAGE_AVAILABLE = True
     except ImportError:
         ALPHA_VANTAGE_AVAILABLE = False
         TimeSeries = None
         EconomicIndicator = None
-import requests
 from dotenv import load_dotenv
 from .data_cache import cached
 from .yfinance_session import get_yfinance_session
@@ -456,8 +451,7 @@ class DataFetcher:
         - Fundamentals: SEC EDGAR, Polygon, IEX
         """
         from .data_providers import (
-            DataProviderRegistry, AssetType,
-            PolygonProvider, IEXProvider, CoinGeckoProvider,
+            DataProviderRegistry, PolygonProvider, IEXProvider, CoinGeckoProvider,
             NewsAPIProvider, SECEdgarProvider
         )
         

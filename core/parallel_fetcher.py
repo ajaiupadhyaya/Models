@@ -13,10 +13,10 @@ Features:
 
 import asyncio
 import threading
-from typing import Dict, List, Optional, Any, Callable, Coroutine
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Optional, Any, Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 import logging
 import queue

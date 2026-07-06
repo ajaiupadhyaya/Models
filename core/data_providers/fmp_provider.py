@@ -54,7 +54,7 @@ class FMPProvider(DataProvider):
                     time.sleep(self.retry_backoff * (2 ** attempt))
                     continue
                 return r
-            except Exception as e:
+            except Exception:
                 if attempt == self.max_retries - 1:
                     raise
                 time.sleep(self.retry_backoff * (2 ** attempt))

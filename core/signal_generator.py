@@ -13,7 +13,7 @@ Features:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -107,7 +107,7 @@ class MarketRegimeDetector:
         
         # Calculate metrics
         trend_strength = self._calculate_trend_strength(prices)
-        volatility = returns.std()
+        returns.std()
         volatility_z_score = self._get_volatility_zscore(df)
         
         # Detect regime

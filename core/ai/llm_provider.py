@@ -9,7 +9,7 @@ call-sites stable while allowing you to swap providers via config.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol, Dict, Any, Optional
+from typing import Protocol, Optional
 import os
 
 from core.ai_analysis import AIAnalysisService

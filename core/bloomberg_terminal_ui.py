@@ -4,20 +4,15 @@ Professional, multi-panel, real-time financial dashboard
 """
 
 import dash
-from dash import dcc, html, Input, Output, callback, clientside_callback
+from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import List, Tuple
 import json
 
 from core.data_fetcher import DataFetcher
-from core.visualizations import ChartBuilder
-from core.advanced_visualizations import PublicationCharts
-from core.automated_trading_orchestrator import AutomatedTradingOrchestrator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -272,7 +267,7 @@ class BloombergTerminalUI:
                             'change': change,
                             'change_pct': change_pct
                         })
-                except:
+                except Exception:
                     pass
             
             # Create watchlist table
@@ -352,7 +347,7 @@ class BloombergTerminalUI:
                 )
                 
                 return fig
-            except Exception as e:
+            except Exception:
                 return go.Figure()
         
         @self.app.callback(
@@ -453,7 +448,7 @@ class BloombergTerminalUI:
                     )
                 
                 return html.Div(indicator_items)
-            except:
+            except Exception:
                 return html.Div("Error loading indicators", style={'color': BLOOMBERG_COLORS['accent_red']})
         
         @self.app.callback(
@@ -487,7 +482,7 @@ class BloombergTerminalUI:
                 )
                 
                 return fig
-            except:
+            except Exception:
                 return go.Figure()
     
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:

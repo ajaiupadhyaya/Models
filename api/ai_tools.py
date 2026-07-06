@@ -3,7 +3,6 @@ AI tool implementations for Claude function-calling.
 Each tool is a Python function called when Claude invokes the corresponding tool.
 """
 
-import json
 import logging
 from typing import Any, Dict, List, Optional
 

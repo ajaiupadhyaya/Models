@@ -12,7 +12,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Dict, Any, List, Set
 import logging
 import asyncio
-import json
 from datetime import datetime
 from pathlib import Path
 import sys

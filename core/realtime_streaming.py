@@ -4,13 +4,10 @@ WebSocket-based live market data streaming
 """
 
 import asyncio
-import json
 import logging
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List, Callable
 from datetime import datetime
-from dataclasses import dataclass, asdict
-import pandas as pd
-import numpy as np
+from dataclasses import dataclass
 
 from core.data_fetcher import DataFetcher
 

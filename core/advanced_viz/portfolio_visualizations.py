@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import warnings
 warnings.filterwarnings('ignore')
 

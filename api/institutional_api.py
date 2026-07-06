@@ -4,7 +4,7 @@ Jane Street / Citadel Level Analysis
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query
 

@@ -4,15 +4,12 @@ Real-time updates, responsive design, institutional-grade.
 """
 
 import dash
-from dash import dcc, html, Input, Output, callback
+from dash import dcc, html, Input, Output
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from typing import Optional
 from .data_fetcher import DataFetcher
 from .visualizations import ChartBuilder
-from .advanced_visualizations import PublicationCharts
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -179,7 +176,7 @@ class FinancialDashboard:
                         title="Macroeconomic Indicators"
                     )
                     macro_fig.update_layout(template="plotly_white", height=400)
-                except:
+                except Exception:
                     macro_fig = go.Figure()
                     macro_fig.add_annotation(
                         text="Macro data unavailable",

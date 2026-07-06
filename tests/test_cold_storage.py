@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("pyarrow", reason="pyarrow is an optional (v2) dependency")
+
 from core.cold_storage import ColdStorageManager, RetentionPolicy
 from core.data_providers import OHLCV
 

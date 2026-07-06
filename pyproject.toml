@@ -1,0 +1,13 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+# Default rules (E, F, W) plus keep the import/bug checks that matter.
+# E402 is ignored project-wide: several modules intentionally run
+# `sys.path.insert(...)` (and a yfinance import-order shim) before imports.
+ignore = ["E402"]
+
+[tool.ruff.lint.per-file-ignores]
+# Package re-exports rely on star imports.
+"__init__.py" = ["F403", "F405"]

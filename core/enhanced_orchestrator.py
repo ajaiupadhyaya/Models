@@ -3,16 +3,13 @@ Enhanced Orchestrator with Advanced Quant Features
 Integrates factor models, regime detection, and portfolio optimization
 """
 
-from typing import Dict, List, Optional, Any
-from datetime import datetime
+from typing import Dict, List, Any
 import logging
 import pandas as pd
-import numpy as np
 
 from core.automated_trading_orchestrator import AutomatedTradingOrchestrator, TradingSignal
 from models.quant.advanced_models import FactorModel, RegimeDetector, PortfolioOptimizerAdvanced
 from core.performance_optimizer import cached, SmartCache
-from typing import Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +60,7 @@ class EnhancedOrchestrator(AutomatedTradingOrchestrator):
             returns = df['Close'].pct_change().dropna()
             
             # Detect regime
-            regimes = self.regime_detector.detect_regimes(returns, method="kmeans")
+            self.regime_detector.detect_regimes(returns, method="kmeans")
             current_regime = self.regime_detector.get_current_regime()
             regime_probs = self.regime_detector.get_regime_probabilities()
             
@@ -184,7 +181,7 @@ class EnhancedOrchestrator(AutomatedTradingOrchestrator):
             
             # Build factor model
             returns_df = pd.DataFrame(returns_data).dropna()
-            factor_results = self.factor_model.fit(returns_df)
+            self.factor_model.fit(returns_df)
             
             # Get factor loadings for symbol
             if symbol in returns_df.columns:

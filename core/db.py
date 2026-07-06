@@ -7,7 +7,7 @@ import os
 import logging
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Generator
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

@@ -4,16 +4,15 @@ Advanced interactive visualizations using D3.js via JavaScript bridge
 """
 
 import json
-from typing import Dict, List, Optional, Any
+from typing import Dict, List
 import pandas as pd
-import numpy as np
 from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
 
 try:
-    import js2py
+    import js2py  # noqa: F401  # availability probe
     HAS_JS2PY = True
 except ImportError:
     HAS_JS2PY = False

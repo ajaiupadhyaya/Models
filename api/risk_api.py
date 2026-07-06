@@ -165,7 +165,6 @@ async def portfolio_correlation(
     period: str = Query("1y"),
 ) -> Dict[str, Any]:
     """Correlation matrix of returns from real price data (DB or fetcher)."""
-    import numpy as np
     import pandas as pd
     sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()][:20]
     if len(sym_list) < 2:
@@ -455,7 +454,6 @@ async def portfolio_enhanced_metrics(
     try:
         import yfinance as yf
         import pandas as pd
-        import numpy as np
         from models.portfolio.advanced_optimization import EnhancedPortfolioMetrics
         from datetime import datetime
         

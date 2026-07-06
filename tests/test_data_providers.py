@@ -141,8 +141,8 @@ class TestDataProviderRegistry:
 class TestPolygonProvider:
     """Test Polygon provider."""
     
-    @patch("core.data_providers.polygon_provider.requests.get")
-    def test_fetch_ohlcv_success(self, mock_get):
+    @patch.object(PolygonProvider, "_request")
+    def test_fetch_ohlcv_success(self, mock_request):
         """Test successful OHLCV fetch."""
         # Mock response
         mock_response = Mock()
@@ -161,7 +161,7 @@ class TestPolygonProvider:
             ],
             "status": "OK",
         }
-        mock_get.return_value = mock_response
+        mock_request.return_value = mock_response
         
         provider = PolygonProvider(api_key="test_key")
         ohlcv = provider.fetch_ohlcv(
@@ -187,8 +187,8 @@ class TestPolygonProvider:
 class TestIEXProvider:
     """Test IEX provider."""
     
-    @patch("core.data_providers.iex_provider.requests.get")
-    def test_fetch_ohlcv_success(self, mock_get):
+    @patch.object(IEXProvider, "_request")
+    def test_fetch_ohlcv_success(self, mock_request):
         """Test successful OHLCV fetch."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -202,7 +202,7 @@ class TestIEXProvider:
                 "volume": 1000000,
             }
         ]
-        mock_get.return_value = mock_response
+        mock_request.return_value = mock_response
         
         provider = IEXProvider(api_key="test_key")
         ohlcv = provider.fetch_ohlcv(
@@ -242,15 +242,15 @@ class TestCoinGeckoProvider:
         assert provider._get_coin_id("ETH") == "ethereum"
         assert provider._get_coin_id("MATIC") == "matic-network"
     
-    @patch("core.data_providers.coingecko_provider.requests.get")
-    def test_fetch_latest_price(self, mock_get):
+    @patch.object(CoinGeckoProvider, "_request")
+    def test_fetch_latest_price(self, mock_request):
         """Test fetching latest price."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "bitcoin": {"usd": 42000.0}
         }
-        mock_get.return_value = mock_response
+        mock_request.return_value = mock_response
         
         provider = CoinGeckoProvider()
         price = provider.fetch_latest_price("BTC")
@@ -272,8 +272,8 @@ class TestNewsAPIProvider:
                 datetime(2025, 1, 31),
             )
     
-    @patch("core.data_providers.newsapi_provider.requests.get")
-    def test_fetch_news(self, mock_get):
+    @patch.object(NewsAPIProvider, "_request")
+    def test_fetch_news(self, mock_request):
         """Test fetching news articles."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -290,7 +290,7 @@ class TestNewsAPIProvider:
                 }
             ],
         }
-        mock_get.return_value = mock_response
+        mock_request.return_value = mock_response
         
         provider = NewsAPIProvider(api_key="test_key")
         articles = provider.fetch_news("AAPL", limit=5)
@@ -314,8 +314,8 @@ class TestSECEdgarProvider:
                 datetime(2025, 1, 31),
             )
     
-    @patch("core.data_providers.sec_edgar_provider.requests.get")
-    def test_get_cik(self, mock_get):
+    @patch.object(SECEdgarProvider, "_request")
+    def test_get_cik(self, mock_request):
         """Test getting CIK for a symbol."""
         # First call returns CIK lookup
         mock_response = Mock()
@@ -323,7 +323,7 @@ class TestSECEdgarProvider:
         mock_response.json.return_value = {
             "CIK_list": [{"CIK": 320193}]  # Apple's CIK
         }
-        mock_get.return_value = mock_response
+        mock_request.return_value = mock_response
         
         provider = SECEdgarProvider()
         cik = provider._get_cik("AAPL")

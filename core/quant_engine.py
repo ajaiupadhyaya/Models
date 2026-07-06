@@ -19,11 +19,10 @@ Usage:
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 from scipy.stats import norm
 
 logger = logging.getLogger(__name__)

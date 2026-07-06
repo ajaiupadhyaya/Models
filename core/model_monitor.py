@@ -5,8 +5,8 @@ Tracks model performance and automatically retrains when needed
 
 import logging
 import json
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime, timedelta
+from typing import Dict, Optional, Tuple
+from datetime import datetime
 from pathlib import Path
 import pandas as pd
 import numpy as np

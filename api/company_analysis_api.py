@@ -14,12 +14,11 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from core.company_search import CompanySearch, search_companies
+from core.company_search import CompanySearch
 from models.fundamental.company_analyzer import CompanyAnalyzer
 from models.valuation.dcf_model import DCFModel
 from models.risk.var_cvar import VaRModel, CVaRModel
 from core.data_fetcher import DataFetcher
-import pandas as pd
 import numpy as np
 from datetime import datetime
 import logging
@@ -282,7 +281,6 @@ def _calculate_dcf(analyzer: CompanyAnalyzer) -> Dict[str, Any]:
     """Calculate DCF valuation."""
     try:
         # Get financial data
-        financials = analyzer.financials
         cash_flow = analyzer.cash_flow
         info = analyzer.info
         

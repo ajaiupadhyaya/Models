@@ -5,8 +5,7 @@ Proper transaction costs, market impact, slippage, and statistical validation
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime
+from typing import Dict
 from dataclasses import dataclass
 import warnings
 warnings.filterwarnings('ignore')

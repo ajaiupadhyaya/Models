@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 import logging
-from datetime import datetime
 from pathlib import Path
 import sys
 
@@ -51,17 +50,16 @@ except Exception:
 
 import yfinance as yf
 import pandas as pd
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
 try:
-    from api.auth_api import get_current_user
-    _auth_deps = [Depends(get_current_user)]
+    from api.auth_api import get_current_user_if_configured
+    _require_auth = [Depends(get_current_user_if_configured)]
 except Exception:
-    _auth_deps = []
+    _require_auth = []
 
-router = APIRouter(dependencies=_auth_deps)
+router = APIRouter()
 
 from api.backtest_contracts import LegacyModelBacktestRequest, strategy_from_model_name
 
@@ -182,7 +180,7 @@ async def get_sample_data(
         return {"candles": [], "symbol": symbol, "error": str(e)}
 
 
-@router.post("/technical", response_model=BacktestResponse)
+@router.post("/technical", response_model=BacktestResponse, dependencies=_require_auth)
 async def run_technical_backtest(request: TechnicalBacktestRequest) -> BacktestResponse:
     """
     Run a technical (indicator-only) strategy backtest (e.g. SMA crossover).
@@ -222,7 +220,7 @@ async def run_technical_backtest(request: TechnicalBacktestRequest) -> BacktestR
 
 # API Endpoints
 
-@router.post("/run", response_model=BacktestResponse)
+@router.post("/run", response_model=BacktestResponse, dependencies=_require_auth)
 async def run_backtest(request: BacktestRequest) -> BacktestResponse:
     """
     Run a backtest for a model.
@@ -264,7 +262,7 @@ async def run_backtest(request: BacktestRequest) -> BacktestResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/compare", response_model=CompareStrategiesResponse)
+@router.post("/compare", response_model=CompareStrategiesResponse, dependencies=_require_auth)
 async def compare_strategies(request: CompareStrategiesRequest) -> CompareStrategiesResponse:
     """
     Compare multiple strategies.
@@ -336,7 +334,7 @@ async def compare_strategies(request: CompareStrategiesRequest) -> CompareStrate
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/walk-forward", response_model=Dict[str, Any])
+@router.post("/walk-forward", response_model=Dict[str, Any], dependencies=_require_auth)
 async def walk_forward_analysis(request: WalkForwardRequest) -> Dict[str, Any]:
     """
     Run walk-forward analysis.

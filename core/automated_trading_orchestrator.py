@@ -5,19 +5,16 @@ Coordinates all AI/ML/DL/RL models for continuous automated trading
 
 import logging
 import os
-import asyncio
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any
+from datetime import datetime
 from dataclasses import dataclass, asdict
-import pandas as pd
 import numpy as np
-import json
 from pathlib import Path
 
 from core.data_fetcher import DataFetcher
 from core.ai_analysis import get_ai_service
 from models.ml.advanced_trading import EnsemblePredictor, LSTMPredictor, RLReadyEnvironment
-from models.ml.rl_agents import DQNAgent, PPOAgent, StableBaselines3Wrapper, TradingCallback
+from models.ml.rl_agents import DQNAgent, StableBaselines3Wrapper, TradingCallback
 from core.paper_trading import AlpacaAdapter
 from core.pipeline.data_scheduler import DataScheduler, UpdateFrequency
 
@@ -167,7 +164,7 @@ class AutomatedTradingOrchestrator:
                             agent = StableBaselines3Wrapper(agent_type="PPO")
                             agent.create_agent(env)
                             self.rl_agents[symbol] = agent
-                        except:
+                        except Exception:
                             # Fallback to custom DQN
                             agent = DQNAgent(state_dim=state_dim, action_dim=action_dim)
                             self.rl_agents[symbol] = agent
@@ -476,7 +473,7 @@ class AutomatedTradingOrchestrator:
                     # RL retraining is more expensive, do it less frequently
                     if days_since >= 7:  # Weekly for RL
                         try:
-                            env = RLReadyEnvironment(df, initial_capital=self.initial_capital)
+                            RLReadyEnvironment(df, initial_capital=self.initial_capital)
                             agent = self.rl_agents[sym]
                             if hasattr(agent, 'train'):
                                 callback = TradingCallback()
@@ -549,7 +546,7 @@ class AutomatedTradingOrchestrator:
                 logger.error(f"Cycle failed: {e}")
         
         # Add to scheduler
-        from core.pipeline.data_scheduler import UpdateJob, UpdateFrequency
+        from core.pipeline.data_scheduler import UpdateJob
         
         job = UpdateJob(
             job_id="automated_trading",

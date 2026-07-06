@@ -12,11 +12,9 @@ Features:
 - Circuit breakers and kill switches
 """
 
-import pandas as pd
-import numpy as np
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 import logging
 import threading
@@ -216,11 +214,11 @@ class RiskManager:
             
             # Check correlation risk
             if self._check_correlation_risk(symbol):
-                return False, f"Position would exceed correlation limits"
+                return False, "Position would exceed correlation limits"
             
             # Check sector exposure
             if self._check_sector_exposure(symbol):
-                return False, f"Sector exposure would exceed limits"
+                return False, "Sector exposure would exceed limits"
             
             # Check daily loss limit
             if self.daily_loss < -self.initial_capital * self.max_daily_loss:

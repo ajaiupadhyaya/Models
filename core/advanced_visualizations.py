@@ -4,11 +4,10 @@ Interactive, creative, and visually stunning charts for financial analysis.
 """
 
 import plotly.graph_objects as go
-import plotly.express as px
 from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict
 import warnings
 warnings.filterwarnings('ignore')
 

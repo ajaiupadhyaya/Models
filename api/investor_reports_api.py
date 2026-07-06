@@ -12,12 +12,11 @@ Generate professional investor-facing reports with:
 All generated using OpenAI API for polished, narrative-driven content.
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from datetime import datetime
 import logging
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +135,7 @@ async def generate_investor_report(request: GenerateReportRequest) -> ReportResp
         
         # Convert request data to internal format
         from core.investor_reports import (
-            ModelPerformance, BacktestResults, InvestorReportGenerator
+            ModelPerformance, BacktestResults
         )
         
         models = [

@@ -4,11 +4,10 @@ Institutional-grade financial charting.
 """
 
 import plotly.graph_objects as go
-import plotly.express as px
 from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
-from typing import Optional, List, Dict, Tuple, Union
+from typing import Optional, Dict, Union
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -396,7 +395,7 @@ class ChartBuilder:
             std, ret = portfolio_performance(weights)
             return -(ret - risk_free_rate) / std
         
-        constraints = {'type': 'eq', 'fun': lambda x: np.sum(x) - 1}
+        {'type': 'eq', 'fun': lambda x: np.sum(x) - 1}
         bounds = tuple((0, 1) for _ in range(n_assets))
         
         # Generate efficient frontier

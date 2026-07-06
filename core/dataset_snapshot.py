@@ -16,13 +16,11 @@ Features:
 
 import json
 import logging
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
 
 from .data_providers import OHLCV, AssetType
 

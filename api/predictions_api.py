@@ -38,8 +38,8 @@ BacktestSignal = backtesting_module.BacktestSignal
 logger = logging.getLogger(__name__)
 
 try:
-    from api.auth_api import get_current_user
-    _auth_deps = [Depends(get_current_user)]
+    from api.auth_api import get_current_user_if_configured
+    _auth_deps = [Depends(get_current_user_if_configured)]
 except Exception:
     _auth_deps = []
 

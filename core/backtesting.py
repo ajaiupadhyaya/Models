@@ -5,8 +5,8 @@ Machine learning enhanced backtesting with multiple prediction models
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Callable
-from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+from datetime import datetime
 from dataclasses import dataclass
 import warnings
 warnings.filterwarnings('ignore')
@@ -422,7 +422,7 @@ class WalkForwardAnalysis:
         while start_idx + self.in_sample_period + self.out_sample_period <= total_length:
             # Training period
             train_end = start_idx + self.in_sample_period
-            train_data = self.df.iloc[start_idx:train_end]
+            self.df.iloc[start_idx:train_end]
             
             # Out-of-sample testing
             test_start = train_end

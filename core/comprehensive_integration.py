@@ -4,20 +4,17 @@ Connects ALL components with AI/ML/DL/RL and automation
 """
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any
 from datetime import datetime
 import pandas as pd
 import numpy as np
 
 from core.enhanced_orchestrator import EnhancedOrchestrator
 from core.ai_analysis import get_ai_service
-from core.backtesting import BacktestEngine, BacktestSignal
 from core.company_search import CompanySearch
 from core.investor_reports import InvestorReportGenerator
 from core.model_monitor import ModelPerformanceMonitor
 from core.alerting_system import AlertingSystem, AlertSeverity
-from models.ml.advanced_trading import EnsemblePredictor, LSTMPredictor
-from models.ml.rl_agents import DQNAgent, PPOAgent
 try:
     from models.risk.var_cvar import VaRModel, CVaRModel
 except ImportError:
@@ -38,9 +35,9 @@ try:
     from models.options.black_scholes import BlackScholes
 except ImportError:
     BlackScholes = None
-from models.quant.advanced_models import FactorModel, RegimeDetector, PortfolioOptimizerAdvanced
+from models.quant.advanced_models import PortfolioOptimizerAdvanced
 try:
-    from models.quant.institutional_grade import (
+    from models.quant.institutional_grade import (  # noqa: F401  # availability probe
         FamaFrenchFactorModel, GARCHModel, AdvancedRiskMetrics,
         TransactionCostModel, StatisticalValidation
     )
@@ -249,7 +246,7 @@ class ComprehensiveIntegration:
                     garch.fit(returns)
                     garch_forecast = garch.forecast(n_periods=1)
                     garch_vol = float(garch_forecast.iloc[0]) if len(garch_forecast) > 0 else None
-                except:
+                except Exception:
                     pass
             
             result = {
@@ -280,7 +277,7 @@ class ComprehensiveIntegration:
                 predicted_vol = rolling_vol.iloc[-1] * 1.1  # Slight upward bias
                 return predicted_vol
             return returns.std()
-        except:
+        except Exception:
             return returns.std()
     
     def _analyze_portfolio_with_factors(self, symbol: str) -> Dict[str, Any]:

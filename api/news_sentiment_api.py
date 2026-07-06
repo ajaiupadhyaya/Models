@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import requests
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

@@ -6,8 +6,7 @@ Intelligent caching with TTL and automatic refresh.
 import os
 import pickle
 import hashlib
-import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional, Callable, Any, Dict
 import warnings
 warnings.filterwarnings('ignore')

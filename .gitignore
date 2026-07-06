@@ -8,6 +8,8 @@ venv/
 env/
 ENV/
 .venv
+.venv-ci/
+.venv*/
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -23,8 +25,10 @@ data/*.xlsx
 data/*.parquet
 data/*.h5
 data/cache/
+data/models/
 data/test_models/
 data/metrics/*.json
+*.pkl
 *.db
 *.sqlite
 

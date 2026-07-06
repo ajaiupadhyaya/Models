@@ -6,7 +6,7 @@ JWT tokens for session; no database for MVP.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Optional
+from typing import Annotated
 
 try:
     import jwt
@@ -70,12 +70,36 @@ def _verify_token(token: str) -> str:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
+def _auth_is_configured() -> bool:
+    """True when production auth is enabled (matches /api/auth/status)."""
+    settings = get_settings()
+    secret_ok = (
+        settings.auth.auth_secret
+        and settings.auth.auth_secret.strip()
+        and "change-me-in-production" not in settings.auth.auth_secret
+    )
+    return bool(
+        settings.auth.terminal_user
+        and settings.auth.terminal_password
+        and secret_ok
+    )
+
+
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
 ) -> str:
     if not credentials or credentials.credentials is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return _verify_token(credentials.credentials)
+
+
+async def get_current_user_if_configured(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
+) -> str:
+    """Require JWT only when auth is fully configured; allow local dev without login."""
+    if not _auth_is_configured():
+        return "anonymous"
+    return await get_current_user(credentials)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -105,15 +129,4 @@ async def auth_status() -> dict:
     Return whether auth is configured. Frontend can allow access without login when False.
     Considered configured only when AUTH_SECRET is set and not the default placeholder.
     """
-    settings = get_settings()
-    secret_ok = (
-        settings.auth.auth_secret
-        and settings.auth.auth_secret.strip()
-        and "change-me-in-production" not in settings.auth.auth_secret
-    )
-    configured = bool(
-        settings.auth.terminal_user
-        and settings.auth.terminal_password
-        and secret_ok
-    )
-    return {"configured": configured}
+    return {"configured": _auth_is_configured()}

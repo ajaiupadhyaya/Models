@@ -21,15 +21,13 @@ import logging
 import json
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Tuple, Any
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, field
 from enum import Enum
 import time
 from pathlib import Path
 
-import pandas as pd
 
 from .data_providers import (
-    DataProvider,
     DataProviderRegistry,
     PolygonProvider,
     IEXProvider,
@@ -40,8 +38,6 @@ from .data_providers import (
     FundamentalsData,
     AssetType,
 )
-from .yfinance_session import get_yfinance_session
-from .data_cache import cached
 
 logger = logging.getLogger(__name__)
 
@@ -367,14 +363,14 @@ class UnifiedDataFetcher:
         )
         
         # Generate cache key
-        cache_key = request.to_cache_key()
+        request.to_cache_key()
         
         # Try cache (using TTL)
         try:
             # This is where Redis/in-memory cache would be checked
             # For now, relying on @cached decorator on individual methods
             pass
-        except:
+        except Exception:
             pass
         
         # Select providers

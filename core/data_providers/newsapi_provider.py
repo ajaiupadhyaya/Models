@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 import logging
 
-from .base import DataProvider, OHLCV, FundamentalsData, AssetType
+from .base import DataProvider, OHLCV, AssetType
 
 logger = logging.getLogger(__name__)
 
@@ -125,5 +125,5 @@ class NewsAPIProvider(DataProvider):
                 timeout=5
             )
             return resp.status_code == 200
-        except:
+        except Exception:
             return False

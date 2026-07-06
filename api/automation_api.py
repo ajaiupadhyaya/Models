@@ -11,11 +11,9 @@ Combines:
 
 import logging
 import os
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
-import pandas as pd
 
 from core.data_fetcher import DataFetcher
 from core.ai_analysis import get_ai_service
@@ -25,8 +23,8 @@ from core.paper_trading import AlpacaAdapter
 logger = logging.getLogger(__name__)
 
 try:
-    from api.auth_api import get_current_user
-    _auth_deps = [Depends(get_current_user)]
+    from api.auth_api import get_current_user_if_configured
+    _auth_deps = [Depends(get_current_user_if_configured)]
 except Exception:
     _auth_deps = []
 
@@ -251,7 +249,7 @@ async def predict_and_trade(
                     })
         
         # 5. Generate narrative
-        narrative_prompt = f"""
+        f"""
         Automated trading run completed at {datetime.now().isoformat()}
         
         Symbols analyzed: {', '.join(symbol_list)}

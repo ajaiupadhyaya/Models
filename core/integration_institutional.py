@@ -4,7 +4,7 @@ Integrates all institutional-grade models with proper validation
 """
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -12,18 +12,15 @@ import numpy as np
 from core.comprehensive_integration import ComprehensiveIntegration
 from models.quant.institutional_grade import (
     FamaFrenchFactorModel, GARCHModel, HestonStochasticVolatility,
-    TransactionCostModel, AdvancedRiskMetrics, StatisticalValidation,
-    BlackLittermanOptimizer, RobustPortfolioOptimizer
+    TransactionCostModel, AdvancedRiskMetrics, StatisticalValidation
 )
 from models.quant.advanced_econometrics import (
-    VectorAutoregression, ARIMAGARCH, RegimeSwitchingModel,
-    CointegrationAnalysis, KalmanFilter
+    VectorAutoregression, ARIMAGARCH, RegimeSwitchingModel
 )
 from models.quant.factor_models_institutional import (
     APTModel, StyleFactorModel, RiskFactorModel
 )
 from models.options.advanced_pricing import BinomialTree, SABRModel, FiniteDifferencePricing
-from models.valuation.institutional_dcf import InstitutionalDCF
 from core.institutional_backtesting import InstitutionalBacktestEngine
 
 logger = logging.getLogger(__name__)

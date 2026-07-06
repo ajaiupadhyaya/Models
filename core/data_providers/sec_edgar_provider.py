@@ -7,10 +7,9 @@ Free tier: No API key required
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 import logging
 import os
-import json
 
 from .base import DataProvider, OHLCV, FundamentalsData, AssetType
 
@@ -131,8 +130,8 @@ class SECEdgarProvider(DataProvider):
             market_cap = get_latest_value("EntityMarketCapitalization")
             net_income = get_latest_value("NetIncomeLoss")
             revenue = get_latest_value("Revenues")
-            assets = get_latest_value("Assets")
-            liabilities = get_latest_value("Liabilities")
+            get_latest_value("Assets")
+            get_latest_value("Liabilities")
             stockholders_equity = get_latest_value("StockholdersEquity")
             shares_outstanding = get_latest_value("EntityCommonStockSharesOutstanding")
             
@@ -178,7 +177,7 @@ class SECEdgarProvider(DataProvider):
                 headers=self._headers(),
             )
             return resp.status_code == 200
-        except:
+        except Exception:
             return False
 
     def _headers(self) -> Dict[str, str]:

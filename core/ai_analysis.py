@@ -10,12 +10,11 @@ Uses a configurable LLM backend (OpenAI by default) to provide:
 """
 
 import os
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 import json
 import logging
 from datetime import datetime
 import pandas as pd
-import numpy as np
 
 try:
     from openai import OpenAI, RateLimitError

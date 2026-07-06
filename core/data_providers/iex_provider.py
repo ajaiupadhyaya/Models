@@ -10,6 +10,8 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 import logging
 
+import requests
+
 from .base import DataProvider, OHLCV, FundamentalsData, AssetType
 
 logger = logging.getLogger(__name__)
@@ -48,7 +50,7 @@ class IEXProvider(DataProvider):
             return []
 
         if interval != "1day":
-            raise ValueError(f"IEX only supports daily data")
+            raise ValueError("IEX only supports daily data")
         
         # Calculate IEX range parameter
         days_diff = (end_date - start_date).days
@@ -212,5 +214,5 @@ class IEXProvider(DataProvider):
             url = f"{self.BASE_URL}/status"
             resp = requests.get(url, params={"token": self.api_key}, timeout=5)
             return resp.status_code == 200
-        except:
+        except Exception:
             return False

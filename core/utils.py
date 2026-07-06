@@ -4,8 +4,6 @@ Utility functions for financial modeling.
 
 import pandas as pd
 import numpy as np
-from typing import Optional, List
-from datetime import datetime, timedelta
 
 
 def calculate_returns(prices: pd.Series, method: str = 'simple') -> pd.Series:

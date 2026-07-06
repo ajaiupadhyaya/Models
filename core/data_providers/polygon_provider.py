@@ -7,8 +7,10 @@ Docs: https://polygon.io/docs
 
 import os
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 import logging
+
+import requests
 
 from .base import DataProvider, OHLCV, FundamentalsData, AssetType
 
@@ -198,5 +200,5 @@ class PolygonProvider(DataProvider):
             url = f"{self.BASE_URL}/v1/marketstatus/now"
             resp = requests.get(url, params={"apikey": self.api_key}, timeout=5)
             return resp.status_code == 200
-        except:
+        except Exception:
             return False

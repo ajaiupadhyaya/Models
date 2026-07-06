@@ -5,10 +5,9 @@ Monitors trading signals, risk thresholds, and anomalies
 
 import logging
 from typing import Dict, List, Optional, Callable, Any
-from datetime import datetime, timedelta
+from datetime import datetime
 from dataclasses import dataclass, asdict
 from enum import Enum
-import json
 
 logger = logging.getLogger(__name__)
 

@@ -6,9 +6,8 @@ High-quality, publication-ready financial visualizations
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 from plotly.subplots import make_subplots
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List
 from enum import Enum
 import warnings
 warnings.filterwarnings('ignore')
@@ -246,7 +245,7 @@ class InteractiveCharts:
         
         # Add statistics
         mean = data.mean()
-        std = data.std()
+        data.std()
         
         fig.add_vline(x=mean, line_dash="dash", line_color="red",
                      annotation_text="Mean", annotation_position="top right")

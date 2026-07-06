@@ -4,7 +4,6 @@ No hardcoded shock values for user tickers - pulls actual returns from DB/fetche
 """
 
 import logging
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -53,7 +52,6 @@ def run_stress_test(
     Apply crisis scenarios using real historical returns from OHLCV.
     Returns portfolio drawdown per scenario, worst single-day loss, recovery time (days).
     """
-    import numpy as np
     import pandas as pd
 
     tickers = [t.upper() for t in tickers]
@@ -134,13 +132,12 @@ def run_stress_test(
 
         # Recovery: first day after trough where cum >= previous peak
         trough_idx = cum.idxmin()
-        trough_val = cum.min()
+        cum.min()
         after = cum.loc[trough_idx:]
         recovered = after[after >= peak.loc[trough_idx]]
         recovery_days = None
         if len(recovered) > 0:
             first_recovery = recovered.index[0]
-            from datetime import datetime as dt
             if hasattr(first_recovery, "date"):
                 delta = (first_recovery - trough_idx).days if hasattr(trough_idx, "date") else None
             else:

@@ -9,14 +9,14 @@ Production-ready API server for ML trading models with:
 - Performance monitoring
 """
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from contextlib import asynccontextmanager
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import logging
 import sys
 import time
@@ -26,9 +26,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# CRITICAL: Disable curl_cffi in yfinance BEFORE any yfinance imports
-# This must be imported first to prevent Yahoo Finance blocking
-from core import yfinance_session
+# yfinance_session shim (no-op for yfinance >= 1.0 compatibility)
 
 # Custom JSON encoder to handle numpy, pandas, and NaN values
 import json
@@ -87,7 +85,7 @@ class NaNInfCleanupMiddleware(BaseHTTPMiddleware):
             try:
                 # This is handled by the patched encoder above
                 pass
-            except:
+            except Exception:
                 pass
         return response
 
@@ -241,7 +239,6 @@ app = FastAPI(
 
 # Request logging middleware: mint request ID, log JSON line per request,
 # return X-Request-ID header so clients can correlate.
-import time
 import uuid
 
 

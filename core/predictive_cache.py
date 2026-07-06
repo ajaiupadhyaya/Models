@@ -12,15 +12,11 @@ Features:
 """
 
 import pandas as pd
-import numpy as np
-from typing import Dict, List, Optional, Any, Tuple, Set
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import datetime
 import pickle
-import json
 import threading
-import hashlib
 from collections import defaultdict, deque
 import logging
 from enum import Enum
@@ -275,7 +271,7 @@ class PredictiveCache:
                     size = len(serialized_value)
                 else:
                     size = len(pickle.dumps(serialized_value))
-            except:
+            except Exception:
                 size = 0
             
             # Create entry

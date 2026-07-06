@@ -3,7 +3,7 @@ Enhanced data fetching utilities with rate limiting, caching, and fallback strat
 This module extends DataFetcher with additional production-ready features.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 import pandas as pd
 from datetime import datetime, timedelta
 import logging

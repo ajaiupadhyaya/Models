@@ -56,8 +56,8 @@ describe("parseCommand", () => {
     expect(parseCommand("SCREEN")).toEqual({ type: "module", module: "screening" });
   });
 
-  it("parses BACKTEST as backtest with quant module", () => {
-    expect(parseCommand("BACKTEST AAPL")).toEqual({ type: "backtest", module: "quant", symbol: "AAPL" });
+  it("parses BACKTEST as backtest module with optional ticker", () => {
+    expect(parseCommand("BACKTEST AAPL")).toEqual({ type: "backtest", module: "backtest", symbol: "AAPL" });
   });
 
   it("parses WORKSPACE with optional name", () => {

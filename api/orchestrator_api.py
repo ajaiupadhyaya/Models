@@ -7,7 +7,7 @@ behind the Bloomberg-style terminal.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
 from pydantic import BaseModel

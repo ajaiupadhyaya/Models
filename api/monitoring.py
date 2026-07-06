@@ -10,7 +10,7 @@ Endpoints for monitoring system performance:
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path

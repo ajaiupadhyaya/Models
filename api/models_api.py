@@ -47,8 +47,6 @@ spec.loader.exec_module(backtesting_module)
 
 SimpleMLPredictor = backtesting_module.SimpleMLPredictor
 import yfinance as yf
-import pandas as pd
-import numpy as np
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -140,7 +138,7 @@ async def load_saved_models() -> Dict[str, Any]:
             metadata = load_model_metadata(model_name)
             
             if metadata:
-                model_type = metadata.get("type")
+                metadata.get("type")
                 model_path = MODELS_DIR / f"{model_name}.pkl"
                 
                 if model_path.exists():

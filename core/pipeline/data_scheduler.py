@@ -4,15 +4,13 @@ Scheduled data fetching and caching
 """
 
 import pandas as pd
-import numpy as np
 from typing import Callable, Optional, Dict, List, Any
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 import schedule
 import time
 import threading
 import logging
-from abc import ABC, abstractmethod
 import warnings
 warnings.filterwarnings('ignore')
 

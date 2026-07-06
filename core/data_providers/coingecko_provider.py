@@ -6,9 +6,11 @@ Docs: https://www.coingecko.com/en/api
 Free tier: No API key required, 10 calls/sec
 """
 
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from datetime import datetime
+from typing import Optional, List
 import logging
+
+import requests
 
 from .base import DataProvider, OHLCV, FundamentalsData, AssetType
 
@@ -180,5 +182,5 @@ class CoinGeckoProvider(DataProvider):
             url = f"{self.BASE_URL}/simple/price"
             resp = requests.get(url, params={"ids": "bitcoin", "vs_currencies": "usd"}, timeout=5)
             return resp.status_code == 200
-        except:
+        except Exception:
             return False

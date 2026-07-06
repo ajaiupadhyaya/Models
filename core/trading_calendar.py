@@ -5,7 +5,7 @@ Uses exchange-calendars for NYSE, NASDAQ, LSE, etc.
 
 import pandas as pd
 from exchange_calendars import get_calendar
-from typing import List, Optional
+from typing import List
 
 
 class TradingCalendar:

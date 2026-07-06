@@ -12,6 +12,8 @@ from pathlib import Path
 import pytest
 import pandas as pd
 
+pytest.importorskip("pyarrow", reason="pyarrow is an optional (v2) dependency")
+
 from core.dataset_snapshot import DatasetSnapshot, SnapshotMetadata
 from core.data_providers import OHLCV, AssetType
 

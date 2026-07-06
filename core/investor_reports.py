@@ -11,7 +11,7 @@ Generates professional, consumer-facing reports suitable for:
 Uses OpenAI API to create polished, narrative-driven content.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 from datetime import datetime
 import json
@@ -504,10 +504,9 @@ Forward-looking statements contained in this report are subject to risks and unc
         # Convert markdown to HTML with professional styling
         try:
             import markdown
-            md = markdown.Markdown(extensions=['tables', 'toc'])
+            markdown.Markdown(extensions=['tables', 'toc'])
         except ImportError:
             logger.warning("markdown package not installed. Using basic conversion.")
-            md = None
         
         content = f"""<!DOCTYPE html>
 <html lang="en">

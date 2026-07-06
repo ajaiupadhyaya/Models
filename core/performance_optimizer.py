@@ -196,7 +196,7 @@ def parallel_process(data: list, func: Callable, n_jobs: int = 4) -> list:
         List of results
     """
     try:
-        from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+        from concurrent.futures import ThreadPoolExecutor
         
         # Use ThreadPoolExecutor for I/O bound tasks
         with ThreadPoolExecutor(max_workers=n_jobs) as executor:

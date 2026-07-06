@@ -4,8 +4,6 @@ Company Search Module
 Search and select companies for analysis with smart matching and caching.
 """
 
-import pandas as pd
-import numpy as np
 from typing import List, Dict, Optional, Tuple
 import yfinance as yf
 from fuzzywuzzy import fuzz
@@ -67,12 +65,6 @@ class CompanySearch:
         companies = {}
         
         # Major indices components
-        indices = {
-            '^GSPC': 'S&P 500',
-            '^DJI': 'Dow Jones',
-            '^IXIC': 'NASDAQ',
-            '^RUT': 'Russell 2000'
-        }
         
         # Get tickers from major ETFs as proxy for indices
         etfs = ['SPY', 'QQQ', 'DIA', 'IWM']
