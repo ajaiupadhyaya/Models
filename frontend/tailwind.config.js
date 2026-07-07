@@ -20,6 +20,7 @@ module.exports = {
         "on-primary-container": "#757575",
         "secondary": "#c6c6c7",
         "primary-fixed-dim": "#c6c6c6",
+        "accent-green": "#22c55e",
         "inverse-surface": "#e5e2e1",
         "on-primary-fixed-variant": "#474747",
         "surface-dim": "#131313",

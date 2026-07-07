@@ -27,6 +27,7 @@
   --accent-green: #22c55e;
   --accent-red: #ef4444;
   --accent-blue: #3568ff;
+  --gradient-accent: linear-gradient(135deg, #3568ff 0%, #5c7cff 100%);
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "Space Mono", ui-monospace, Menlo, Consolas, monospace;
 }
