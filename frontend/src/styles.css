@@ -35,11 +35,6 @@ body {
 }
 
 /* Old Terminal classes preserved for non-migrated components during transition */
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
 .terminal-header {
   display: flex;
   justify-content: space-between;
