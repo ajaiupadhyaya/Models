@@ -22,6 +22,8 @@ import { NewsSentimentPanel } from "./panels/NewsSentimentPanel";
 import { CommandBar } from "./CommandBar";
 import { TickerSearchBar } from "./TickerSearchBar";
 import { TickerStrip } from "./TickerStrip";
+import { TopNavBar } from "./TopNavBar";
+import { SideNavBar } from "./SideNavBar";
 import {
   TerminalContext,
   type ActiveModule,
@@ -319,63 +321,44 @@ export const TerminalShell: React.FC = () => {
         setWatchlist,
       }}
     >
-      <div className="terminal-root">
-        <header className="terminal-header terminal-header-row">
-          <div className="terminal-brand">
-            <div className="terminal-title">MODELS</div>
-            <span className="terminal-module-badge">{MODULE_LABELS[activeModule]}</span>
-            <span className="terminal-symbol-badge">{primarySymbol}</span>
+      <div className="min-h-screen bg-background text-on-surface flex flex-col">
+        <TopNavBar />
+        <SideNavBar />
+        
+        <main className="ml-20 mt-16 p-margin-page flex-1 flex flex-col bg-outline-variant gap-gutter relative z-0 h-[calc(100vh-64px)] overflow-hidden">
+          <div className="bg-background hairline-b shrink-0 flex flex-col">
+            <TickerStrip primarySymbol={primarySymbol} onWsStatus={setWsConnected} />
+            <div className="px-4 py-2 border-b border-outline-variant">
+              <CommandBar onSubmit={handleCommand} />
+            </div>
           </div>
-          <TickerSearchBar />
-          <div className="terminal-status terminal-status-end">
-            <span className={`terminal-status-dot ${wsConnected ? "live" : ""}`} aria-hidden />
-            {wsConnected ? "Live" : "REST"} • {apiLabel}
-          </div>
-        </header>
-        <div className="terminal-command-row">
-          <CommandBar onSubmit={handleCommand} />
-        </div>
-
-        <nav className="terminal-module-tabs" aria-label="Switch module">
-          {MODULES_ORDER.map((mod) => (
-            <button
-              key={mod}
-              type="button"
-              onClick={() => setActiveModule(mod)}
-              className={activeModule === mod ? "terminal-tab terminal-tab-active" : "terminal-tab"}
-            >
-              {MODULE_LABELS[mod]}
-            </button>
-          ))}
-        </nav>
-
-        <TickerStrip primarySymbol={primarySymbol} onWsStatus={setWsConnected} />
-
-        <Group
-          key={currentWorkspaceName}
-          orientation="horizontal"
-          className="terminal-panels"
-          defaultLayout={defaultLayout}
-          onLayoutChanged={handleLayoutChanged}
-        >
-          <Panel id="left" defaultSize={defaultLayout.left} minSize={15} maxSize={35} className="terminal-panel-slot">
-            <div className="terminal-panel-padding">
-              <MarketOverview />
-            </div>
-          </Panel>
-          <Separator id="left-sep" className="terminal-panel-separator" />
-          <Panel id="main" defaultSize={defaultLayout.main} minSize={30} maxSize={70} className="terminal-panel-slot">
-            <div className="terminal-panel-padding terminal-panel-main">
-              <MainContent activeModule={activeModule} />
-            </div>
-          </Panel>
-          <Separator id="right-sep" className="terminal-panel-separator" />
-          <Panel id="right" defaultSize={defaultLayout.right} minSize={20} maxSize={45} className="terminal-panel-slot">
-            <div className="terminal-panel-padding">
-              <AiAssistantPanel />
-            </div>
-          </Panel>
-        </Group>
+          
+          <Group
+            key={currentWorkspaceName}
+            orientation="horizontal"
+            className="flex-1 min-h-0 bg-background"
+            defaultLayout={defaultLayout}
+            onLayoutChanged={handleLayoutChanged}
+          >
+            <Panel id="left" defaultSize={defaultLayout.left} minSize={15} maxSize={35} className="overflow-auto bg-surface-container-low hairline-r">
+              <div className="h-full p-4">
+                <MarketOverview />
+              </div>
+            </Panel>
+            <Separator id="left-sep" className="w-[1px] bg-outline-variant cursor-col-resize hover:bg-primary transition-colors" />
+            <Panel id="main" defaultSize={defaultLayout.main} minSize={30} maxSize={70} className="overflow-y-auto bg-background">
+              <div className="min-h-full flex flex-col">
+                <MainContent activeModule={activeModule} />
+              </div>
+            </Panel>
+            <Separator id="right-sep" className="w-[1px] bg-outline-variant cursor-col-resize hover:bg-primary transition-colors" />
+            <Panel id="right" defaultSize={defaultLayout.right} minSize={20} maxSize={45} className="overflow-auto bg-surface-container-low hairline-l">
+              <div className="h-full p-4">
+                <AiAssistantPanel />
+              </div>
+            </Panel>
+          </Group>
+        </main>
       </div>
     </TerminalContext.Provider>
   );

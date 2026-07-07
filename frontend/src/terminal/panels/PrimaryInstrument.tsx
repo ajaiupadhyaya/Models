@@ -644,79 +644,73 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
   };
 
   return (
-    <section className="panel panel-main">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div className="panel-title">Primary Instrument: {primarySymbol}</div>
-        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+    <section className="bg-background p-8 flex flex-col justify-between hairline-b mb-4 flex-shrink-0">
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <div className="font-label-xs text-label-xs uppercase text-on-tertiary-container tracking-[0.4em] mb-4">PRIMARY INSTRUMENT</div>
+          <h1 className="font-display-price text-[80px] leading-[80px] tracking-[-0.04em] font-extrabold text-on-surface uppercase">{primarySymbol}</h1>
+        </div>
+        <div className="text-right flex flex-col items-end gap-2">
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            {data.length > 0 && (
+              <>
+                <button type="button" className="text-label-xs font-label-xs uppercase tracking-widest px-2 py-1 border border-outline-variant hover:bg-surface-container-low transition-colors text-on-surface" onClick={() => handleExportChart("png")} title="Download chart as PNG">PNG</button>
+                <button type="button" className="text-label-xs font-label-xs uppercase tracking-widest px-2 py-1 border border-outline-variant hover:bg-surface-container-low transition-colors text-on-surface" onClick={() => handleExportChart("svg")} title="Download chart as SVG">SVG</button>
+              </>
+            )}
+            {indicatorOverlay === "none" && (
+              <button
+                type="button"
+                className={`text-label-xs font-label-xs uppercase tracking-widest px-2 py-1 border transition-colors ${showSma ? 'bg-primary text-background border-primary' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'}`}
+                onClick={() => setShowSma(!showSma)}
+              >
+                SMA 20
+              </button>
+            )}
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf.period}
+                type="button"
+                className={`text-label-xs font-label-xs uppercase tracking-widest px-2 py-1 border transition-colors ${timeframe === tf.period ? 'bg-primary text-background border-primary' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'}`}
+                onClick={() => setTimeframe(tf.period)}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
           {data.length > 0 && (
             <>
-              <button type="button" className="ai-button" style={{ padding: "4px 8px", fontSize: 11 }} onClick={() => handleExportChart("png")} title="Download chart as PNG">
-                Export PNG
-              </button>
-              <button type="button" className="ai-button" style={{ padding: "4px 8px", fontSize: 11 }} onClick={() => handleExportChart("svg")} title="Download chart as SVG">
-                Export SVG
-              </button>
+              <div className="font-data-mono text-data-mono text-on-surface-variant mt-4 uppercase">VOL: {((data[data.length - 1]?.volume ?? 0) / 1000000).toFixed(1)}M</div>
+              <div className="font-data-mono text-data-mono text-tertiary mt-1 uppercase">
+                CLOSE: {data[data.length - 1]?.close.toFixed(2)}
+              </div>
             </>
           )}
-          {indicatorOverlay === "none" && (
-            <button
-              type="button"
-              className="ai-button"
-              style={{
-                padding: "4px 8px",
-                fontSize: 11,
-                background: showSma ? "var(--accent)" : "var(--bg-panel)",
-                border: `1px solid ${showSma ? "var(--accent)" : "var(--border)"}`,
-                color: showSma ? "#0a0a0a" : "var(--text)",
-              }}
-              onClick={() => setShowSma(!showSma)}
-            >
-              SMA 20
-            </button>
-          )}
-          {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf.period}
-              type="button"
-              className="ai-button"
-              style={{
-                padding: "4px 8px",
-                fontSize: 11,
-                background: timeframe === tf.period ? "var(--accent)" : "var(--bg-panel)",
-                border: `1px solid ${timeframe === tf.period ? "var(--accent)" : "var(--border)"}`,
-                color: timeframe === tf.period ? "#0a0a0a" : "var(--text)",
-              }}
-              onClick={() => setTimeframe(tf.period)}
-            >
-              {tf.label}
-            </button>
-          ))}
         </div>
       </div>
       {chartError && (
-        <div className="panel-body-muted" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="text-error font-data-mono text-xs mb-4 flex items-center gap-2">
           {chartError}. Try again or retry.
-          <button type="button" className="ai-button" onClick={() => setRetryKey((k) => k + 1)}>Retry</button>
+          <button type="button" className="border border-error px-2 py-1" onClick={() => setRetryKey((k) => k + 1)}>Retry</button>
         </div>
       )}
       {dataWarning && !chartError && (
-        <div className="panel-data-warning" role="status">
+        <div className="text-tertiary font-data-mono text-xs mb-4" role="status">
           {dataWarning}
         </div>
       )}
-      <div style={{ position: "relative" }}>
-        <div ref={ref} className="chart-root" />
+      <div style={{ position: "relative" }} className="flex-1 w-full flex flex-col">
+        <div ref={ref} className="chart-container w-full min-h-[400px] flex-1" />
         <div
           ref={tooltipRef}
           style={{
             position: "fixed",
             visibility: "hidden",
             pointerEvents: "none",
-            background: "var(--bg-panel)",
-            border: "1px solid var(--border)",
-            borderRadius: 2,
+            background: "#131313",
+            border: "1px solid rgba(255,255,255,0.1)",
             padding: "8px 10px",
-            fontFamily: "var(--font-mono)",
+            fontFamily: "Space Mono",
             fontSize: 11,
             zIndex: 1000,
           }}

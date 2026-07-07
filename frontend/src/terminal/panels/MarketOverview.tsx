@@ -108,75 +108,70 @@ export const MarketOverview: React.FC = () => {
   };
 
   return (
-    <div className="panel panel-left">
-      <div className="panel-title">Watchlist</div>
+    <div className="flex flex-col h-full bg-surface-container-low text-on-surface">
+      <div className="font-label-xs text-label-xs uppercase text-on-tertiary-container tracking-[0.4em] mb-4">WATCHLIST</div>
       {fallbackWarning && (
-        <div className="panel-body-muted" style={{ fontSize: 10, marginBottom: 8 }}>
+        <div className="text-tertiary font-data-mono text-[10px] mb-2 uppercase">
           {fallbackWarning}
         </div>
       )}
-      <div style={{ marginBottom: 8, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+      <div className="flex gap-2 mb-4 w-full">
         <input
           type="text"
-          placeholder="Add symbol"
+          placeholder="ADD SYMBOL"
           value={addSymbol}
           onChange={(e) => setAddSymbol(e.target.value.toUpperCase())}
           onKeyDown={(e) => e.key === "Enter" && handleAddSymbol()}
-          style={{
-            flex: 1,
-            minWidth: 80,
-            background: "var(--bg-panel)",
-            border: "1px solid var(--border)",
-            color: "var(--text)",
-            padding: "4px 8px",
-            borderRadius: 4,
-            fontSize: 12,
-            fontFamily: "var(--font-mono)",
-          }}
+          className="flex-1 bg-background border border-outline-variant text-on-surface px-2 py-1 font-data-mono text-[12px] uppercase focus:outline-none focus:border-on-tertiary-container transition-all"
           aria-label="Add symbol to watchlist"
         />
-        <button type="button" className="ai-button" onClick={handleAddSymbol} disabled={!addSymbol.trim()}>
-          Add
+        <button 
+          type="button" 
+          className="text-label-xs font-label-xs uppercase tracking-widest px-3 py-1 border border-outline-variant hover:bg-background transition-colors text-on-surface disabled:opacity-50 disabled:cursor-not-allowed" 
+          onClick={handleAddSymbol} 
+          disabled={!addSymbol.trim()}
+        >
+          ADD
         </button>
       </div>
       {loading && symbols.length === 0 && !error && (
-        <div className="panel-skeleton">
+        <div className="flex flex-col gap-2">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className={`panel-skeleton-line ${i % 3 === 0 ? "short" : i % 3 === 1 ? "medium" : ""}`}
+              className={`h-3 bg-outline-variant opacity-60 rounded-sm animate-pulse ${i % 3 === 0 ? "w-2/5" : i % 3 === 1 ? "w-3/4" : "w-full"}`}
             />
           ))}
         </div>
       )}
       {error && (
-        <div className="panel-error-inline">
+        <div className="text-error font-data-mono text-xs flex items-center gap-2">
           <span>{error}</span>
-          <button type="button" className="ai-button" onClick={retry}>Retry</button>
+          <button type="button" className="border border-error px-2 py-1" onClick={retry}>RETRY</button>
         </div>
       )}
       {sparklineData.length >= 2 && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ color: "var(--text-soft)", fontSize: 10, marginBottom: 4 }}>{primarySymbol} (1M)</div>
+        <div className="mb-4">
+          <div className="text-on-surface-variant font-data-mono text-[10px] mb-1">{primarySymbol} (1M)</div>
           <TimeSeriesLine
             data={sparklineData}
             height={44}
             marginPreset="sparkline"
             showAxis={false}
             strokeWidth={1.2}
-            className="chart-root"
+            className="w-full"
             style={{ minHeight: 44 }}
           />
         </div>
       )}
       {symbols.length > 0 && (
-        <div className="watchlist-rows">
+        <div className="flex flex-col gap-1 overflow-y-auto">
           {symbols.map((row) => (
             <div
               key={row.symbol}
               role="button"
               tabIndex={0}
-              className={`watchlist-row ${row.symbol === primarySymbol ? "selected" : ""}`}
+              className={`flex justify-between items-center px-2 py-2 border-l-2 cursor-pointer transition-colors ${row.symbol === primarySymbol ? "border-primary bg-background" : "border-transparent hover:bg-background/50"}`}
               onClick={() => setPrimarySymbol(row.symbol)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -184,19 +179,12 @@ export const MarketOverview: React.FC = () => {
                   setPrimarySymbol(row.symbol);
                 }
               }}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "var(--space-2) var(--space-3)",
-                borderRadius: "var(--radius-sm)",
-              }}
             >
-              <span className="num-mono" style={{ color: "var(--accent)", fontWeight: 500 }}>
+              <span className="font-data-mono text-primary font-medium text-[12px]">
                 {row.symbol}
               </span>
-              <span className="num-mono" style={{ marginLeft: 8 }}>{row.price.toFixed(2)}</span>
-              <span className={`num-mono ${row.changePct >= 0 ? "up" : "down"}`} style={{ marginLeft: 8, minWidth: 48, textAlign: "right" }}>
+              <span className="font-data-mono text-[12px] ml-2">{row.price.toFixed(2)}</span>
+              <span className={`font-data-mono text-[12px] ml-2 min-w-[48px] text-right ${row.changePct >= 0 ? "text-accent-green" : "text-error"}`}>
                 {row.changePct !== 0 ? `${row.changePct >= 0 ? "+" : ""}${row.changePct.toFixed(2)}%` : "—"}
               </span>
               <button
@@ -205,27 +193,20 @@ export const MarketOverview: React.FC = () => {
                   e.stopPropagation();
                   handleRemoveSymbol(row.symbol);
                 }}
-                style={{
-                  marginLeft: 4,
-                  background: "none",
-                  border: "none",
-                  color: "var(--text-soft)",
-                  cursor: "pointer",
-                  padding: 2,
-                  fontSize: 14,
-                  lineHeight: 1,
-                }}
+                className="ml-2 text-on-surface-variant hover:text-on-surface transition-colors"
                 title="Remove from watchlist"
                 aria-label={`Remove ${row.symbol}`}
               >
-                ×
+                <span className="material-symbols-outlined text-[14px]">close</span>
               </button>
             </div>
           ))}
         </div>
       )}
       {watchlist.length === 0 && !loading && (
-        <div className="panel-body-muted" style={{ fontSize: 12 }}>Add symbols above. Watchlist is saved in this browser.</div>
+        <div className="text-on-surface-variant font-data-mono text-[10px] uppercase mt-2">
+          Add symbols above. Watchlist is saved in this browser.
+        </div>
       )}
     </div>
   );

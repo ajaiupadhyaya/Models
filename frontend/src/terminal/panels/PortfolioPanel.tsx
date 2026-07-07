@@ -82,39 +82,38 @@ function PortfolioOptimizeBlock() {
     parse: parseOptimize,
     deps: [symbolsParam],
   });
-  if (optLoading) return <div className="panel-body-muted" style={{ fontSize: 11 }}>Loading…</div>;
-  if (optError || data?.error) return <div className="panel-body-muted" style={{ fontSize: 11 }}>{data?.error ?? optError} <button type="button" className="ai-button" style={{ marginLeft: 8 }} onClick={optRetry}>Retry</button></div>;
+  if (optLoading) return <div className="text-on-surface-variant font-data-mono text-[10px] animate-pulse">Loading…</div>;
+  if (optError || data?.error) return <div className="text-error font-data-mono text-[10px] flex items-center gap-2">{data?.error ?? optError} <button type="button" className="border border-error px-2 py-1" onClick={optRetry}>RETRY</button></div>;
   const weights = data?.weights ?? {};
   const entries = Object.entries(weights).filter(([, v]) => typeof v === "number");
-  if (entries.length === 0) return <div className="panel-body-muted" style={{ fontSize: 11 }}>Need at least 2 symbols in watchlist for optimization.</div>;
+  if (entries.length === 0) return <div className="text-on-surface-variant font-data-mono text-[10px] uppercase">Need at least 2 symbols in watchlist for optimization.</div>;
   const allocationData = entries.map(([sym, w]) => ({ label: sym, value: Number(w) * 100 }));
   return (
-    <div style={{ fontSize: 11 }}>
-      <div style={{ marginBottom: 8 }}>
+    <div className="font-data-mono text-[12px]">
+      <div className="mb-4">
         <BarChart
           data={allocationData}
           height={Math.min(140, allocationData.length * 24)}
           marginPreset="compact"
           horizontal
           valueFormat={(v) => `${v.toFixed(1)}%`}
-          title="Allocation"
-          className="chart-root"
+          className="w-full"
         />
       </div>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <table className="w-full border-collapse">
         <tbody>
           {entries.map(([sym, w]) => (
-            <tr key={sym}>
-              <td className="num-mono" style={{ color: "var(--accent)", padding: "2px 8px 2px 0" }}>{sym}</td>
-              <td className="num-mono" style={{ textAlign: "right" }}>{(Number(w) * 100).toFixed(1)}%</td>
+            <tr key={sym} className="border-b border-outline-variant/50 hover:bg-background/50">
+              <td className="text-primary py-1">{sym}</td>
+              <td className="text-right py-1">{(Number(w) * 100).toFixed(1)}%</td>
             </tr>
           ))}
         </tbody>
       </table>
       {(data?.sharpe_ratio != null || data?.volatility != null) && (
-        <div style={{ marginTop: 6, color: "var(--text-soft)" }}>
-          {data.sharpe_ratio != null && <span className="num-mono">Sharpe {data.sharpe_ratio.toFixed(2)}</span>}
-          {data.volatility != null && <span className="num-mono" style={{ marginLeft: 8 }}>Vol {(data.volatility * 100).toFixed(2)}%</span>}
+        <div className="mt-2 text-on-surface-variant flex gap-4 uppercase">
+          {data.sharpe_ratio != null && <span>Sharpe <span className="text-on-surface">{data.sharpe_ratio.toFixed(2)}</span></span>}
+          {data.volatility != null && <span>Vol <span className="text-on-surface">{(data.volatility * 100).toFixed(2)}%</span></span>}
         </div>
       )}
     </div>
@@ -133,17 +132,20 @@ function InvestorReportsBlock() {
   const base = typeof window !== "undefined" ? window.location.origin : "";
   const docsUrl = `${base}/docs`;
   return (
-    <div style={{ fontSize: 11, color: "var(--text-soft)" }}>
-      {data?.status === "healthy" ? (
-        <>
-          <span style={{ color: "var(--accent-green)" }}>Available</span>
-          {data.openai_configured ? " (OpenAI configured)." : " (Set OPENAI_API_KEY for generation)."}
-        </>
-      ) : (
-        <span>See <a href={docsUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>/docs</a> for report generation.</span>
-      )}
-      {" "}
-      <a href={docsUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>API docs</a>
+    <div className="font-data-mono text-[12px] text-on-surface-variant uppercase flex flex-col gap-1">
+      <div>
+        {data?.status === "healthy" ? (
+          <>
+            <span className="text-accent-green">Available</span>
+            {data.openai_configured ? " (OpenAI configured)." : " (Set OPENAI_API_KEY for generation)."}
+          </>
+        ) : (
+          <span>See <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">/docs</a> for report generation.</span>
+        )}
+      </div>
+      <div>
+        <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">API docs</a>
+      </div>
     </div>
   );
 }
@@ -186,22 +188,20 @@ export const PortfolioPanel: React.FC = () => {
 
   if (loading) {
     return (
-      <section className="panel panel-main-secondary">
-        <div className="panel-title">Portfolio & Strategies</div>
-        <div className="panel-body-muted">Loading…</div>
-      </section>
+      <div className="flex flex-col h-full bg-surface-container-low text-on-surface p-4">
+        <div className="font-label-xs text-label-xs uppercase text-on-tertiary-container tracking-[0.4em] mb-4">PORTFOLIO & STRATEGIES</div>
+        <div className="text-on-surface-variant font-data-mono text-[12px] animate-pulse">Loading…</div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <PanelErrorState
-        sectionClassName="panel panel-main-secondary"
-        title="Portfolio & Strategies"
-        error={error}
-        hint="Try again or ensure the service is reachable."
-        onRetry={retry}
-      />
+      <div className="flex flex-col h-full bg-surface-container-low text-on-surface p-4">
+        <div className="font-label-xs text-label-xs uppercase text-on-tertiary-container tracking-[0.4em] mb-4">PORTFOLIO & STRATEGIES</div>
+        <div className="text-error font-data-mono text-[12px]">{error}</div>
+        <button type="button" className="border border-error px-2 py-1 mt-2 text-error font-data-mono text-[10px]" onClick={retry}>RETRY</button>
+      </div>
     );
   }
 
@@ -210,67 +210,67 @@ export const PortfolioPanel: React.FC = () => {
   const recent = data?.recent_predictions ?? [];
   const totalPreds = data?.system?.total_predictions ?? 0;
 
-  const signalColor = (s: number) => (s > 0 ? "var(--accent-green)" : s < 0 ? "var(--accent-red)" : "var(--text-soft)");
+  const signalColorClass = (s: number) => (s > 0 ? "text-accent-green" : s < 0 ? "text-error" : "text-on-surface-variant");
 
   return (
-    <section className="panel panel-main-secondary">
-      <div className="panel-title">Portfolio & Strategies</div>
-      <div style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
+    <div className="flex flex-col h-full bg-surface-container-low text-on-surface overflow-y-auto">
+      <div className="font-label-xs text-label-xs uppercase text-on-tertiary-container tracking-[0.4em] mb-4">PORTFOLIO & STRATEGIES</div>
+      <div className="font-data-mono text-[12px]">
         {quickPredict && !quickPredict.error && (
-          <div style={{ marginBottom: 8 }}>
-            <span className="num-mono" style={{ color: "var(--accent)" }}>ML Signal ({primarySymbol})</span>
+          <div className="mb-4 bg-background p-2 border border-outline-variant">
+            <span className="text-primary font-bold uppercase">ML Signal ({primarySymbol})</span>
             {" "}
-            <span className="num-mono">{quickPredict.recommendation ?? "—"}</span>
+            <span className="uppercase ml-2">{quickPredict.recommendation ?? "—"}</span>
             {" "}
-            <span className="num-mono" style={{ color: signalColor(quickPredict.signal ?? 0) }}>
+            <span className={`ml-2 ${signalColorClass(quickPredict.signal ?? 0)}`}>
               {(quickPredict.signal ?? 0).toFixed(2)}
             </span>
             {quickPredict.current_price != null && (
-              <span className="num-mono" style={{ marginLeft: 4 }}>@ ${quickPredict.current_price.toFixed(2)}</span>
+              <span className="ml-2">@ ${quickPredict.current_price.toFixed(2)}</span>
             )}
           </div>
         )}
         {!hasModels ? (
-          <p className="panel-body-muted">
+          <p className="text-on-surface-variant uppercase text-[10px]">
             No models loaded yet. Train or load models via the API. Dashboard refreshes every 30s.
           </p>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+          <table className="w-full border-collapse mb-4">
             <tbody>
-              <tr>
-                <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Active models</td>
-                <td className="num-mono" style={{ textAlign: "right" }}>{data?.active_models ?? 0}</td>
+              <tr className="border-b border-outline-variant">
+                <td className="text-on-surface-variant py-1">Active models</td>
+                <td className="text-right font-medium">{data?.active_models ?? 0}</td>
               </tr>
               {models.length > 0 && (
-                <tr>
-                  <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Available</td>
-                  <td className="num-mono" style={{ textAlign: "right" }}>{models.join(", ")}</td>
+                <tr className="border-b border-outline-variant">
+                  <td className="text-on-surface-variant py-1">Available</td>
+                  <td className="text-right font-medium">{models.join(", ")}</td>
                 </tr>
               )}
               <tr>
-                <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Total predictions</td>
-                <td className="num-mono" style={{ textAlign: "right" }}>{totalPreds}</td>
+                <td className="text-on-surface-variant py-1">Total predictions</td>
+                <td className="text-right font-medium">{totalPreds}</td>
               </tr>
             </tbody>
           </table>
         )}
         {recent.length > 0 && (
-          <div style={{ marginTop: 8 }}>
-            <div style={{ color: "var(--accent)", marginBottom: 4 }}>Recent predictions</div>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+          <div className="mt-4">
+            <div className="text-primary uppercase mb-2">Recent predictions</div>
+            <table className="w-full border-collapse">
               <thead>
-                <tr>
-                  <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Model</th>
-                  <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Symbol</th>
-                  <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Signal</th>
+                <tr className="border-b border-outline-variant text-on-surface-variant">
+                  <th className="text-left font-normal py-1">Model</th>
+                  <th className="text-left font-normal py-1">Symbol</th>
+                  <th className="text-right font-normal py-1">Signal</th>
                 </tr>
               </thead>
               <tbody>
                 {recent.slice(-5).reverse().map((p, i) => (
-                  <tr key={i}>
-                    <td className="num-mono">{p.model_name ?? "—"}</td>
-                    <td className="num-mono" style={{ color: "var(--accent)" }}>{p.symbol ?? "—"}</td>
-                    <td className="num-mono" style={{ textAlign: "right", color: signalColor(typeof p.signal === "number" ? p.signal : 0) }}>
+                  <tr key={i} className="border-b border-outline-variant/50 hover:bg-background/50">
+                    <td className="py-1">{p.model_name ?? "—"}</td>
+                    <td className="py-1 text-primary">{p.symbol ?? "—"}</td>
+                    <td className={`py-1 text-right ${signalColorClass(typeof p.signal === "number" ? p.signal : 0)}`}>
                       {typeof p.signal === "number" ? p.signal.toFixed(2) : "—"}
                     </td>
                   </tr>
@@ -279,18 +279,18 @@ export const PortfolioPanel: React.FC = () => {
             </table>
           </div>
         )}
-        <div style={{ marginTop: 12, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-          <div style={{ color: "var(--accent)", marginBottom: 6 }}>Risk ({primarySymbol})</div>
-          {riskLoading && <div className="panel-body-muted" style={{ fontSize: 11 }}>Loading…</div>}
+        <div className="mt-6 pt-4 border-t border-outline-variant">
+          <div className="text-primary uppercase mb-2">Risk ({primarySymbol})</div>
+          {riskLoading && <div className="text-on-surface-variant animate-pulse">Loading…</div>}
           {!riskLoading && riskError && (
-            <div className="panel-body-muted" style={{ fontSize: 11 }}>
+            <div className="text-error flex items-center gap-2">
               {riskError}
-              <button type="button" className="ai-button" style={{ marginLeft: 8 }} onClick={riskRetry}>Retry</button>
+              <button type="button" className="border border-error px-2 py-1 text-[10px]" onClick={riskRetry}>RETRY</button>
             </div>
           )}
           {!riskLoading && riskMetrics && (
             <>
-              <div style={{ marginBottom: 8 }}>
+              <div className="mb-4">
                 <BarChart
                   data={[
                     { label: "VaR 95%", value: riskMetrics.var_95_pct ?? 0, color: "var(--accent-red)" },
@@ -303,53 +303,53 @@ export const PortfolioPanel: React.FC = () => {
                   height={140}
                   marginPreset="compact"
                   valueFormat={(v) => (Math.abs(v) >= 1 ? v.toFixed(1) : v.toFixed(2))}
-                  className="chart-root"
+                  className="w-full"
                 />
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+              <table className="w-full border-collapse">
                 <tbody>
-                  <tr>
-                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>VaR 95%</td>
-                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.var_95_pct != null ? `${riskMetrics.var_95_pct.toFixed(2)}%` : "—"}</td>
+                  <tr className="border-b border-outline-variant/50 hover:bg-background/50">
+                    <td className="text-on-surface-variant py-1">VaR 95%</td>
+                    <td className="text-right">{riskMetrics.var_95_pct != null ? `${riskMetrics.var_95_pct.toFixed(2)}%` : "—"}</td>
                   </tr>
-                  <tr>
-                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>VaR 99%</td>
-                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.var_99_pct != null ? `${riskMetrics.var_99_pct.toFixed(2)}%` : "—"}</td>
+                  <tr className="border-b border-outline-variant/50 hover:bg-background/50">
+                    <td className="text-on-surface-variant py-1">VaR 99%</td>
+                    <td className="text-right">{riskMetrics.var_99_pct != null ? `${riskMetrics.var_99_pct.toFixed(2)}%` : "—"}</td>
                   </tr>
-                  <tr>
-                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>CVaR 95%</td>
-                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.cvar_95_pct != null ? `${riskMetrics.cvar_95_pct.toFixed(2)}%` : "—"}</td>
+                  <tr className="border-b border-outline-variant/50 hover:bg-background/50">
+                    <td className="text-on-surface-variant py-1">CVaR 95%</td>
+                    <td className="text-right">{riskMetrics.cvar_95_pct != null ? `${riskMetrics.cvar_95_pct.toFixed(2)}%` : "—"}</td>
                   </tr>
-                  <tr>
-                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Vol (ann.)</td>
-                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.volatility_annual_pct != null ? `${riskMetrics.volatility_annual_pct.toFixed(2)}%` : "—"}</td>
+                  <tr className="border-b border-outline-variant/50 hover:bg-background/50">
+                    <td className="text-on-surface-variant py-1">Vol (ann.)</td>
+                    <td className="text-right">{riskMetrics.volatility_annual_pct != null ? `${riskMetrics.volatility_annual_pct.toFixed(2)}%` : "—"}</td>
                   </tr>
-                  <tr>
-                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Max DD</td>
-                    <td className="num-mono" style={{ textAlign: "right", color: "var(--accent-red)" }}>{riskMetrics.max_drawdown_pct != null ? `${riskMetrics.max_drawdown_pct.toFixed(2)}%` : "—"}</td>
+                  <tr className="border-b border-outline-variant/50 hover:bg-background/50">
+                    <td className="text-on-surface-variant py-1">Max DD</td>
+                    <td className="text-right text-error">{riskMetrics.max_drawdown_pct != null ? `${riskMetrics.max_drawdown_pct.toFixed(2)}%` : "—"}</td>
                   </tr>
-                  <tr>
-                    <td style={{ color: "var(--text-soft)", padding: "2px 8px 2px 0" }}>Sharpe</td>
-                    <td className="num-mono" style={{ textAlign: "right" }}>{riskMetrics.sharpe_ratio != null ? riskMetrics.sharpe_ratio.toFixed(2) : "—"}</td>
+                  <tr className="hover:bg-background/50">
+                    <td className="text-on-surface-variant py-1">Sharpe</td>
+                    <td className="text-right">{riskMetrics.sharpe_ratio != null ? riskMetrics.sharpe_ratio.toFixed(2) : "—"}</td>
                   </tr>
                 </tbody>
               </table>
             </>
           )}
-          {!riskLoading && !riskError && !riskMetrics && <div className="panel-body-muted" style={{ fontSize: 11 }}>Risk data unavailable. Try again or retry.</div>}
+          {!riskLoading && !riskError && !riskMetrics && <div className="text-on-surface-variant text-[10px] uppercase">Risk data unavailable. Try again or retry.</div>}
         </div>
-        <div style={{ marginTop: 12, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-          <div style={{ color: "var(--accent)", marginBottom: 6 }}>Stress testing ({primarySymbol})</div>
-          {stressLoading && <div className="panel-body-muted" style={{ fontSize: 11 }}>Loading…</div>}
+        <div className="mt-6 pt-4 border-t border-outline-variant">
+          <div className="text-primary uppercase mb-2">Stress testing ({primarySymbol})</div>
+          {stressLoading && <div className="text-on-surface-variant animate-pulse">Loading…</div>}
           {!stressLoading && stressError && (
-            <div className="panel-body-muted" style={{ fontSize: 11 }}>
+            <div className="text-error flex items-center gap-2">
               {stressError}
-              <button type="button" className="ai-button" style={{ marginLeft: 8 }} onClick={stressRetry}>Retry</button>
+              <button type="button" className="border border-error px-2 py-1 text-[10px]" onClick={stressRetry}>RETRY</button>
             </div>
           )}
           {!stressLoading && stressData?.scenarios && stressData.scenarios.length > 0 && (
             <>
-              <div style={{ marginBottom: 8 }}>
+              <div className="mb-4">
                 <BarChart
                   data={stressData.scenarios.map((s) => ({
                     label: (s.name ?? s.scenario_id ?? "—").slice(0, 12),
@@ -360,21 +360,21 @@ export const PortfolioPanel: React.FC = () => {
                   marginPreset="compact"
                   horizontal
                   valueFormat={(v) => `${v.toFixed(1)}%`}
-                  className="chart-root"
+                  className="w-full"
                 />
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr>
-                    <th style={{ textAlign: "left", color: "var(--text-soft)", fontWeight: 500 }}>Scenario</th>
-                    <th style={{ textAlign: "right", color: "var(--text-soft)", fontWeight: 500 }}>Est. return %</th>
+                  <tr className="border-b border-outline-variant text-on-surface-variant">
+                    <th className="text-left font-normal py-1">Scenario</th>
+                    <th className="text-right font-normal py-1">Est. return %</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stressData.scenarios.map((s, i) => (
-                    <tr key={i}>
-                      <td style={{ color: "var(--text)", padding: "2px 8px 2px 0" }}>{s.name ?? s.scenario_id ?? "—"}</td>
-                      <td className="num-mono" style={{ textAlign: "right", color: (s.estimated_return_pct ?? 0) < 0 ? "var(--accent-red)" : "var(--text)" }}>
+                    <tr key={i} className="border-b border-outline-variant/50 hover:bg-background/50">
+                      <td className="py-1 text-on-surface">{s.name ?? s.scenario_id ?? "—"}</td>
+                      <td className={`py-1 text-right ${(s.estimated_return_pct ?? 0) < 0 ? "text-error" : "text-on-surface"}`}>
                         {s.estimated_return_pct != null ? `${s.estimated_return_pct.toFixed(2)}%` : "—"}
                       </td>
                     </tr>
@@ -384,18 +384,18 @@ export const PortfolioPanel: React.FC = () => {
             </>
           )}
           {!stressLoading && stressData && (!stressData.scenarios || stressData.scenarios.length === 0) && !stressError && (
-            <div className="panel-body-muted" style={{ fontSize: 11 }}>No stress scenarios available.</div>
+            <div className="text-on-surface-variant text-[10px] uppercase">No stress scenarios available.</div>
           )}
         </div>
-        <div style={{ marginTop: 12, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-          <div style={{ color: "var(--accent)", marginBottom: 6 }}>Portfolio optimization (Max Sharpe)</div>
+        <div className="mt-6 pt-4 border-t border-outline-variant">
+          <div className="text-primary uppercase mb-2">Portfolio optimization (Max Sharpe)</div>
           <PortfolioOptimizeBlock />
         </div>
-        <div style={{ marginTop: 12, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-          <div style={{ color: "var(--accent)", marginBottom: 6 }}>Investor reports</div>
+        <div className="mt-6 pt-4 border-t border-outline-variant">
+          <div className="text-primary uppercase mb-2">Investor reports</div>
           <InvestorReportsBlock />
         </div>
       </div>
-    </section>
+    </div>
   );
 };

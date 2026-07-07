@@ -121,46 +121,46 @@ export const AiAssistantPanel: React.FC = () => {
   }, [lastAiQuery?.q, lastAiQuery?.a]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <section className="panel panel-right">
-      <div className="panel-title">AI Assistant</div>
-      <p className="ai-panel-fallback-banner">
+    <div className="flex flex-col h-full bg-surface-container-low text-on-surface">
+      <div className="font-label-xs text-label-xs uppercase text-on-tertiary-container tracking-[0.4em] mb-4">AI ASSISTANT</div>
+      <p className="text-tertiary font-data-mono text-[10px] mb-4 uppercase">
         Requires an LLM API key on the server. Without it, you still get charts, quant, portfolio, and backtests.
       </p>
-      <div className="ai-panel">
-        <div className="ai-panel-messages" ref={scrollRef}>
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex-1 overflow-y-auto mb-4 font-data-mono text-[12px] space-y-4" ref={scrollRef}>
           {messages.length === 0 && !lastAiQuery && (
-            <p className="ai-panel-empty">
+            <p className="text-on-surface-variant uppercase">
               Ask about stocks, run DCF, screen stocks, get company overviews, run backtests, or macro snapshots.
               Example: &quot;Run DCF on AAPL at 10% WACC&quot;
             </p>
           )}
           {lastAiQuery != null && messages.length === 0 && (
-            <div>
-              <div className="ai-panel-q">
-                <span className="ai-panel-q-label">Q: </span>
-                <span className="ai-panel-message">{lastAiQuery.q}</span>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <span className="text-primary font-bold">&gt;</span>
+                <span className="text-on-surface">{lastAiQuery.q}</span>
               </div>
-              <div className="ai-panel-a">
-                <span className="ai-panel-a-label">A: </span>
-                <span className="ai-panel-message">
-                  {loading ? "Thinking…" : lastAiQuery.a || "—"}
+              <div className="flex gap-2 text-on-surface-variant">
+                <span className="text-accent font-bold">~</span>
+                <span>
+                  {loading ? "Processing..." : lastAiQuery.a || "—"}
                 </span>
               </div>
             </div>
           )}
           {messages.map((m, i) => (
-            <div key={i}>
-              <div className={m.role === "user" ? "ai-panel-q" : "ai-panel-a"}>
-                <span className={m.role === "user" ? "ai-panel-q-label" : "ai-panel-a-label"}>
-                  {m.role === "user" ? "Q: " : "A: "}
+            <div key={i} className="space-y-2">
+              <div className="flex gap-2">
+                <span className={m.role === "user" ? "text-primary font-bold" : "text-accent font-bold"}>
+                  {m.role === "user" ? ">" : "~"}
                 </span>
-                <span className="ai-panel-message">{m.content}</span>
+                <span className={m.role === "user" ? "text-on-surface" : "text-on-surface-variant"}>{m.content}</span>
               </div>
               {m.toolCalls && m.toolCalls.length > 0 && (
-                <div>
+                <div className="pl-4 border-l border-outline-variant space-y-1">
                   {m.toolCalls.map((tc, j) => (
-                    <div key={j} className="ai-panel-tool">
-                      <span aria-hidden>🔧</span>
+                    <div key={j} className="text-[10px] text-tertiary flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[12px]">build</span>
                       <span>
                         {tc.tool === "run_dcf" && tc.input?.symbol && `Running DCF on ${tc.input.symbol}…`}
                         {tc.tool === "screen_stocks" && "Running screener…"}
@@ -169,17 +169,17 @@ export const AiAssistantPanel: React.FC = () => {
                         {tc.tool === "get_macro_snapshot" && "Getting macro snapshot…"}
                         {!["run_dcf", "screen_stocks", "get_company_overview", "run_backtest", "get_macro_snapshot"].includes(tc.tool) && `${tc.tool}`}
                       </span>
-                      {tc.status === "complete" && <span style={{ color: "var(--accent-green)" }}>✓</span>}
+                      {tc.status === "complete" && <span className="text-accent-green material-symbols-outlined text-[12px]">check</span>}
                     </div>
                   ))}
                 </div>
               )}
               {m.structuredData && Object.keys(m.structuredData).length > 0 && (
-                <div className="ai-panel-structured">
+                <div className="pl-4 mt-2 space-y-2">
                   {m.structuredData.run_dcf && !("error" in m.structuredData.run_dcf) && (
-                    <div className="ai-panel-card">
-                      <div className="ai-panel-card-title">DCF Result</div>
-                      <div className="ai-panel-card-body">
+                    <div className="bg-background border border-outline-variant p-2">
+                      <div className="text-accent uppercase text-[10px] mb-1">DCF Result</div>
+                      <div>
                         Intrinsic: ${String((m.structuredData.run_dcf as Record<string, unknown>).intrinsic_value_per_share)}
                         {" | "}
                         Current: ${String((m.structuredData.run_dcf as Record<string, unknown>).current_price)}
@@ -189,11 +189,11 @@ export const AiAssistantPanel: React.FC = () => {
                     </div>
                   )}
                   {m.structuredData.screen_stocks && !("error" in m.structuredData.screen_stocks) && (
-                    <div className="ai-panel-card">
-                      <div className="ai-panel-card-title">
+                    <div className="bg-background border border-outline-variant p-2">
+                      <div className="text-accent uppercase text-[10px] mb-1">
                         Screener Results (top {String((m.structuredData.screen_stocks as Record<string, unknown>).count)})
                       </div>
-                      <div className="ai-panel-card-body">
+                      <div>
                         {((m.structuredData.screen_stocks as Record<string, unknown>).tickers as Array<Record<string, unknown>>)?.slice(0, 5).map((t, k) => (
                           <div key={k}>
                             {String(t.symbol)}: {String(t.name)} | MCap: {t.market_cap != null ? `$${Number(t.market_cap) / 1e9}B` : "—"} | P/E: {String(t.pe ?? "—")}
@@ -203,25 +203,25 @@ export const AiAssistantPanel: React.FC = () => {
                     </div>
                   )}
                   {m.structuredData.get_company_overview && !("error" in m.structuredData.get_company_overview) && (
-                    <div className="ai-panel-card">
-                      <div className="ai-panel-card-title">Company Overview</div>
-                      <div className="ai-panel-card-body">
+                    <div className="bg-background border border-outline-variant p-2">
+                      <div className="text-accent uppercase text-[10px] mb-1">Company Overview</div>
+                      <div>
                         {String((m.structuredData.get_company_overview as Record<string, unknown>).name)} | Price: ${String((m.structuredData.get_company_overview as Record<string, unknown>).price)} | Sector: {String((m.structuredData.get_company_overview as Record<string, unknown>).sector)}
                       </div>
                     </div>
                   )}
                   {m.structuredData.run_backtest && !("error" in m.structuredData.run_backtest) && (
-                    <div className="ai-panel-card">
-                      <div className="ai-panel-card-title">Backtest Result</div>
-                      <div className="ai-panel-card-body">
+                    <div className="bg-background border border-outline-variant p-2">
+                      <div className="text-accent uppercase text-[10px] mb-1">Backtest Result</div>
+                      <div>
                         Sharpe: {String((m.structuredData.run_backtest as Record<string, unknown>).sharpe_ratio)} | CAGR: {String((m.structuredData.run_backtest as Record<string, unknown>).cagr_pct)}% | Max DD: {String((m.structuredData.run_backtest as Record<string, unknown>).max_drawdown_pct)}%
                       </div>
                     </div>
                   )}
                   {m.structuredData.get_macro_snapshot && !("error" in m.structuredData.get_macro_snapshot) && (
-                    <div className="ai-panel-card">
-                      <div className="ai-panel-card-title">Macro Snapshot</div>
-                      <div className="ai-panel-card-body">
+                    <div className="bg-background border border-outline-variant p-2">
+                      <div className="text-accent uppercase text-[10px] mb-1">Macro Snapshot</div>
+                      <div>
                         {JSON.stringify(m.structuredData.get_macro_snapshot)}
                       </div>
                     </div>
@@ -231,31 +231,30 @@ export const AiAssistantPanel: React.FC = () => {
             </div>
           ))}
           {loading && toolCallsActive.length === 0 && messages.length > 0 && (
-            <div className="ai-panel-empty">Thinking…</div>
+            <div className="text-on-surface-variant animate-pulse">Processing...</div>
           )}
         </div>
-        <div className="ai-panel-input-row">
+        <div className="flex-shrink-0">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               sendMessage(input, false);
             }}
-            className="ai-controls"
-            style={{ width: "100%", marginBottom: 0 }}
+            className="flex gap-2 w-full"
           >
             <input
-              className="ai-input"
+              className="flex-1 bg-background border border-outline-variant text-on-surface px-3 py-2 font-data-mono text-[12px] uppercase focus:outline-none focus:border-on-tertiary-container transition-all"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about stocks, DCF, screener…"
               disabled={loading}
             />
-            <button type="submit" className="ai-button" disabled={loading}>
+            <button type="submit" className="text-label-xs font-label-xs uppercase tracking-widest px-4 py-2 border border-outline-variant hover:bg-background transition-colors text-on-surface disabled:opacity-50 disabled:cursor-not-allowed" disabled={loading}>
               Send
             </button>
           </form>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
