@@ -648,10 +648,10 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
       <div className="flex justify-between items-start mb-8">
         <div>
           <div className="font-label-xs text-label-xs uppercase text-on-tertiary-container tracking-[0.4em] mb-4">PRIMARY INSTRUMENT</div>
-          <h1 className="font-display-price text-[80px] leading-[80px] tracking-[-0.04em] font-extrabold text-on-surface uppercase">{primarySymbol}</h1>
+          <h1 className="font-display-price text-[clamp(36px,6vw,80px)] leading-[1.0] tracking-[-0.04em] font-extrabold text-on-surface uppercase break-all">{primarySymbol}</h1>
         </div>
         <div className="text-right flex flex-col items-end gap-2">
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <div className="flex flex-wrap gap-1 items-center justify-end">
             {data.length > 0 && (
               <>
                 <button type="button" className="text-label-xs font-label-xs uppercase tracking-widest px-2 py-1 border border-outline-variant hover:bg-surface-container-low transition-colors text-on-surface" onClick={() => handleExportChart("png")} title="Download chart as PNG">PNG</button>

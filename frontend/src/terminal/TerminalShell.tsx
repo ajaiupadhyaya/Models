@@ -340,19 +340,19 @@ export const TerminalShell: React.FC = () => {
             defaultLayout={defaultLayout}
             onLayoutChanged={handleLayoutChanged}
           >
-            <Panel id="left" defaultSize={defaultLayout.left} minSize={15} maxSize={35} className="overflow-auto bg-surface-container-low hairline-r">
+            <Panel id="left" defaultSize={defaultLayout.left} minSize={15} maxSize={35} className="min-w-0 overflow-auto bg-surface-container-low hairline-r">
               <div className="h-full p-4">
                 <MarketOverview />
               </div>
             </Panel>
             <Separator id="left-sep" className="w-[1px] bg-outline-variant cursor-col-resize hover:bg-primary transition-colors" />
-            <Panel id="main" defaultSize={defaultLayout.main} minSize={30} maxSize={70} className="overflow-y-auto bg-background">
-              <div className="min-h-full flex flex-col">
+            <Panel id="main" defaultSize={defaultLayout.main} minSize={30} maxSize={70} className="min-w-0 overflow-y-auto bg-background">
+              <div className="min-h-full min-w-0 flex flex-col">
                 <MainContent activeModule={activeModule} />
               </div>
             </Panel>
             <Separator id="right-sep" className="w-[1px] bg-outline-variant cursor-col-resize hover:bg-primary transition-colors" />
-            <Panel id="right" defaultSize={defaultLayout.right} minSize={20} maxSize={45} className="overflow-auto bg-surface-container-low hairline-l">
+            <Panel id="right" defaultSize={defaultLayout.right} minSize={20} maxSize={45} className="min-w-0 overflow-auto bg-surface-container-low hairline-l">
               <div className="h-full p-4">
                 <AiAssistantPanel />
               </div>
