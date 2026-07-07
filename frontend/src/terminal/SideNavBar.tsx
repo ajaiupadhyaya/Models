@@ -6,8 +6,8 @@ export const SideNavBar: React.FC = () => {
 
   const navItems = [
     { id: "primary", icon: "trending_up", label: "EQUITIES" },
-    { id: "technical", icon: "currency_bitcoin", label: "CRYPTO" },
-    { id: "quant", icon: "account_balance", label: "FIXED" },
+    { id: "technical", icon: "insights", label: "TECHNICAL" },
+    { id: "quant", icon: "functions", label: "QUANT" },
     { id: "fundamental", icon: "description", label: "RESEARCH" },
   ] as const;
 
