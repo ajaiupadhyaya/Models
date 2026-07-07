@@ -69,7 +69,7 @@ export const AreaChart: React.FC<AreaChartProps> = ({
       .y0(innerHeight)
       .y1((d) => yScale(d.value));
 
-    g.append("path").datum(data).attr("fill", fill).attr("stroke", "none").attr("opacity", 0.4).attr("d", area);
+    g.append("path").datum(data).attr("fill", fill).attr("stroke", "none").attr("opacity", 0.03).attr("d", area);
     g.append("path")
       .datum(data)
       .attr("fill", "none")

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { resolveApiUrl } from "../../apiBase";
 import { useTerminal } from "../TerminalContext";
+import { getAuthHeaders } from "../../hooks/useFetchWithRetry";
 import { TERMINAL_API_ENDPOINTS } from "../endpoints";
 import { AreaChart } from "../../charts";
 import type { TimeSeriesPoint } from "../../charts";
@@ -72,7 +73,7 @@ export const BacktestPanel: React.FC = () => {
     try {
       const res = await fetch(resolveApiUrl(TERMINAL_API_ENDPOINTS.quantBacktest), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           symbol: symbol.toUpperCase(),
           strategy,
@@ -84,7 +85,12 @@ export const BacktestPanel: React.FC = () => {
       });
       const json = (await res.json().catch(() => ({}))) as BacktestResult;
       if (!res.ok) {
-        setError((json as { detail?: string }).detail ?? json.error ?? `HTTP ${res.status}`);
+        const detail = (json as { detail?: string }).detail ?? json.error ?? `HTTP ${res.status}`;
+        const friendly =
+          res.status === 401
+            ? "Sign in required for backtests. Use the login page or configure auth for local dev."
+            : detail;
+        setError(friendly);
         return;
       }
       if (json.error) {

@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useTerminal, COMMAND_HELP } from "./TerminalContext";
+import { useTerminal, COMMAND_HELP, DEMO_COMMANDS } from "./TerminalContext";
 import { parseCommand } from "./parseCommand";
 
 const HISTORY_KEY = "bloomberg-command-history";
 const MAX_HISTORY = 10;
+const DEMO_HINT_KEY = "bloomberg-demo-hint-dismissed";
 
 function loadHistory(): string[] {
   try {
@@ -42,6 +43,13 @@ export const CommandBar: React.FC<CommandBarProps> = ({ onSubmit }) => {
   const [history, setHistory] = useState<string[]>(loadHistory);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [showHelp, setShowHelp] = useState(false);
+  const [showDemoHint, setShowDemoHint] = useState(() => {
+    try {
+      return localStorage.getItem(DEMO_HINT_KEY) !== "1";
+    } catch {
+      return true;
+    }
+  });
   const inputRef = useRef<HTMLInputElement>(null);
 
   const pushHistory = useCallback((entry: string) => {
@@ -61,6 +69,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({ onSubmit }) => {
       if (!parsed) return;
       pushHistory(raw);
       setValue("");
+      setShowDemoHint(false);
+      try {
+        localStorage.setItem(DEMO_HINT_KEY, "1");
+      } catch {
+        // ignore
+      }
 
       if (parsed.type === "help") {
         setShowHelp(true);
@@ -71,7 +85,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({ onSubmit }) => {
       if (parsed.type === "ai" && parsed.query != null) onSubmit(parsed.query);
       if (parsed.type === "backtest") onRunBacktest(parsed.symbol || primarySymbol);
       if (parsed.type === "workspace" && parsed.symbol) onSwitchWorkspace(parsed.symbol);
-      if (parsed.type === "ai" && parsed.query != null) onSubmit(parsed.query);
     },
     [
       setPrimarySymbol,
@@ -92,6 +105,14 @@ export const CommandBar: React.FC<CommandBarProps> = ({ onSubmit }) => {
       handleParsedCommand(v);
     },
     [value, handleParsedCommand]
+  );
+
+  const runDemoCommand = useCallback(
+    (command: string) => {
+      handleParsedCommand(command);
+      inputRef.current?.blur();
+    },
+    [handleParsedCommand]
   );
 
   useEffect(() => {
@@ -155,12 +176,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({ onSubmit }) => {
 
   return (
     <>
-      <form onSubmit={handleSubmit} style={{ flex: 1, display: "flex", minWidth: 0 }}>
+      <form onSubmit={handleSubmit} className="terminal-command-form">
         <input
           ref={inputRef}
           type="text"
           className="terminal-command-input"
-          placeholder="Type a symbol or command (e.g. AAPL, FA AAPL, ECO, ? for help)"
+          placeholder="Type a symbol or command (e.g. AAPL, GP AAPL, ? for help)"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={onKeyDown}
@@ -168,55 +189,35 @@ export const CommandBar: React.FC<CommandBarProps> = ({ onSubmit }) => {
         />
         <span className="terminal-command-hint" aria-hidden>⌘K</span>
       </form>
-      {showHelp && (
-        <div
-          className="command-help-overlay"
-          role="dialog"
-          aria-label="Command help"
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            marginTop: 4,
-            background: "var(--bg-panel)",
-            border: "1px solid var(--border)",
-            borderRadius: 4,
-            padding: "12px 16px",
-            zIndex: 1000,
-            fontFamily: "var(--font-mono)",
-            fontSize: 12,
-            maxHeight: 320,
-            overflowY: "auto",
-          }}
-        >
-          <div style={{ color: "var(--accent)", marginBottom: 8, fontWeight: 600 }}>
-            Commands
-          </div>
-          {COMMAND_HELP.map(({ code, desc }) => (
-            <div
-              key={code}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 16,
-                padding: "4px 0",
-                borderBottom: "1px solid var(--border)",
-              }}
+      {showDemoHint && (
+        <div className="demo-commands" role="group" aria-label="Try these commands">
+          <span className="demo-commands-label">Try:</span>
+          {DEMO_COMMANDS.map(({ label, command }) => (
+            <button
+              key={command}
+              type="button"
+              className="demo-command-chip"
+              onClick={() => runDemoCommand(command)}
+              title={command}
             >
-              <span style={{ color: "var(--text)" }}>{code}</span>
-              <span style={{ color: "var(--text-soft)" }}>{desc}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {showHelp && (
+        <div className="command-help-overlay" role="dialog" aria-label="Command help">
+          <div className="command-help-title">Commands</div>
+          {COMMAND_HELP.map(({ code, desc }) => (
+            <div key={code} className="command-help-row">
+              <span className="command-help-code">{code}</span>
+              <span className="command-help-desc">{desc}</span>
             </div>
           ))}
-          <div style={{ color: "var(--text-soft)", marginTop: 12, marginBottom: 4, fontSize: 11 }}>
+          <div className="command-help-shortcuts">
             Shortcuts: / or Cmd+K focus bar · Alt+Left/Right switch module · Esc clear
           </div>
-          <button
-            type="button"
-            className="ai-button"
-            style={{ marginTop: 12 }}
-            onClick={() => setShowHelp(false)}
-          >
+          <button type="button" className="ai-button command-help-close" onClick={() => setShowHelp(false)}>
             Close
           </button>
         </div>

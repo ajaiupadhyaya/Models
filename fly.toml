@@ -3,9 +3,8 @@
 # Production notes:
 #   - 512 MB is intentional. The FastAPI app imports pandas/sklearn/yfinance
 #     and OOM-killed on Fly's generated 256 MB default.
-#   - DISABLE_LIVE_MARKET_DATA keeps the public demo responsive on small
-#     machines. Market widgets use labelled deterministic fallback data; set
-#     this to false for a private deployment with live data-provider capacity.
+#   - DISABLE_LIVE_MARKET_DATA=false enables live yfinance quotes/charts.
+#     Set to true only if you need a lightweight public demo on tiny VMs.
 #   - CORS_ORIGINS is configured as a Fly secret because it varies by frontend
 #     deployment URL.
 #
@@ -24,7 +23,7 @@ primary_region = "iad"
   LOG_LEVEL = "INFO"
   PORT = "8000"
   PYTHONUNBUFFERED = "1"
-  DISABLE_LIVE_MARKET_DATA = "true"
+  DISABLE_LIVE_MARKET_DATA = "false"
 
 [http_service]
   internal_port = 8000

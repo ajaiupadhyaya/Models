@@ -45,6 +45,15 @@ export function useTerminal(): TerminalContextValue {
   return ctx;
 }
 
+/** Curated commands shown in the demo quick-start strip. */
+export const DEMO_COMMANDS: { label: string; command: string }[] = [
+  { label: "Chart", command: "GP AAPL" },
+  { label: "Quant", command: "QUANT AAPL" },
+  { label: "Portfolio", command: "PORT" },
+  { label: "Backtest", command: "BACKTEST AAPL" },
+  { label: "AI", command: "AI why is AAPL moving?" },
+];
+
 export const COMMAND_HELP: { code: string; desc: string }[] = [
   { code: "DATA / STATUS", desc: "Data ingestion status dashboard" },
   { code: "GP [ticker]", desc: "Graph / Primary instrument" },
@@ -61,7 +70,8 @@ export const COMMAND_HELP: { code: string; desc: string }[] = [
   { code: "SCREEN", desc: "Screening & discovery" },
   { code: "AI [query]", desc: "AI assistant (or type freely)" },
   { code: "BACKTEST / BT [ticker]", desc: "Run strategy backtest" },
-  { code: "TRAIN [ticker]", desc: "Quant / Train model" },
+  { code: "QUANT [ticker]", desc: "Quant models and factor views" },
+  { code: "TRAIN [ticker]", desc: "Quant / Train model (alias)" },
   { code: "WORKSPACE [name]", desc: "Switch workspace" },
   { code: "? or HELP", desc: "Show this help" },
   { code: "/docs", desc: "API docs (Swagger) at /docs when API running" },

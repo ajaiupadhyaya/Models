@@ -25,10 +25,19 @@ interface ChatMessage {
   structuredData?: StructuredData;
 }
 
-/** Single-word ticker-like (1–5 uppercase letters). */
 function looksLikeTicker(q: string): boolean {
   const t = q.trim().toUpperCase();
   return /^[A-Z]{1,5}$/.test(t) && t.length >= 1;
+}
+
+function formatAiError(raw: string, status?: number): string {
+  if (status === 401) {
+    return "Sign in required for AI features. Configure TERMINAL_USER/PASSWORD/AUTH_SECRET or use local dev without auth.";
+  }
+  if (/not configured|OPENAI|ANTHROPIC|API_KEY/i.test(raw)) {
+    return "AI provider not configured. Set OPENAI_API_KEY or ANTHROPIC_API_KEY in the server environment to enable live answers. Other terminal panels still work without AI.";
+  }
+  return raw;
 }
 
 export const AiAssistantPanel: React.FC = () => {
@@ -64,7 +73,8 @@ export const AiAssistantPanel: React.FC = () => {
         const json = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-          const err = json.detail ?? json.error ?? `HTTP ${res.status}`;
+          const raw = String(json.detail ?? json.error ?? `HTTP ${res.status}`);
+          const err = formatAiError(raw, res.status);
           if (isCommandBar) setAiResponse(err);
           else setMessages((prev) => [...prev, { role: "assistant", content: err }]);
           return;
@@ -75,13 +85,13 @@ export const AiAssistantPanel: React.FC = () => {
         const structuredData = (json.structured_data ?? {}) as StructuredData;
 
         if (isCommandBar) {
-          setAiResponse(reply);
+          setAiResponse(reply || "No response returned.");
         } else {
           setMessages((prev) => [
             ...prev,
             {
               role: "assistant",
-              content: reply,
+              content: reply || "No response returned.",
               toolCalls: toolCalls.length ? toolCalls : undefined,
               structuredData: Object.keys(structuredData).length ? structuredData : undefined,
             },
@@ -89,8 +99,9 @@ export const AiAssistantPanel: React.FC = () => {
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Request failed";
-        if (isCommandBar) setAiResponse(msg);
-        else setMessages((prev) => [...prev, { role: "assistant", content: msg }]);
+        const friendly = formatAiError(msg);
+        if (isCommandBar) setAiResponse(friendly);
+        else setMessages((prev) => [...prev, { role: "assistant", content: friendly }]);
       } finally {
         setLoading(false);
         setToolCallsActive([]);
@@ -110,101 +121,107 @@ export const AiAssistantPanel: React.FC = () => {
   }, [lastAiQuery?.q, lastAiQuery?.a]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <section className="panel panel-right bg-gray-900 border border-gray-700 rounded-lg">
-      <div className="panel-title text-white">AI Assistant</div>
-      <div className="flex flex-col h-full min-h-0">
-        <div className="flex-1 overflow-y-auto p-2 space-y-3" ref={scrollRef}>
+    <section className="panel panel-right">
+      <div className="panel-title">AI Assistant</div>
+      <p className="ai-panel-fallback-banner">
+        Requires an LLM API key on the server. Without it, you still get charts, quant, portfolio, and backtests.
+      </p>
+      <div className="ai-panel">
+        <div className="ai-panel-messages" ref={scrollRef}>
           {messages.length === 0 && !lastAiQuery && (
-            <p className="text-gray-500 text-sm">
-              Ask about stocks, run DCF, screen stocks, get company overviews, run backtests, or macro snapshots. Example: &quot;Run DCF on AAPL at 10% WACC&quot;
+            <p className="ai-panel-empty">
+              Ask about stocks, run DCF, screen stocks, get company overviews, run backtests, or macro snapshots.
+              Example: &quot;Run DCF on AAPL at 10% WACC&quot;
             </p>
           )}
           {lastAiQuery != null && messages.length === 0 && (
-            <div className="space-y-2">
-              <div>
-                <span className="text-blue-400 font-mono">Q: </span>
-                <span className="text-white">{lastAiQuery.q}</span>
+            <div>
+              <div className="ai-panel-q">
+                <span className="ai-panel-q-label">Q: </span>
+                <span className="ai-panel-message">{lastAiQuery.q}</span>
               </div>
-              <div>
-                <span className="text-green-400 font-mono">A: </span>
-                <span className="text-gray-300">
-                  {loading ? "Thinking..." : lastAiQuery.a || "—"}
+              <div className="ai-panel-a">
+                <span className="ai-panel-a-label">A: </span>
+                <span className="ai-panel-message">
+                  {loading ? "Thinking…" : lastAiQuery.a || "—"}
                 </span>
               </div>
             </div>
           )}
           {messages.map((m, i) => (
-            <div key={i} className="space-y-1">
-              <div>
-                <span className={`font-mono ${m.role === "user" ? "text-blue-400" : "text-green-400"}`}>
+            <div key={i}>
+              <div className={m.role === "user" ? "ai-panel-q" : "ai-panel-a"}>
+                <span className={m.role === "user" ? "ai-panel-q-label" : "ai-panel-a-label"}>
                   {m.role === "user" ? "Q: " : "A: "}
                 </span>
-                <span className="text-white whitespace-pre-wrap">{m.content}</span>
+                <span className="ai-panel-message">{m.content}</span>
               </div>
               {m.toolCalls && m.toolCalls.length > 0 && (
-                <div className="ml-4 space-y-1 text-xs">
+                <div>
                   {m.toolCalls.map((tc, j) => (
-                    <div key={j} className="text-gray-400 flex items-center gap-2">
-                      <span>🔧</span>
+                    <div key={j} className="ai-panel-tool">
+                      <span aria-hidden>🔧</span>
                       <span>
-                        {tc.tool === "run_dcf" && tc.input?.symbol && `Running DCF on ${tc.input.symbol}...`}
-                        {tc.tool === "screen_stocks" && "Running screener..."}
-                        {tc.tool === "get_company_overview" && tc.input?.symbol && `Getting overview for ${tc.input.symbol}...`}
-                        {tc.tool === "run_backtest" && "Running backtest..."}
-                        {tc.tool === "get_macro_snapshot" && "Getting macro snapshot..."}
+                        {tc.tool === "run_dcf" && tc.input?.symbol && `Running DCF on ${tc.input.symbol}…`}
+                        {tc.tool === "screen_stocks" && "Running screener…"}
+                        {tc.tool === "get_company_overview" && tc.input?.symbol && `Getting overview for ${tc.input.symbol}…`}
+                        {tc.tool === "run_backtest" && "Running backtest…"}
+                        {tc.tool === "get_macro_snapshot" && "Getting macro snapshot…"}
                         {!["run_dcf", "screen_stocks", "get_company_overview", "run_backtest", "get_macro_snapshot"].includes(tc.tool) && `${tc.tool}`}
                       </span>
-                      {tc.status === "complete" && <span className="text-green-500">✓</span>}
+                      {tc.status === "complete" && <span style={{ color: "var(--accent-green)" }}>✓</span>}
                     </div>
                   ))}
                 </div>
               )}
               {m.structuredData && Object.keys(m.structuredData).length > 0 && (
-                <div className="ml-4 mt-2 space-y-2">
+                <div className="ai-panel-structured">
                   {m.structuredData.run_dcf && !("error" in m.structuredData.run_dcf) && (
-                    <div className="bg-gray-800 border border-gray-600 rounded p-2 text-xs">
-                      <div className="text-blue-400 font-semibold mb-1">DCF Result</div>
-                      <div className="text-gray-300">
-                        Intrinsic: ${(m.structuredData.run_dcf as Record<string, unknown>).intrinsic_value_per_share}
+                    <div className="ai-panel-card">
+                      <div className="ai-panel-card-title">DCF Result</div>
+                      <div className="ai-panel-card-body">
+                        Intrinsic: ${String((m.structuredData.run_dcf as Record<string, unknown>).intrinsic_value_per_share)}
                         {" | "}
-                        Current: ${(m.structuredData.run_dcf as Record<string, unknown>).current_price}
+                        Current: ${String((m.structuredData.run_dcf as Record<string, unknown>).current_price)}
                         {" | "}
-                        Upside: {(m.structuredData.run_dcf as Record<string, unknown>).upside_downside_pct}%
+                        Upside: {String((m.structuredData.run_dcf as Record<string, unknown>).upside_downside_pct)}%
                       </div>
                     </div>
                   )}
                   {m.structuredData.screen_stocks && !("error" in m.structuredData.screen_stocks) && (
-                    <div className="bg-gray-800 border border-gray-600 rounded p-2 text-xs">
-                      <div className="text-blue-400 font-semibold mb-1">Screener Results (top {(m.structuredData.screen_stocks as Record<string, unknown>).count})</div>
-                      <div className="text-gray-300 space-y-0.5">
+                    <div className="ai-panel-card">
+                      <div className="ai-panel-card-title">
+                        Screener Results (top {String((m.structuredData.screen_stocks as Record<string, unknown>).count)})
+                      </div>
+                      <div className="ai-panel-card-body">
                         {((m.structuredData.screen_stocks as Record<string, unknown>).tickers as Array<Record<string, unknown>>)?.slice(0, 5).map((t, k) => (
                           <div key={k}>
-                            {t.symbol}: {t.name} | MCap: {t.market_cap != null ? `$${Number(t.market_cap) / 1e9}B` : "—"} | P/E: {t.pe ?? "—"}
+                            {String(t.symbol)}: {String(t.name)} | MCap: {t.market_cap != null ? `$${Number(t.market_cap) / 1e9}B` : "—"} | P/E: {String(t.pe ?? "—")}
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
                   {m.structuredData.get_company_overview && !("error" in m.structuredData.get_company_overview) && (
-                    <div className="bg-gray-800 border border-gray-600 rounded p-2 text-xs">
-                      <div className="text-blue-400 font-semibold mb-1">Company Overview</div>
-                      <div className="text-gray-300">
-                        {(m.structuredData.get_company_overview as Record<string, unknown>).name} | Price: ${(m.structuredData.get_company_overview as Record<string, unknown>).price} | Sector: {(m.structuredData.get_company_overview as Record<string, unknown>).sector}
+                    <div className="ai-panel-card">
+                      <div className="ai-panel-card-title">Company Overview</div>
+                      <div className="ai-panel-card-body">
+                        {String((m.structuredData.get_company_overview as Record<string, unknown>).name)} | Price: ${String((m.structuredData.get_company_overview as Record<string, unknown>).price)} | Sector: {String((m.structuredData.get_company_overview as Record<string, unknown>).sector)}
                       </div>
                     </div>
                   )}
                   {m.structuredData.run_backtest && !("error" in m.structuredData.run_backtest) && (
-                    <div className="bg-gray-800 border border-gray-600 rounded p-2 text-xs">
-                      <div className="text-blue-400 font-semibold mb-1">Backtest Result</div>
-                      <div className="text-gray-300">
-                        Sharpe: {(m.structuredData.run_backtest as Record<string, unknown>).sharpe_ratio} | CAGR: {(m.structuredData.run_backtest as Record<string, unknown>).cagr_pct}% | Max DD: {(m.structuredData.run_backtest as Record<string, unknown>).max_drawdown_pct}%
+                    <div className="ai-panel-card">
+                      <div className="ai-panel-card-title">Backtest Result</div>
+                      <div className="ai-panel-card-body">
+                        Sharpe: {String((m.structuredData.run_backtest as Record<string, unknown>).sharpe_ratio)} | CAGR: {String((m.structuredData.run_backtest as Record<string, unknown>).cagr_pct)}% | Max DD: {String((m.structuredData.run_backtest as Record<string, unknown>).max_drawdown_pct)}%
                       </div>
                     </div>
                   )}
                   {m.structuredData.get_macro_snapshot && !("error" in m.structuredData.get_macro_snapshot) && (
-                    <div className="bg-gray-800 border border-gray-600 rounded p-2 text-xs">
-                      <div className="text-blue-400 font-semibold mb-1">Macro Snapshot</div>
-                      <div className="text-gray-300">
+                    <div className="ai-panel-card">
+                      <div className="ai-panel-card-title">Macro Snapshot</div>
+                      <div className="ai-panel-card-body">
                         {JSON.stringify(m.structuredData.get_macro_snapshot)}
                       </div>
                     </div>
@@ -214,29 +231,26 @@ export const AiAssistantPanel: React.FC = () => {
             </div>
           ))}
           {loading && toolCallsActive.length === 0 && messages.length > 0 && (
-            <div className="text-gray-500 text-sm">Thinking...</div>
+            <div className="ai-panel-empty">Thinking…</div>
           )}
         </div>
-        <div className="p-2 border-t border-gray-700">
+        <div className="ai-panel-input-row">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               sendMessage(input, false);
             }}
-            className="flex gap-2"
+            className="ai-controls"
+            style={{ width: "100%", marginBottom: 0 }}
           >
             <input
-              className="flex-1 bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded text-sm"
+              className="ai-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about stocks, DCF, screener..."
+              placeholder="Ask about stocks, DCF, screener…"
               disabled={loading}
             />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm disabled:opacity-50"
-              disabled={loading}
-            >
+            <button type="submit" className="ai-button" disabled={loading}>
               Send
             </button>
           </form>

@@ -25,7 +25,7 @@ export function parseCommand(raw: string): ParsedCommand | null {
 
   // Single-word: could be a command (ECO, PORT, FLD) or a ticker (AAPL)
   const singleWordNoArgCodes = [
-    "DATA", "STATUS", "ECO", "PORT", "PAPER", "AUTO", "ORCH", "TRAIN", "FLD", "FLDS", "BACKTEST", "BT",
+    "DATA", "STATUS", "ECO", "PORT", "PAPER", "AUTO", "ORCH", "TRAIN", "QUANT", "FLD", "FLDS", "BACKTEST", "BT",
     "OPT", "OPTIMIZER", "STRESS", "NEWSSENT", "SENT", "NS"
   ];
   if (parts.length === 1) {
@@ -35,7 +35,7 @@ export function parseCommand(raw: string): ParsedCommand | null {
       if (code === "PORT") return { type: "module", module: "portfolio" };
       if (code === "PAPER") return { type: "module", module: "paper" };
       if (code === "AUTO" || code === "ORCH") return { type: "module", module: "automation" };
-      if (code === "TRAIN") return { type: "module", module: "quant" };
+      if (code === "TRAIN" || code === "QUANT") return { type: "module", module: "quant" };
       if (code === "FLD" || code === "FLDS") return { type: "module", module: "technical" };
       if (code === "BACKTEST" || code === "BT") return { type: "module", module: "backtest" };
       if (code === "OPT" || code === "OPTIMIZER") return { type: "module", module: "optimizer" };
@@ -81,6 +81,7 @@ export function parseCommand(raw: string): ParsedCommand | null {
     case "BT":
       return { type: "backtest", module: "backtest", symbol: ticker || undefined };
     case "TRAIN":
+    case "QUANT":
       return { type: "module", module: "quant", symbol: ticker || undefined };
     case "OPT":
     case "OPTIMIZER":

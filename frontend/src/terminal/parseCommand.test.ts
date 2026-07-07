@@ -47,21 +47,26 @@ describe("parseCommand", () => {
     expect(parseCommand("ORCH")).toEqual({ type: "module", module: "automation" });
   });
 
-  it("parses TRAIN as quant with optional ticker", () => {
+  it("parses TRAIN and QUANT as quant with optional ticker", () => {
     expect(parseCommand("TRAIN")).toEqual({ type: "module", module: "quant" });
     expect(parseCommand("TRAIN AAPL")).toEqual({ type: "module", module: "quant", symbol: "AAPL" });
+    expect(parseCommand("QUANT")).toEqual({ type: "module", module: "quant" });
+    expect(parseCommand("QUANT MSFT")).toEqual({ type: "module", module: "quant", symbol: "MSFT" });
   });
 
   it("parses SCREEN as screening", () => {
     expect(parseCommand("SCREEN")).toEqual({ type: "module", module: "screening" });
   });
 
-  it("parses BACKTEST as backtest module with optional ticker", () => {
+  it("parses BACKTEST and BT as backtest with optional ticker", () => {
     expect(parseCommand("BACKTEST AAPL")).toEqual({ type: "backtest", module: "backtest", symbol: "AAPL" });
+    expect(parseCommand("BT MSFT")).toEqual({ type: "backtest", module: "backtest", symbol: "MSFT" });
+    expect(parseCommand("BACKTEST")).toEqual({ type: "module", module: "backtest" });
   });
 
   it("parses WORKSPACE with optional name", () => {
     expect(parseCommand("WORKSPACE myws")).toEqual({ type: "workspace", symbol: "MYWS" });
+    expect(parseCommand("WORKSPACE")).toEqual({ type: "workspace" });
   });
 
   it("parses AI with query", () => {

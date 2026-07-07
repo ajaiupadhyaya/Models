@@ -1,15 +1,34 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveApiUrl } from "./apiBase";
 
 const TOKEN_KEY = "terminal_token";
+
+const FEATURES = [
+  "Candlestick charts with technical indicators",
+  "Factor exposure, regime detection, and quant models",
+  "Portfolio risk metrics and strategy backtesting",
+  "AI research assistant with natural-language queries",
+];
 
 export function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [authConfigured, setAuthConfigured] = useState<boolean | null>(null);
+  const [apiHealthy, setApiHealthy] = useState<boolean | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch(resolveApiUrl("/health"))
+      .then((r) => setApiHealthy(r.ok))
+      .catch(() => setApiHealthy(false));
+    fetch(resolveApiUrl("/api/auth/status"))
+      .then((r) => r.json().catch(() => ({ configured: true })))
+      .then((data) => setAuthConfigured(data?.configured === true))
+      .catch(() => setAuthConfigured(true));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,7 +44,9 @@ export function LoginPage() {
         const data = await res.json().catch(() => ({}));
         const detail = typeof data.detail === "string" ? data.detail : "";
         if (res.status === 503 && /auth|configured/i.test(detail)) {
-          setError("Auth not configured on server. Set TERMINAL_USER, TERMINAL_PASSWORD, and AUTH_SECRET in the server environment (e.g. Render dashboard).");
+          setError(
+            "Auth is not configured on this server. Set TERMINAL_USER, TERMINAL_PASSWORD, and AUTH_SECRET in the deployment environment."
+          );
         } else {
           setError(detail || "Invalid username or password");
         }
@@ -36,10 +57,10 @@ export function LoginPage() {
         localStorage.setItem(TOKEN_KEY, data.token);
         navigate("/", { replace: true });
       } else {
-        setError("Invalid response");
+        setError("Invalid response from server");
       }
-    } catch (err) {
-      setError("Connection failed. Please try again.");
+    } catch {
+      setError("Cannot reach the API. Start the backend or check your deployment URL.");
     } finally {
       setLoading(false);
     }
@@ -50,11 +71,44 @@ export function LoginPage() {
     setPassword("demo");
   }
 
+  const showDemoButton = import.meta.env.DEV;
+
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1 className="login-title">Bloomberg Terminal</h1>
-        <p className="login-subtitle">Sign in to continue.</p>
+        <h1 className="login-title">Models Quant Terminal</h1>
+        <p className="login-subtitle">
+          Bloomberg-style research terminal for charts, quant models, backtesting, and AI commentary.
+        </p>
+
+        <ul className="login-features">
+          {FEATURES.map((f) => (
+            <li key={f}>{f}</li>
+          ))}
+        </ul>
+
+        {apiHealthy === false && (
+          <p className="login-notice login-notice-warn">
+            API unreachable. For local use, run <code>uvicorn api.main:app --reload --port 8000</code> then refresh.
+          </p>
+        )}
+
+        {authConfigured === false && (
+          <p className="login-notice">
+            Auth is not configured — local dev can open the terminal without signing in. See{" "}
+            <a href="https://github.com/ajaiupadhyaya/Models/blob/main/GETTING_STARTED.md" target="_blank" rel="noreferrer">
+              GETTING_STARTED.md
+            </a>
+            .
+          </p>
+        )}
+
+        {authConfigured === true && !showDemoButton && (
+          <p className="login-notice">
+            Sign in with credentials from your deployment secrets. No public demo password is published.
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="login-form">
           <label htmlFor="username">Username</label>
           <input
@@ -86,9 +140,11 @@ export function LoginPage() {
                 "Sign in"
               )}
             </button>
-            <button type="button" className="login-demo" onClick={handleDemo}>
-              Use demo (demo / demo)
-            </button>
+            {showDemoButton && (
+              <button type="button" className="login-demo" onClick={handleDemo}>
+                Fill demo credentials (local dev)
+              </button>
+            )}
           </div>
         </form>
       </div>

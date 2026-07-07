@@ -4,7 +4,7 @@
 
 **Why this exists:** The previous backlog (Feb 2026) scoped ~16 weeks of work across 27 critical stories. For a solo project, that's a treadmill. This document trades breadth for a real stopping point: 4 of 8 terminal modules, 3 of 6 D3 charts, equity-only backtesting, no MLflow, no LLM agent — with everything cut explicitly preserved below as v2.
 
-**Status as of 2026-07-06:** v1.0 code, docs, and automated gates are release-ready locally. Verified: backend tests (`367 passed, 18 skipped`), backend contract/schema gates, ruff over `config/ api/ core/`, frontend Vitest (`24 passed`), and frontend production build. Live provider tests now require explicit opt-in via `RUN_LIVE_PROVIDER_TESTS=1`, keeping normal CI deterministic. Remaining publication tasks: capture screenshot/GIF assets, create the `v1.0.0` tag, and publish GitHub release notes.
+**Status as of 2026-07-06:** v1.0 code, docs, and automated gates are release-ready locally. Verified: backend tests (`367 passed, 18 skipped`), backend contract/schema gates, ruff over `config/ api/ core/`, frontend Vitest (`24 passed`), and frontend production build. Live provider tests now require explicit opt-in via `RUN_LIVE_PROVIDER_TESTS=1`, keeping normal CI deterministic. Remaining publication tasks: capture screenshot/GIF assets, create the `v1.0.0` tag, and publish GitHub release notes. See [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) for the full pre-tag checklist.
 
 **Related docs:** [`../SECURITY.md`](../SECURITY.md) · [`../DEPLOYMENT_GUIDE.md`](../DEPLOYMENT_GUIDE.md) · [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md)
 

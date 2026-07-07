@@ -277,7 +277,7 @@ export const TerminalShell: React.FC = () => {
 
   if (apiHealthy === null) {
     return (
-      <div className="login-page" style={{ alignItems: "center", justifyContent: "center" }}>
+      <div className="terminal-state-screen">
         <p className="login-subtitle">Checking API…</p>
       </div>
     );
@@ -285,10 +285,11 @@ export const TerminalShell: React.FC = () => {
 
   if (apiHealthy === false) {
     return (
-      <div className="login-page" style={{ alignItems: "center", justifyContent: "center", gap: 16 }}>
-        <h2 className="login-title" style={{ fontSize: "1.25rem" }}>API unreachable</h2>
-        <p className="login-subtitle" style={{ maxWidth: 400, textAlign: "center" }}>
-          The backend is not responding. Ensure the API is running. On Render, check that the service is deployed and /health returns 200.
+      <div className="terminal-state-screen terminal-state-screen-gap">
+        <h2 className="login-title terminal-state-title">API unreachable</h2>
+        <p className="login-subtitle terminal-state-message">
+          The backend is not responding. Start the API locally or verify your deployment. Check that{" "}
+          <code>/health</code> returns 200.
         </p>
         <button type="button" className="ai-button" onClick={checkApiHealth}>
           Retry
@@ -319,48 +320,29 @@ export const TerminalShell: React.FC = () => {
       }}
     >
       <div className="terminal-root">
-        <header className="terminal-header" style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div className="terminal-title">BLOOMBERG</div>
+        <header className="terminal-header terminal-header-row">
+          <div className="terminal-brand">
+            <div className="terminal-title">MODELS</div>
+            <span className="terminal-module-badge">{MODULE_LABELS[activeModule]}</span>
+            <span className="terminal-symbol-badge">{primarySymbol}</span>
+          </div>
           <TickerSearchBar />
-          <div className="terminal-status" style={{ marginLeft: "auto" }}>
+          <div className="terminal-status terminal-status-end">
             <span className={`terminal-status-dot ${wsConnected ? "live" : ""}`} aria-hidden />
             {wsConnected ? "Live" : "REST"} • {apiLabel}
           </div>
         </header>
-        <div className="terminal-command-row" style={{ position: "relative" }}>
+        <div className="terminal-command-row">
           <CommandBar onSubmit={handleCommand} />
         </div>
 
-        <nav
-          className="terminal-module-tabs"
-          aria-label="Switch module"
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 4,
-            padding: "6px 8px",
-            borderBottom: "1px solid var(--border)",
-            background: "var(--bg-panel)",
-            minHeight: 36,
-            alignItems: "center",
-          }}
-        >
+        <nav className="terminal-module-tabs" aria-label="Switch module">
           {MODULES_ORDER.map((mod) => (
             <button
               key={mod}
               type="button"
               onClick={() => setActiveModule(mod)}
-              className={activeModule === mod ? "terminal-tab-active" : "terminal-tab"}
-              style={{
-                padding: "4px 10px",
-                fontSize: 12,
-                fontFamily: "var(--font-mono)",
-                border: `1px solid ${activeModule === mod ? "var(--accent)" : "var(--border)"}`,
-                borderRadius: 4,
-                background: activeModule === mod ? "var(--accent)" : "transparent",
-                color: activeModule === mod ? "#0a0a0a" : "var(--text)",
-                cursor: "pointer",
-              }}
+              className={activeModule === mod ? "terminal-tab terminal-tab-active" : "terminal-tab"}
             >
               {MODULE_LABELS[mod]}
             </button>
@@ -376,20 +358,20 @@ export const TerminalShell: React.FC = () => {
           defaultLayout={defaultLayout}
           onLayoutChanged={handleLayoutChanged}
         >
-          <Panel id="left" defaultSize={defaultLayout.left} minSize={15} maxSize={35} style={{ minWidth: 0, overflow: "auto" }}>
-            <div style={{ padding: 8, height: "100%" }}>
+          <Panel id="left" defaultSize={defaultLayout.left} minSize={15} maxSize={35} className="terminal-panel-slot">
+            <div className="terminal-panel-padding">
               <MarketOverview />
             </div>
           </Panel>
-          <Separator id="left-sep" style={{ width: 4, background: "var(--border)", cursor: "col-resize" }} />
-          <Panel id="main" defaultSize={defaultLayout.main} minSize={30} maxSize={70} style={{ minWidth: 0, overflow: "auto" }}>
-            <div style={{ padding: 8, height: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
+          <Separator id="left-sep" className="terminal-panel-separator" />
+          <Panel id="main" defaultSize={defaultLayout.main} minSize={30} maxSize={70} className="terminal-panel-slot">
+            <div className="terminal-panel-padding terminal-panel-main">
               <MainContent activeModule={activeModule} />
             </div>
           </Panel>
-          <Separator id="right-sep" style={{ width: 4, background: "var(--border)", cursor: "col-resize" }} />
-          <Panel id="right" defaultSize={defaultLayout.right} minSize={20} maxSize={45} style={{ minWidth: 0, overflow: "auto" }}>
-            <div style={{ padding: 8, height: "100%" }}>
+          <Separator id="right-sep" className="terminal-panel-separator" />
+          <Panel id="right" defaultSize={defaultLayout.right} minSize={20} maxSize={45} className="terminal-panel-slot">
+            <div className="terminal-panel-padding">
               <AiAssistantPanel />
             </div>
           </Panel>

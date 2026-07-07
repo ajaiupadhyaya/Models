@@ -7,6 +7,22 @@ A Bloomberg-terminal-style web app for personal quant research. FastAPI backend,
 
 ---
 
+## Demo in 30 seconds
+
+Open the terminal and try these commands in the command bar (`/` or `Cmd+K` to focus):
+
+| Command | What you see |
+| --- | --- |
+| `GP AAPL` | Candlestick chart with volume and indicators |
+| `QUANT AAPL` | Factor exposure and quant models |
+| `PORT` | Portfolio risk metrics and allocation |
+| `BACKTEST AAPL` | Strategy backtest with equity curve |
+| `AI why is AAPL moving?` | AI research assistant (needs API key) |
+
+The command bar includes a **Try:** quick-start strip for first-time users. Panels degrade gracefully when optional provider keys are missing.
+
+---
+
 ## What's in v1.0
 
 | Module | Status |
@@ -97,6 +113,7 @@ JWT (single-user MVP) protects state-mutating and CPU-heavy routes. See [`SECURI
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — common failure modes by stage.
 - [`SECURITY.md`](SECURITY.md) — auth model, secret handling, disclosure.
 - [`docs/FEATURE_BACKLOG.md`](docs/FEATURE_BACKLOG.md) — v1.0 scope + v2 roadmap.
+- [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) — pre-tag verification checklist.
 
 ---
 

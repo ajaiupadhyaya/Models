@@ -177,11 +177,16 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
 
   useEffect(() => {
     let cancelled = false;
+    if (data.length === 0) {
+      setChartOverlay(null);
+      return;
+    }
     (async () => {
       try {
         const res = await fetch(resolveApiUrl(`/api/v1/ai/stock-analysis/${primarySymbol}?include_prediction=true`), { headers: getAuthHeaders() });
         const json = await res.json().catch(() => ({}));
         if (cancelled) return;
+        if (!res.ok) return;
         const overlay = (json as { chart_overlay?: ChartOverlay }).chart_overlay
           ?? (json as { prediction?: { next_price?: number; confidence_interval_low?: number; confidence_interval_high?: number } }).prediction
             ? (() => {
@@ -200,12 +205,13 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
       }
     })();
     return () => { cancelled = true; };
-  }, [primarySymbol]);
+  }, [primarySymbol, data.length]);
 
   const effectiveOverlay: IndicatorOverlay = indicatorOverlay !== "none" ? indicatorOverlay : (showSma ? "sma20" : "none");
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         setChartError(null);
         setDataWarning(null);
@@ -694,7 +700,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
         </div>
       )}
       {dataWarning && !chartError && (
-        <div className="panel-body-muted" style={{ marginBottom: 8 }}>
+        <div className="panel-data-warning" role="status">
           {dataWarning}
         </div>
       )}

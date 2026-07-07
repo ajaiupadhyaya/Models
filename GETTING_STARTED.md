@@ -50,6 +50,8 @@ npm run dev
 
 Open `http://localhost:5173`. Vite proxies `/api/*` to `http://127.0.0.1:8000`.
 
+**Auth in local dev:** With the default placeholder `AUTH_SECRET` in `.env`, `/api/auth/status` returns `configured: false` and the frontend skips login. Set real `TERMINAL_USER`, `TERMINAL_PASSWORD`, and `AUTH_SECRET` for deployed or shared environments. The login page shows a **Fill demo credentials** button only in dev mode (`npm run dev`).
+
 Useful backend URLs:
 
 - `http://localhost:8000/health`
