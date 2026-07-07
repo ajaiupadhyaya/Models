@@ -14,7 +14,7 @@ All generated using OpenAI API for polished, narrative-driven content.
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 import logging
 
@@ -406,7 +406,7 @@ async def analyze_backtest_results(results: BacktestResultsData) -> Dict[str, st
 
 
 @router.get("/health")
-async def investor_reports_health() -> Dict[str, bool]:
+async def investor_reports_health() -> Dict[str, Any]:
     """Check investor report generator health."""
     try:
         generator = get_report_generator()
