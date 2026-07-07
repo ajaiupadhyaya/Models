@@ -19,6 +19,7 @@ interface BacktestResult {
   metrics: Record<string, number | null>;
   equity_curve?: Array<{ date: string; equity: number }>;
   status?: string;
+  trades?: unknown[];
 }
 
 interface ModelsResponse {
@@ -605,13 +606,13 @@ export const QuantPanel: React.FC = () => {
                       ) : (
                         <>
                           <td className="num-mono" style={{ textAlign: "right" }}>
-                            {(s.metrics?.sharpe_ratio ?? s.metrics?.sharpe) != null ? Number(s.metrics.sharpe_ratio ?? s.metrics.sharpe).toFixed(3) : "—"}
+                            {(s.metrics?.sharpe_ratio ?? s.metrics?.sharpe) != null ? Number(s.metrics?.sharpe_ratio ?? s.metrics?.sharpe).toFixed(3) : "—"}
                           </td>
                           <td className="num-mono" style={{ textAlign: "right" }}>
-                            {(s.metrics?.max_drawdown_pct ?? s.metrics?.max_drawdown) != null ? `${Number(s.metrics.max_drawdown_pct ?? s.metrics.max_drawdown).toFixed(2)}%` : "—"}
+                            {(s.metrics?.max_drawdown_pct ?? s.metrics?.max_drawdown) != null ? `${Number(s.metrics?.max_drawdown_pct ?? s.metrics?.max_drawdown).toFixed(2)}%` : "—"}
                           </td>
                           <td className="num-mono" style={{ textAlign: "right" }}>
-                            {(s.metrics?.total_return_pct ?? s.metrics?.total_return ?? s.metrics?.cumulative_return) != null ? `${Number(s.metrics.total_return_pct ?? s.metrics.total_return ?? s.metrics.cumulative_return).toFixed(2)}%` : "—"}
+                            {(s.metrics?.total_return_pct ?? s.metrics?.total_return ?? s.metrics?.cumulative_return) != null ? `${Number(s.metrics?.total_return_pct ?? s.metrics?.total_return ?? s.metrics?.cumulative_return).toFixed(2)}%` : "—"}
                           </td>
                         </>
                       )}

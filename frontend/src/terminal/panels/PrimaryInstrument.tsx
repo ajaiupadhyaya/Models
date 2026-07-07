@@ -586,7 +586,7 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
       .scaleExtent([1, 32])
       .on("zoom", (event) => {
         const t = event.transform;
-        const tXOnly = d3.zoomIdentity.translate(t.x, 0).scale(t.k, 1);
+        const tXOnly = d3.zoomIdentity.translate(t.x, 0).scale(t.k);
         zoomable.attr("transform", tXOnly.toString());
       });
 

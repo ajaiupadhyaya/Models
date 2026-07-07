@@ -83,7 +83,7 @@ export const BarChart: React.FC<BarChartProps> = ({
       g.append("g")
         .attr("transform", `translate(0,${innerHeight})`)
         .attr("class", "axis axis-x")
-        .call(d3.axisBottom(xScale).ticks(5).tickFormat(valueFormat));
+        .call(d3.axisBottom(xScale).ticks(5).tickFormat((v) => valueFormat(Number(v))));
       g.selectAll("rect")
         .data(data)
         .enter()
@@ -126,7 +126,7 @@ export const BarChart: React.FC<BarChartProps> = ({
         .attr("transform", `translate(0,${innerHeight})`)
         .attr("class", "axis axis-x")
         .call(d3.axisBottom(xScale));
-      g.append("g").attr("class", "axis axis-y").call(d3.axisLeft(yScale).ticks(5).tickFormat(valueFormat));
+      g.append("g").attr("class", "axis axis-y").call(d3.axisLeft(yScale).ticks(5).tickFormat((v) => valueFormat(Number(v))));
       g.selectAll("rect")
         .data(data)
         .enter()

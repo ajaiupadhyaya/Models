@@ -162,9 +162,9 @@ export const AiAssistantPanel: React.FC = () => {
                     <div key={j} className="text-[10px] text-tertiary flex items-center gap-2">
                       <span className="material-symbols-outlined text-[12px]">build</span>
                       <span>
-                        {tc.tool === "run_dcf" && tc.input?.symbol && `Running DCF on ${tc.input.symbol}…`}
+                        {tc.tool === "run_dcf" && Boolean(tc.input?.symbol) && `Running DCF on ${String(tc.input.symbol)}…`}
                         {tc.tool === "screen_stocks" && "Running screener…"}
-                        {tc.tool === "get_company_overview" && tc.input?.symbol && `Getting overview for ${tc.input.symbol}…`}
+                        {tc.tool === "get_company_overview" && Boolean(tc.input?.symbol) && `Getting overview for ${String(tc.input.symbol)}…`}
                         {tc.tool === "run_backtest" && "Running backtest…"}
                         {tc.tool === "get_macro_snapshot" && "Getting macro snapshot…"}
                         {!["run_dcf", "screen_stocks", "get_company_overview", "run_backtest", "get_macro_snapshot"].includes(tc.tool) && `${tc.tool}`}

@@ -40,7 +40,7 @@ function parseScreener(json: unknown): ScreenRow[] | null {
   return Array.isArray(r?.results) ? r.results : [];
 }
 
-type SortKey = "symbol" | "name" | "sector" | "market_cap" | "pe_ratio" | "pb_ratio";
+type SortKey = "symbol" | "name" | "sector" | "market_cap" | "pe_ratio" | "pb_ratio" | "sparkline";
 
 function MiniSparkline({ data }: { data: number[] }) {
   if (!data || data.length < 2) return <span style={{ color: "var(--text-soft)" }}>—</span>;
@@ -90,7 +90,8 @@ export const ScreeningPanel: React.FC = () => {
         setScreenerResults(null);
         return;
       }
-      const results = Array.isArray((json as ScreenerResponse).results) ? (json as ScreenerResponse).results : [];
+      const parsed = json as ScreenerResponse;
+      const results = Array.isArray(parsed.results) ? parsed.results : [];
       setScreenerResults(results);
     } catch (err) {
       setScreenerError(err instanceof Error ? err.message : "Request failed");

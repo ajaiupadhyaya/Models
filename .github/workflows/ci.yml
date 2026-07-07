@@ -52,8 +52,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Install and test frontend
+      - name: Install frontend dependencies
         run: |
           cd frontend
           npm ci
+      - name: Typecheck
+        run: |
+          cd frontend
+          npm run typecheck
+      - name: Test frontend
+        run: |
+          cd frontend
           npm run test
