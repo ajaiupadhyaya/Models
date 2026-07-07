@@ -1,10 +1,39 @@
 :root {
   color-scheme: dark;
+  /* Legacy token names, remapped to the Stitch palette.
+     D3 charts and non-migrated panels consume these via var(--...). */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --shadow-panel: none;
+  --shadow-elevated: none;
+  --transition-fast: 100ms linear;
+  --transition-normal: 150ms linear;
+  --bg: #131313;
+  --bg-secondary: #1c1b1b;
+  --bg-panel: #0e0e0e;
+  --border: #4c4546;
+  --border-focus: #3568ff;
+  --text: #e5e2e1;
+  --text-soft: #988e90;
+  --accent: #3568ff;
+  --accent-hover: #5c7cff;
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --accent-blue: #3568ff;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 
 body {
   margin: 0;
-  background-color: #000000;
+  background-color: #131313;
   color: #e5e2e1;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
