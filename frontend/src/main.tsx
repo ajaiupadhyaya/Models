@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { TerminalShell } from "./terminal/TerminalShell";
 import { LoginPage } from "./LoginPage";
 import { ProtectedRoute } from "./ProtectedRoute";
+import "./tailwind.css";
 import "./styles.css";
 
 const rootElement = document.getElementById("root") as HTMLElement;
