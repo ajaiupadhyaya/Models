@@ -587,7 +587,7 @@ class DataSourceHealthChecker:
             }
 
         try:
-            base_url = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+            base_url = os.getenv("ALPACA_API_BASE") or os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
             url = f"{base_url}/v2/account"
             headers = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret}
             resp = requests.get(url, headers=headers, timeout=10)
@@ -734,7 +734,7 @@ def get_data_source_recommendations() -> Dict[str, str]:
         recommendations['alpaca'] = (
             "Alpaca credentials not configured. Paper trading will be unavailable. "
             "Sign up at https://alpaca.markets for free paper trading. "
-            "Set ALPACA_API_KEY, ALPACA_API_SECRET, and ALPACA_BASE_URL in .env file. "
+            "Set ALPACA_API_KEY, ALPACA_API_SECRET, and ALPACA_API_BASE in .env file. "
             "Note: Alpaca is for trading execution, not historical data."
         )
     
