@@ -645,10 +645,10 @@ export const PrimaryInstrument: React.FC<PrimaryInstrumentProps> = ({ indicatorO
 
   return (
     <section className="bg-background p-8 flex flex-col justify-between hairline-b mb-4 flex-shrink-0">
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex flex-wrap justify-between items-start gap-4 mb-8">
         <div>
           <div className="font-label-xs text-label-xs uppercase text-on-tertiary-container tracking-[0.4em] mb-4">PRIMARY INSTRUMENT</div>
-          <h1 className="font-display-price text-[clamp(36px,6vw,80px)] leading-[1.0] tracking-[-0.04em] font-extrabold text-on-surface uppercase break-all">{primarySymbol}</h1>
+          <h1 className="font-display-price text-[clamp(36px,6vw,80px)] leading-[1.0] tracking-[-0.04em] font-extrabold text-on-surface uppercase whitespace-nowrap">{primarySymbol}</h1>
         </div>
         <div className="text-right flex flex-col items-end gap-2">
           <div className="flex flex-wrap gap-1 items-center justify-end">
