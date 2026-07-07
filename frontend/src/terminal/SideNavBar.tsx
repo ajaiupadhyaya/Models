@@ -12,7 +12,7 @@ export const SideNavBar: React.FC = () => {
   ] as const;
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-24 z-40 bg-background dark:bg-background border-r border-outline-variant">
+    <aside className="fixed left-0 top-20 h-[calc(100vh-80px)] w-20 flex flex-col items-center py-6 z-40 bg-background dark:bg-background border-r border-outline-variant">
       <div className="flex flex-col items-center gap-8 flex-grow w-full">
         <div className="w-10 h-10 bg-surface-container-high flex items-center justify-center mb-4 hairline-border">
           <span className="material-symbols-outlined text-on-surface">grid_view</span>

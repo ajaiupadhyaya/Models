@@ -5,7 +5,7 @@ export const TopNavBar: React.FC = () => {
   const { activeModule, setActiveModule, primarySymbol, setPrimarySymbol } = useTerminal();
 
   return (
-    <header className="fixed top-0 left-0 w-full z-50 bg-background dark:bg-background border-b border-outline-variant flex justify-between items-center px-margin-page py-4">
+    <header className="fixed top-0 left-0 w-full z-50 h-20 bg-background dark:bg-background border-b border-outline-variant flex justify-between items-center px-margin-page">
       <div className="flex items-center gap-12">
         <div className="font-headline-lg text-headline-lg font-black tracking-tighter text-on-background dark:text-on-background">
           FIN-TERMINAL

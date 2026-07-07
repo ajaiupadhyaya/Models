@@ -325,7 +325,7 @@ export const TerminalShell: React.FC = () => {
         <TopNavBar />
         <SideNavBar />
         
-        <main className="ml-20 mt-16 p-margin-page flex-1 flex flex-col bg-outline-variant gap-gutter relative z-0 h-[calc(100vh-64px)] overflow-hidden">
+        <main className="ml-20 mt-20 p-margin-page flex-1 flex flex-col bg-outline-variant gap-gutter relative z-0 h-[calc(100vh-80px)] overflow-hidden">
           <div className="bg-background hairline-b shrink-0 flex flex-col">
             <TickerStrip primarySymbol={primarySymbol} onWsStatus={setWsConnected} />
             <div className="px-4 py-2 border-b border-outline-variant">
