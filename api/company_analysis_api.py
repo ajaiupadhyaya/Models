@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 import sys
 from pathlib import Path
+import math
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -26,6 +27,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _json_safe(value):
+    """Recursively replace non-finite floats (NaN/Inf) with None — they are not JSON compliant."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return value
 
 
 # Request/Response Models
@@ -197,8 +209,9 @@ async def analyze_company(
         
         # Generate Summary
         response["summary"] = _generate_summary(response)
-        
+
         logger.info(f"Analysis complete for {ticker}")
+        response = _json_safe(response)
         set_cached(key, response, CACHE_TTL_COMPANY_ANALYZE)
         return response
     

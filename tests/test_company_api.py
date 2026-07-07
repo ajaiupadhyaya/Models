@@ -54,3 +54,25 @@ def test_analyze_returns_200_with_keys_when_mocked(client):
         assert "company_name" in data
         assert "fundamental_analysis" in data
         assert "valuation" in data or "risk_metrics" in data
+
+
+def test_analyze_sanitizes_nan_to_null(client):
+    """NaN in analyzer output must serialize as null, not 500 (regression)."""
+    with patch("api.company_analysis_api.CompanySearch") as MockSearch:
+        MockSearch.return_value.validate_ticker.return_value = (True, "OK")
+        with patch("api.company_analysis_api.CompanyAnalyzer") as MockAnalyzer:
+            mock_analyzer = MagicMock()
+            mock_analyzer.comprehensive_analysis.return_value = {
+                "profile": {"name": "NaN Test Inc"},
+                "ratios": {"pe_ratio": float("nan"), "pb_ratio": float("inf")},
+                "financials": {},
+            }
+            MockAnalyzer.return_value = mock_analyzer
+            response = client.get(
+                # unique ticker so the 15-min analyze cache can't serve a stale entry
+                "/api/v1/company/analyze/NANTST?include_dcf=false&include_risk=false&include_technicals=false"
+            )
+    assert response.status_code == 200
+    ratios = response.json()["fundamental_analysis"]["ratios"]
+    assert ratios["pe_ratio"] is None
+    assert ratios["pb_ratio"] is None
