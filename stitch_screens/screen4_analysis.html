@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FIN-TERMINAL | Asset Analysis</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&amp;family=Space+Mono:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Space+Mono:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#1b1b1b",
+                    "on-secondary-fixed-variant": "#454747",
+                    "error-container": "#93000a",
+                    "tertiary-fixed": "#dce1ff",
+                    "outline": "#988e90",
+                    "on-tertiary-fixed": "#001551",
+                    "tertiary-fixed-dim": "#b6c4ff",
+                    "primary": "#c6c6c6",
+                    "on-error-container": "#ffdad6",
+                    "on-error": "#690005",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-primary-fixed-variant": "#474747",
+                    "surface-container-highest": "#353534",
+                    "surface-bright": "#3a3939",
+                    "inverse-surface": "#e5e2e1",
+                    "on-secondary": "#2f3131",
+                    "surface-container-high": "#2a2a2a",
+                    "surface": "#131313",
+                    "on-surface-variant": "#cfc4c5",
+                    "inverse-on-surface": "#313030",
+                    "surface-container-low": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#0039b3",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "primary-container": "#000000",
+                    "on-background": "#e5e2e1",
+                    "primary-fixed-dim": "#c6c6c6",
+                    "surface-tint": "#c6c6c6",
+                    "tertiary": "#b6c4ff",
+                    "secondary-container": "#454747",
+                    "surface-dim": "#131313",
+                    "on-secondary-container": "#b4b5b5",
+                    "secondary-fixed": "#e2e2e2",
+                    "inverse-primary": "#5e5e5e",
+                    "on-tertiary-container": "#3568ff",
+                    "on-surface": "#e5e2e1",
+                    "tertiary-container": "#000000",
+                    "error": "#ffb4ab",
+                    "secondary": "#c6c6c7",
+                    "primary-fixed": "#e2e2e2",
+                    "surface-container": "#201f1f",
+                    "on-primary-container": "#757575",
+                    "surface-variant": "#353534",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "outline-variant": "#4c4546",
+                    "on-tertiary": "#002780",
+                    "background": "#131313",
+                    "on-primary": "#303030"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "margin-page": "48px",
+                    "gutter": "1px",
+                    "cell-padding": "12px"
+            },
+            "fontFamily": {
+                    "display-price": ["Inter"],
+                    "label-xs": ["Space Mono"],
+                    "headline-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "data-mono": ["Space Mono"],
+                    "headline-lg-mobile": ["Inter"]
+            },
+            "fontSize": {
+                    "display-price": ["72px", {"lineHeight": "72px", "letterSpacing": "-0.04em", "fontWeight": "800"}],
+                    "label-xs": ["10px", {"lineHeight": "12px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "data-mono": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #131313; color: #e5e2e1; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+        .hairline { border: 1px solid rgba(255, 255, 255, 0.1); }
+        .hairline-b { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .hairline-r { border-right: 1px solid rgba(255, 255, 255, 0.1); }
+        .matrix-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+        .sentiment-node { transition: all 0.3s ease; }
+        .sentiment-node:hover { color: #3568ff; transform: scale(1.1); }
+        .flicker { animation: flicker 3s infinite; }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .scroll-hide::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="font-body-md text-body-md overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-full flex flex-col items-center py-8 z-50 bg-background border-r border-outline-variant w-20">
+<div class="mb-12">
+<span class="font-headline-lg text-headline-lg font-black text-on-background tracking-tighter">FT</span>
+</div>
+<nav class="flex flex-col gap-8 flex-grow">
+<!-- Analysis is Active -->
+<button class="flex flex-col items-center gap-1 group text-on-tertiary-container bg-tertiary-container border-r-2 border-on-tertiary-container p-3 transition-none opacity-100">
+<span class="material-symbols-outlined text-[24px]">analytics</span>
+<span class="font-label-xs text-label-xs">Analysis</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-on-surface-variant hover:bg-surface-variant hover:text-on-background p-3 transition-none opacity-60 hover:opacity-100">
+<span class="material-symbols-outlined text-[24px]">grid_view</span>
+<span class="font-label-xs text-label-xs">Dashboard</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-on-surface-variant hover:bg-surface-variant hover:text-on-background p-3 transition-none opacity-60 hover:opacity-100">
+<span class="material-symbols-outlined text-[24px]">show_chart</span>
+<span class="font-label-xs text-label-xs">Markets</span>
+</button>
+<button class="flex flex-col items-center gap-1 group text-on-surface-variant hover:bg-surface-variant hover:text-on-background p-3 transition-none opacity-60 hover:opacity-100">
+<span class="material-symbols-outlined text-[24px]">account_balance_wallet</span>
+<span class="font-label-xs text-label-xs">Portfolio</span>
+</button>
+</nav>
+<div class="mt-auto">
+<div class="w-10 h-10 bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined">person</span>
+</div>
+</div>
+</aside>
+<!-- TopAppBar (Shared Component) -->
+<header class="fixed top-0 left-20 right-0 h-16 flex justify-between items-center px-margin-page bg-background border-b border-outline-variant z-40">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="font-data-mono text-data-mono text-on-tertiary-container">ASSET_IDENTITY:</span>
+<h1 class="font-headline-lg text-headline-lg font-black tracking-tighter text-on-background">TSLA.NAS</h1>
+</div>
+<div class="h-4 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-2">
+<span class="font-display-price text-[24px] text-on-background">$178.44</span>
+<span class="font-data-mono text-label-xs text-on-tertiary-container">+2.41%</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">search</span>
+</div>
+<input class="bg-surface-container-low border-none focus:ring-1 focus:ring-on-tertiary-container text-data-mono text-label-xs w-64 pl-10 h-10" placeholder="TERMINAL_CMD" type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center hover:bg-on-background hover:text-background transition-colors duration-100">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center hover:bg-on-background hover:text-background transition-colors duration-100">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-20 mt-16 h-[calc(100vh-64px)] overflow-y-auto scroll-hide p-margin-page">
+<div class="max-w-[1600px] mx-auto grid grid-cols-12 gap-gutter bg-outline-variant p-gutter">
+<!-- Hero Asset Section (4 Columns) -->
+<div class="col-span-12 lg:col-span-4 bg-background p-10 flex flex-col justify-between">
+<div>
+<span class="font-data-mono text-label-xs text-on-tertiary-container mb-4 block">INSTITUTIONAL_SUMMARY</span>
+<h2 class="font-headline-lg text-headline-lg font-extrabold mb-8">Tesla, Inc.</h2>
+<p class="font-body-md text-on-surface-variant leading-relaxed max-w-sm">
+                        High-frequency analysis of electric vehicle and renewable energy market penetration. Analyzing volatility clusters and liquidity depth for Tier 1 institutional positioning.
+                    </p>
+</div>
+<div class="mt-12">
+<div class="space-y-4">
+<div class="flex justify-between items-center py-3 border-b border-outline-variant/30">
+<span class="font-data-mono text-label-xs opacity-60">MARKET_CAP</span>
+<span class="font-data-mono text-body-md">567.24B</span>
+</div>
+<div class="flex justify-between items-center py-3 border-b border-outline-variant/30">
+<span class="font-data-mono text-label-xs opacity-60">PE_RATIO</span>
+<span class="font-data-mono text-body-md">42.18</span>
+</div>
+<div class="flex justify-between items-center py-3 border-b border-outline-variant/30">
+<span class="font-data-mono text-label-xs opacity-60">ALPHA_COEFF</span>
+<span class="font-data-mono text-body-md text-on-tertiary-container">1.24</span>
+</div>
+</div>
+</div>
+<div class="mt-12 h-40 w-full relative group overflow-hidden">
+
+<div class="absolute inset-0 flex flex-col items-center justify-center p-4 border border-on-tertiary-container/20 group-hover:bg-on-tertiary-container/5 transition-colors">
+<span class="font-data-mono text-label-xs text-on-tertiary-container mb-2">LIVE_CORRELATION</span>
+<span class="font-display-price text-[32px]">0.88</span>
+</div>
+</div>
+</div>
+<!-- Sentiment Cloud (Artistic Center Piece - 8 Columns) -->
+<div class="col-span-12 lg:col-span-8 bg-background p-margin-page relative overflow-hidden min-h-[500px]">
+<div class="absolute inset-0 opacity-10 pointer-events-none">
+
+</div>
+<div class="relative z-10 flex flex-col h-full">
+<div class="flex justify-between items-start mb-12">
+<div>
+<span class="font-data-mono text-label-xs text-on-tertiary-container">NETWORK_SENTIMENT</span>
+<h3 class="font-headline-lg text-headline-lg font-black uppercase tracking-widest">Sentiment Cloud</h3>
+</div>
+<div class="text-right">
+<span class="font-data-mono text-label-xs">NODE_COUNT: 1,422</span>
+</div>
+</div>
+<div class="flex-grow flex items-center justify-center relative">
+<!-- Abstract Sentiment Cloud -->
+<div class="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 max-w-2xl text-center">
+<span class="sentiment-node font-display-price text-[48px] uppercase tracking-tighter opacity-100">BULLISH</span>
+<span class="sentiment-node font-data-mono text-[14px] opacity-40">#CYBERTRUCK</span>
+<span class="sentiment-node font-headline-lg text-[28px] italic opacity-70">Momentum</span>
+<span class="sentiment-node font-data-mono text-[12px] opacity-30">FED_PIVOT</span>
+<span class="sentiment-node font-display-price text-[32px] font-black">VOLATILITY</span>
+<span class="sentiment-node font-headline-lg text-[20px] opacity-60">Production_Scale</span>
+<span class="sentiment-node font-data-mono text-[18px] text-on-tertiary-container">LIQUIDITY</span>
+<span class="sentiment-node font-body-md text-[14px] opacity-40">ESG_COMPLIANCE</span>
+<span class="sentiment-node font-headline-lg text-[36px] font-bold">ACCUMULATE</span>
+<span class="sentiment-node font-data-mono text-[10px] opacity-20">QUARTERLY_BEAT</span>
+<span class="sentiment-node font-display-price text-[24px] opacity-50">SHORTS_SQUEEZE</span>
+</div>
+</div>
+<div class="mt-12 flex items-end justify-between border-t border-outline-variant pt-8">
+<div class="flex gap-12">
+<div>
+<span class="font-data-mono text-label-xs block opacity-40 mb-2">POSITIVE_FLOW</span>
+<span class="font-display-price text-[24px]">64.2%</span>
+</div>
+<div>
+<span class="font-data-mono text-label-xs block opacity-40 mb-2">NEGATIVE_FLOW</span>
+<span class="font-display-price text-[24px] text-on-primary-container">35.8%</span>
+</div>
+</div>
+<button class="bg-on-background text-background px-8 py-3 font-data-mono text-label-xs hover:bg-on-tertiary-container hover:text-on-background transition-colors">
+                            DOWNLOAD_REPORT.PDF
+                        </button>
+</div>
+</div>
+</div>
+<!-- Technical Matrix (Full Width) -->
+<div class="col-span-12 bg-background p-margin-page">
+<div class="flex items-center justify-between mb-12">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">grid_guides</span>
+<h3 class="font-headline-lg text-headline-lg font-black uppercase tracking-tighter">Technical Matrix</h3>
+</div>
+<div class="flex gap-4">
+<span class="flex items-center gap-2 px-3 py-1 border border-outline-variant font-data-mono text-label-xs">1H_INTERVAL</span>
+<span class="flex items-center gap-2 px-3 py-1 border border-on-tertiary-container font-data-mono text-label-xs text-on-tertiary-container">REAL_TIME</span>
+</div>
+</div>
+<div class="matrix-grid gap-gutter bg-outline-variant border border-outline-variant">
+<!-- Cell 1 -->
+<div class="bg-background p-8 flex flex-col gap-6 hover:bg-surface-container-low transition-colors group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-on-tertiary-container group-hover:scale-125 transition-transform">monitoring</span>
+<span class="font-data-mono text-label-xs opacity-40">RSI_14</span>
+</div>
+<div>
+<span class="font-display-price text-[40px]">58.2</span>
+<span class="font-data-mono text-label-xs block text-on-tertiary-container mt-1">NEUTRAL_POSITIVE</span>
+</div>
+</div>
+<!-- Cell 2 -->
+<div class="bg-background p-8 flex flex-col gap-6 hover:bg-surface-container-low transition-colors group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-on-tertiary-container group-hover:scale-125 transition-transform">waves</span>
+<span class="font-data-mono text-label-xs opacity-40">MACD_SIGNAL</span>
+</div>
+<div>
+<span class="font-display-price text-[40px] text-on-primary-container">0.42</span>
+<span class="font-data-mono text-label-xs block text-on-primary-container mt-1">CROSSOVER_ALERT</span>
+</div>
+</div>
+<!-- Cell 3 -->
+<div class="bg-background p-8 flex flex-col gap-6 hover:bg-surface-container-low transition-colors group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-on-tertiary-container group-hover:scale-125 transition-transform">bolt</span>
+<span class="font-data-mono text-label-xs opacity-40">ADX_STRENGTH</span>
+</div>
+<div>
+<span class="font-display-price text-[40px]">32.1</span>
+<span class="font-data-mono text-label-xs block text-on-tertiary-container mt-1">STRONG_TREND</span>
+</div>
+</div>
+<!-- Cell 4 -->
+<div class="bg-background p-8 flex flex-col gap-6 hover:bg-surface-container-low transition-colors group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-on-tertiary-container group-hover:scale-125 transition-transform">architecture</span>
+<span class="font-data-mono text-label-xs opacity-40">FIB_RETRACE</span>
+</div>
+<div>
+<span class="font-display-price text-[40px]">0.618</span>
+<span class="font-data-mono text-label-xs block text-on-tertiary-container mt-1">CRITICAL_SUPPORT</span>
+</div>
+</div>
+<!-- Cell 5 -->
+<div class="bg-background p-8 flex flex-col gap-6 hover:bg-surface-container-low transition-colors group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-on-tertiary-container group-hover:scale-125 transition-transform">bar_chart</span>
+<span class="font-data-mono text-label-xs opacity-40">VOL_WEIGHTED</span>
+</div>
+<div>
+<span class="font-display-price text-[40px]">176.2</span>
+<span class="font-data-mono text-label-xs block text-on-tertiary-container mt-1">VWAP_ALIGNMENT</span>
+</div>
+</div>
+<!-- Cell 6 -->
+<div class="bg-background p-8 flex flex-col gap-6 hover:bg-surface-container-low transition-colors group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-on-tertiary-container group-hover:scale-125 transition-transform">radar</span>
+<span class="font-data-mono text-label-xs opacity-40">BOLLINGER</span>
+</div>
+<div>
+<span class="font-display-price text-[40px] italic">WIDTH</span>
+<span class="font-data-mono text-label-xs block text-on-tertiary-container mt-1">SQUEEZE_IMMINENT</span>
+</div>
+</div>
+</div>
+</div>
+<!-- News & Feed Frame (Asymmetric - 4 columns) -->
+<div class="col-span-12 lg:col-span-4 bg-background p-10 border border-outline-variant">
+<div class="flex justify-between items-center mb-10">
+<h4 class="font-data-mono text-label-xs uppercase tracking-widest text-on-tertiary-container">Institutional_Feed</h4>
+<span class="material-symbols-outlined text-sm">more_horiz</span>
+</div>
+<div class="space-y-8">
+<div class="group cursor-pointer">
+<span class="font-data-mono text-[10px] opacity-40 mb-1 block">08:42:15_UTC</span>
+<h5 class="font-body-md font-bold group-hover:text-on-tertiary-container transition-colors">Morgan Stanley Adjusts Target to $200; Cites Full Self-Driving potential as primary alpha driver.</h5>
+</div>
+<div class="group cursor-pointer">
+<span class="font-data-mono text-[10px] opacity-40 mb-1 block">07:15:00_UTC</span>
+<h5 class="font-body-md font-bold group-hover:text-on-tertiary-container transition-colors">Gigafactory Berlin expansion approved by local authorities. Production ramp-up expected Q3.</h5>
+</div>
+<div class="group cursor-pointer">
+<span class="font-data-mono text-[10px] opacity-40 mb-1 block">06:02:11_UTC</span>
+<h5 class="font-body-md font-bold group-hover:text-on-tertiary-container transition-colors">Global EV Sales Data: Tesla maintains 18% market share despite increased competition in APAC.</h5>
+</div>
+<div class="group cursor-pointer">
+<span class="font-data-mono text-[10px] opacity-40 mb-1 block">05:30:58_UTC</span>
+<h5 class="font-body-md font-bold group-hover:text-on-tertiary-container transition-colors">Options Flow Alert: Massive 180 Call sweep detected for July expiry. Whale activity confirmed.</h5>
+</div>
+</div>
+<div class="mt-12">
+<button class="w-full h-px bg-outline-variant/50 relative overflow-visible">
+<span class="absolute left-1/2 -translate-x-1/2 -top-3 px-4 bg-background font-data-mono text-[10px] opacity-40">END_OF_TRANSMISSION</span>
+</button>
+</div>
+</div>
+<!-- Visual Asset Gallery (8 Columns) -->
+<div class="col-span-12 lg:col-span-8 grid grid-cols-2 gap-gutter bg-outline-variant">
+<div class="bg-background p-10 flex flex-col justify-between">
+<div>
+<span class="font-data-mono text-label-xs text-on-tertiary-container block mb-4">SYSTEM_STATUS</span>
+<h4 class="font-headline-lg text-[24px] font-bold">Predictive Neural Engine</h4>
+<p class="font-body-md text-on-surface-variant mt-4">Autonomous ML models processing 4M data points/sec to identify fractal pattern repeats in price action.</p>
+</div>
+<div class="mt-8 flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-on-tertiary-container flicker"></div>
+<span class="font-data-mono text-label-xs">MODEL_V4.2_STABLE</span>
+</div>
+</div>
+<div class="bg-background relative group">
+<div class="w-full h-full min-h-[300px]" data-alt="A sophisticated abstract architectural photograph of a high-tech Tesla charging hub at night. Minimalist concrete structures under stark, electric blue neon lights. The composition is geometric and sharp, following a Swiss design aesthetic. High contrast with deep black shadows and brilliant white surfaces, emphasizing elite engineering and futuristic infrastructure." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCu0hgRbH2vFqAYGo4mtrxRoAyJGwVmF28TqBq5Frv_Pn1qcVHLxdwZnKNz3deSI-mp0LXUWgsQUjQBAXTfEXhvkSBNaCCNl8OMN6gxVLZ_Ydzdn5Ces0laOK7ajOJy6QpByT-EabzkZjO5R78-qzc9Kzydc5YiyLMW4IpLWULdcvHvKGjAbJ_fo_WDIO3qkF7C7AEVisDAlfGsYZ2Cjzhmaas-qD7xTSw_vNsfniR0EBDBER5gNBKGjvJFN-EqGDCfj16E5NczBKI')"></div>
+<div class="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+<button class="border border-on-background px-6 py-2 font-data-mono text-label-xs hover:bg-on-background hover:text-background transition-colors">EXPAND_VISUALS</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual Information Overlay (Bottom Right) -->
+<div class="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-4 pointer-events-none">
+<div class="pointer-events-auto bg-on-background text-background p-6 flex flex-col gap-1">
+<span class="font-data-mono text-[10px] font-black uppercase">Terminal_Uptime</span>
+<span class="font-display-price text-[24px]" id="terminal-clock">14:55:02</span>
+</div>
+<div class="pointer-events-auto bg-background border border-on-tertiary-container p-4 flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-on-tertiary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-background text-sm" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div class="flex flex-col">
+<span class="font-data-mono text-[10px] opacity-60">NETWORK_LATENCY</span>
+<span class="font-data-mono text-label-xs text-on-tertiary-container">12MS_STABLE</span>
+</div>
+</div>
+</div>
+<script>
+        // Micro-interactions and clock
+        function updateClock() {
+            const now = new Date();
+            const time = now.toTimeString().split(' ')[0];
+            document.getElementById('terminal-clock').innerText = time;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Simple interactivity for Matrix cells
+        document.querySelectorAll('.matrix-grid > div').forEach(cell => {
+            cell.addEventListener('mousedown', () => {
+                cell.style.backgroundColor = 'rgba(53, 104, 255, 0.1)';
+            });
+            cell.addEventListener('mouseup', () => {
+                cell.style.backgroundColor = '';
+            });
+        });
+    </script>
+</body></html>

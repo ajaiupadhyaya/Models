@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FIN-TERMINAL | Global Markets Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #131313;
+            color: #e5e2e1;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .grid-line-h {
+            height: 1px;
+            width: 100%;
+            background-color: rgba(152, 142, 144, 0.2);
+        }
+        .grid-line-v {
+            width: 1px;
+            height: 100%;
+            background-color: rgba(152, 142, 144, 0.2);
+        }
+        .heat-map-cell:hover {
+            background-color: #e5e2e1 !important;
+            color: #131313 !important;
+        }
+        /* Custom scrollbar for gallery-style news */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 2px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #131313;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4c4546;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-fixed": "#1b1b1b",
+                      "on-secondary-fixed-variant": "#454747",
+                      "error-container": "#93000a",
+                      "tertiary-fixed": "#dce1ff",
+                      "outline": "#988e90",
+                      "on-tertiary-fixed": "#001551",
+                      "tertiary-fixed-dim": "#b6c4ff",
+                      "primary": "#c6c6c6",
+                      "on-error-container": "#ffdad6",
+                      "on-error": "#690005",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-primary-fixed-variant": "#474747",
+                      "surface-container-highest": "#353534",
+                      "surface-bright": "#3a3939",
+                      "inverse-surface": "#e5e2e1",
+                      "on-secondary": "#2f3131",
+                      "surface-container-high": "#2a2a2a",
+                      "surface": "#131313",
+                      "on-surface-variant": "#cfc4c5",
+                      "inverse-on-surface": "#313030",
+                      "surface-container-low": "#1c1b1b",
+                      "on-tertiary-fixed-variant": "#0039b3",
+                      "on-secondary-fixed": "#1a1c1c",
+                      "primary-container": "#000000",
+                      "on-background": "#e5e2e1",
+                      "primary-fixed-dim": "#c6c6c6",
+                      "surface-tint": "#c6c6c6",
+                      "tertiary": "#b6c4ff",
+                      "secondary-container": "#454747",
+                      "surface-dim": "#131313",
+                      "on-secondary-container": "#b4b5b5",
+                      "secondary-fixed": "#e2e2e2",
+                      "inverse-primary": "#5e5e5e",
+                      "on-tertiary-container": "#3568ff",
+                      "on-surface": "#e5e2e1",
+                      "tertiary-container": "#000000",
+                      "error": "#ffb4ab",
+                      "secondary": "#c6c6c7",
+                      "primary-fixed": "#e2e2e2",
+                      "surface-container": "#201f1f",
+                      "on-primary-container": "#757575",
+                      "surface-variant": "#353534",
+                      "secondary-fixed-dim": "#c6c6c7",
+                      "outline-variant": "#4c4546",
+                      "on-tertiary": "#002780",
+                      "background": "#131313",
+                      "on-primary": "#303030"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "unit": "4px",
+                      "margin-page": "48px",
+                      "gutter": "1px",
+                      "cell-padding": "12px"
+              },
+              "fontFamily": {
+                      "display-price": ["Inter"],
+                      "label-xs": ["Space Mono"],
+                      "headline-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "data-mono": ["Space Mono"],
+                      "headline-lg-mobile": ["Inter"]
+              },
+              "fontSize": {
+                      "display-price": ["72px", {"lineHeight": "72px", "letterSpacing": "-0.04em", "fontWeight": "800"}],
+                      "label-xs": ["10px", {"lineHeight": "12px", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "data-mono": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="font-body-md text-body-md bg-background selection:bg-on-tertiary-container selection:text-white">
+<!-- Sidebar Navigation -->
+<nav class="fixed left-0 top-0 h-full flex flex-col items-center py-8 z-50 bg-background border-r border-outline-variant w-20">
+<div class="mb-12">
+<span class="font-headline-lg text-headline-lg font-black text-on-background tracking-tighter">FT</span>
+</div>
+<div class="flex flex-col gap-8 flex-grow">
+<!-- Navigation Items Mapping -->
+<button class="flex flex-col items-center gap-1 opacity-60 hover:bg-surface-variant hover:text-on-background transition-colors p-2">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-label-xs text-label-xs uppercase tracking-widest">Dash</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-tertiary-container bg-tertiary-container border-r-2 border-on-tertiary-container p-2">
+<span class="material-symbols-outlined">show_chart</span>
+<span class="font-label-xs text-label-xs uppercase tracking-widest">Mkts</span>
+</button>
+<button class="flex flex-col items-center gap-1 opacity-60 hover:bg-surface-variant hover:text-on-background transition-colors p-2">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-xs text-label-xs uppercase tracking-widest">Port</span>
+</button>
+<button class="flex flex-col items-center gap-1 opacity-60 hover:bg-surface-variant hover:text-on-background transition-colors p-2">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-xs text-label-xs uppercase tracking-widest">Anly</span>
+</button>
+</div>
+<div class="mt-auto">
+<button class="p-2 opacity-60 hover:opacity-100">
+<span class="material-symbols-outlined">person</span>
+</button>
+</div>
+</nav>
+<!-- Top App Bar -->
+<header class="fixed top-0 left-20 right-0 h-16 flex justify-between items-center px-margin-page bg-background border-b border-outline-variant z-40">
+<div class="flex items-center gap-8">
+<h1 class="font-headline-lg text-headline-lg font-black tracking-tighter text-on-background">FIN-TERMINAL</h1>
+<div class="hidden md:flex gap-6">
+<span class="font-label-xs text-label-xs text-on-tertiary-container font-bold cursor-pointer">MARKETS</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant hover:text-on-background transition-colors cursor-pointer">INDICATORS</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant hover:text-on-background transition-colors cursor-pointer">MACRO</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-data-mono text-data-mono text-on-surface-variant">UTC 14:32:05</span>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-on-background cursor-pointer hover:bg-on-background hover:text-background p-1">notifications</span>
+<span class="material-symbols-outlined text-on-background cursor-pointer hover:bg-on-background hover:text-background p-1">settings</span>
+</div>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="ml-20 pt-16 min-h-screen grid grid-cols-12 relative">
+<!-- Background Grid Decoration -->
+<div class="absolute inset-0 pointer-events-none opacity-5">
+<div class="grid grid-cols-12 h-full w-full">
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+<div class="border-r border-outline h-full"></div>
+</div>
+</div>
+<!-- Left Content: Markets & Heatmap (9 Columns) -->
+<div class="col-span-12 lg:col-span-9 p-margin-page border-r border-outline-variant relative overflow-hidden">
+<!-- Header Section -->
+<div class="mb-12">
+<span class="font-label-xs text-label-xs uppercase tracking-[0.4em] text-on-surface-variant block mb-2">Institutional Intelligence</span>
+<h2 class="text-[120px] font-black leading-none tracking-tighter text-on-background m-0 -ml-2 select-none opacity-90">MARKETS</h2>
+</div>
+<!-- Indices Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-0 border border-outline-variant mb-12 bg-surface-container-low">
+<div class="p-8 border-r border-outline-variant hover:bg-surface-variant transition-colors group">
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest block mb-4">S&amp;P 500 / SPY</span>
+<div class="font-display-price text-display-price text-on-background mb-2">5,137<span class="text-headline-lg opacity-40">.08</span></div>
+<div class="flex items-center gap-2">
+<span class="font-data-mono text-data-mono text-on-tertiary-container">+1.24%</span>
+<span class="w-24 h-px bg-on-tertiary-container"></span>
+</div>
+</div>
+<div class="p-8 border-r border-outline-variant hover:bg-surface-variant transition-colors group">
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest block mb-4">NASDAQ / QQQ</span>
+<div class="font-display-price text-display-price text-on-background mb-2">18,302<span class="text-headline-lg opacity-40">.91</span></div>
+<div class="flex items-center gap-2">
+<span class="font-data-mono text-data-mono text-on-tertiary-container">+1.89%</span>
+<span class="w-32 h-px bg-on-tertiary-container"></span>
+</div>
+</div>
+<div class="p-8 hover:bg-surface-variant transition-colors group">
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest block mb-4">DOW JONES / DIA</span>
+<div class="font-display-price text-display-price text-on-background mb-2">38,989<span class="text-headline-lg opacity-40">.83</span></div>
+<div class="flex items-center gap-2">
+<span class="font-data-mono text-data-mono text-on-surface-variant opacity-60">-0.12%</span>
+<span class="w-16 h-px bg-on-surface-variant"></span>
+</div>
+</div>
+</div>
+<!-- Heat Map Title -->
+<div class="flex justify-between items-end mb-4 border-b border-outline-variant pb-2">
+<h3 class="font-label-xs text-label-xs uppercase tracking-[0.2em]">Abstract Sector Distribution</h3>
+<span class="font-data-mono text-data-mono text-on-surface-variant">Live Feed (250ms latency)</span>
+</div>
+<!-- Bento Heatmap -->
+<div class="grid grid-cols-12 h-[600px] gap-gutter bg-outline-variant border border-outline-variant overflow-hidden">
+<!-- Tech Sector -->
+<div class="col-span-6 row-span-2 bg-on-tertiary-container heat-map-cell p-cell-padding flex flex-col justify-between transition-all duration-75 cursor-crosshair">
+<div class="flex justify-between items-start">
+<span class="font-headline-lg text-headline-lg font-black tracking-tighter">TECH</span>
+<span class="font-data-mono text-data-mono">+2.4%</span>
+</div>
+<div class="font-label-xs text-label-xs uppercase">Semiconductors / SaaS / Cloud</div>
+</div>
+<!-- Energy -->
+<div class="col-span-3 row-span-1 bg-surface-container-highest heat-map-cell p-cell-padding flex flex-col justify-between transition-all duration-75 cursor-crosshair">
+<div class="flex justify-between items-start">
+<span class="font-headline-lg text-headline-lg font-bold">NRG</span>
+<span class="font-data-mono text-data-mono">-0.8%</span>
+</div>
+<div class="font-label-xs text-label-xs uppercase">Oil &amp; Gas</div>
+</div>
+<!-- Finance -->
+<div class="col-span-3 row-span-2 bg-on-background heat-map-cell text-background p-cell-padding flex flex-col justify-between transition-all duration-75 cursor-crosshair">
+<div class="flex justify-between items-start">
+<span class="font-headline-lg text-headline-lg font-black tracking-tighter">FIN</span>
+<span class="font-data-mono text-data-mono">+1.1%</span>
+</div>
+<div class="font-label-xs text-label-xs uppercase">Global Banking</div>
+</div>
+<!-- Consumer -->
+<div class="col-span-3 row-span-1 bg-surface-container-low border border-outline heat-map-cell p-cell-padding flex flex-col justify-between transition-all duration-75 cursor-crosshair">
+<div class="flex justify-between items-start">
+<span class="font-headline-lg text-headline-lg font-bold">CONS</span>
+<span class="font-data-mono text-data-mono">+0.2%</span>
+</div>
+<div class="font-label-xs text-label-xs uppercase">Retail</div>
+</div>
+<!-- Healthcare -->
+<div class="col-span-4 row-span-1 bg-surface-variant heat-map-cell p-cell-padding flex flex-col justify-between transition-all duration-75 cursor-crosshair">
+<div class="flex justify-between items-start">
+<span class="font-headline-lg text-headline-lg font-bold">HLTH</span>
+<span class="font-data-mono text-data-mono">+0.5%</span>
+</div>
+<div class="font-label-xs text-label-xs uppercase">Pharma</div>
+</div>
+<!-- Industrials -->
+<div class="col-span-5 row-span-1 bg-on-tertiary-fixed heat-map-cell p-cell-padding flex flex-col justify-between transition-all duration-75 cursor-crosshair">
+<div class="flex justify-between items-start">
+<span class="font-headline-lg text-headline-lg font-bold">IND</span>
+<span class="font-data-mono text-data-mono">+0.9%</span>
+</div>
+<div class="font-label-xs text-label-xs uppercase">Logistics</div>
+</div>
+</div>
+</div>
+<!-- Right Sidebar: Global News Placard (3 Columns) -->
+<div class="col-span-12 lg:col-span-3 bg-surface-container-lowest h-screen overflow-y-auto custom-scrollbar sticky top-16">
+<div class="p-margin-page">
+<!-- Placard Header -->
+<div class="border-l-4 border-on-tertiary-container pl-6 mb-12">
+<span class="font-label-xs text-label-xs text-on-surface-variant block mb-1">EDITION</span>
+<span class="font-data-mono text-data-mono block mb-4">MAR 24 2024</span>
+<h4 class="font-headline-lg text-headline-lg font-black tracking-tighter uppercase leading-none">Global<br/>Bulletin</h4>
+</div>
+<!-- News Feed -->
+<div class="space-y-16">
+<!-- Article 1 -->
+<article class="group cursor-pointer">
+<div class="mb-4">
+<span class="font-label-xs text-label-xs text-on-tertiary-container bg-tertiary-container px-2 py-1">MACRO</span>
+</div>
+<h5 class="font-headline-lg text-headline-lg font-bold leading-tight mb-4 group-hover:text-on-tertiary-container transition-colors">Yield Curve Inversion Persists as Fed Holds Steady</h5>
+<p class="text-on-surface-variant text-justify leading-relaxed mb-6">
+                            The collective anxiety of the bond market continues as the 2-year and 10-year yield spread widens. Analysts suggest a recalibration of institutional risk profiles.
+                        </p>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<span class="font-data-mono text-data-mono">4m ago</span>
+<span class="w-2 h-2 rounded-full bg-on-tertiary-container animate-pulse"></span>
+</div>
+</article>
+<!-- Article 2 -->
+<article class="group cursor-pointer">
+<div class="mb-4">
+<span class="font-label-xs text-label-xs text-on-surface-variant border border-outline-variant px-2 py-1">ENERGY</span>
+</div>
+<h5 class="font-headline-lg text-headline-lg font-bold leading-tight mb-4 group-hover:text-on-tertiary-container transition-colors">Brent Crude Volatility Increases Amid Geopolitical Shifts</h5>
+<p class="text-on-surface-variant text-justify leading-relaxed mb-6">
+                            Supply chain rerouting and storage capacities in Northern Europe are reaching critical thresholds, forcing a momentary price correction in energy futures.
+                        </p>
+<div class="font-data-mono text-data-mono text-on-surface-variant">12m ago</div>
+</article>
+<!-- Article 3 -->
+<article class="group cursor-pointer">
+<div class="mb-4">
+<span class="font-label-xs text-label-xs text-on-surface-variant border border-outline-variant px-2 py-1">TECH</span>
+</div>
+<h5 class="font-headline-lg text-headline-lg font-bold leading-tight mb-4 group-hover:text-on-tertiary-container transition-colors">AI Infrastructure Spending Surpasses Historical Capex Highs</h5>
+<p class="text-on-surface-variant text-justify leading-relaxed mb-6">
+                            Silicon-valley titans are reallocating cloud resources at an unprecedented rate, signaling a structural shift in the digital economy's underlying architecture.
+                        </p>
+<div class="font-data-mono text-data-mono text-on-surface-variant">25m ago</div>
+</article>
+<!-- Image Asset Placeholder (Artistic Financial Abstract) -->
+<div class="mt-12 border border-outline-variant p-2">
+<div class="bg-cover bg-center aspect-square grayscale opacity-60" data-alt="A high-contrast, black and white abstract digital art piece representing global financial flow. Sharp, minimalist geometric lines crisscross a dark canvas, with subtle glowing accents in electric blue and silver. The style is avant-garde functionalism, evoking the feeling of a modern art gallery focused on data visualization and institutional precision." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDm-gTYXznAr2b2v5exPe4PUTkwiuZGl9aa3NEHNvlwDqK4HcXfADbmm4vC0ux4oAlNklxlXKBeXdP9dejgWX5JVkSx-QzT-6ITBO1sQkNu-mT5bTywTFLioTIjQPTNnWTL554OuDSs1FbU2LBXtVrm3dgaR97oCjX4Ad6pLteJ1Wr7mnAeLqHV7XgUqDU5psLKOctmm_8T_DeCLa21eC8977Im-4CvN-ApbLPYK_iAGeJhBse6kv5UIY87vNIV_d26UpmJBzV9FJU')"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Stats Bar (Mobile/Bottom) -->
+<div class="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface-container-highest border-t border-outline-variant flex items-center justify-around px-4 z-50">
+<div class="flex flex-col items-center">
+<span class="font-label-xs text-label-xs text-on-surface-variant">SPY</span>
+<span class="font-data-mono text-data-mono text-on-tertiary-container">+1.2%</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-xs text-label-xs text-on-surface-variant">QQQ</span>
+<span class="font-data-mono text-data-mono text-on-tertiary-container">+1.8%</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-xs text-label-xs text-on-surface-variant">BTC</span>
+<span class="font-data-mono text-data-mono text-on-tertiary-container">+0.5%</span>
+</div>
+</div>
+<!-- Micro-Interactions Script -->
+<script>
+        // Smooth hover effects for the gallery pieces
+        const cells = document.querySelectorAll('.heat-map-cell');
+        cells.forEach(cell => {
+            cell.addEventListener('mouseenter', () => {
+                cell.style.zIndex = "10";
+            });
+            cell.addEventListener('mouseleave', () => {
+                cell.style.zIndex = "1";
+            });
+        });
+
+        // Simple real-time data simulation
+        setInterval(() => {
+            const dataMonos = document.querySelectorAll('.font-data-mono');
+            dataMonos.forEach(item => {
+                if(Math.random() > 0.9) {
+                    item.style.opacity = '0.3';
+                    setTimeout(() => item.style.opacity = '1', 50);
+                }
+            });
+        }, 100);
+    </script>
+</body></html>
