@@ -303,7 +303,7 @@ class BacktestEngine:
                     self.trades.append(trade)
                     
                     # Update equity
-                    equity -= trade.pnl
+                    equity += trade.pnl
                     equity *= (1 - self.commission)  # Commission on exit
                     
                     self.open_positions = {}
@@ -340,9 +340,9 @@ class BacktestEngine:
             trade = self.open_positions['position']['trade']
             trade.close(df.index[-1], df['Close'].iloc[-1])
             self.trades.append(trade)
-            equity -= trade.pnl
+            equity += trade.pnl
             equity *= (1 - self.commission)
-        
+
         return self._calculate_metrics(equity)
     
     def _calculate_metrics(self, final_equity: float) -> Dict:
